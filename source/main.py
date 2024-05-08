@@ -192,10 +192,37 @@ def check_entry_conditions(row, last_fractal):
     return False
 
 
-def identify_exit_signals(merged_df, fractal_exit):
-    # Identify exit signals based on exit strategy
-    # Return DataFrame with exit signals and reasons
-    pass
+def identify_exit_signals(row, trade, fractal_exit, exit_counter):
+    exit_signal = None
+    exit_datetime = None
+    exit_price = None
+    exit_type = None
+
+    # Tag Change Exit
+    if row['tag'] != trade.entry_signal.upper():
+        exit_signal = True
+        exit_datetime = row.name
+        exit_price = row['Close']
+        exit_type = 'Signal Change Exit'
+
+    # New Entry Signal Exit
+    elif trade.entry_signal == 'long' and row['P_1_FRACTAL_CONFIRMED_SHORT']:
+        if fractal_exit == 'ALL' or exit_counter < fractal_exit:
+            exit_signal = True
+            exit_datetime = row.name
+            exit_price = row['Close']
+            exit_type = 'Fractal Change Exit'
+            exit_counter += 1
+
+    elif trade.entry_signal == 'short' and row['P_1_FRACTAL_CONFIRMED_LONG']:
+        if fractal_exit == 'ALL' or exit_counter < fractal_exit:
+            exit_signal = True
+            exit_datetime = row.name
+            exit_price = row['Close']
+            exit_type = 'Fractal Change Exit'
+            exit_counter += 1
+
+    return exit_signal, exit_datetime, exit_price, exit_type, exit_counter
 
 
 def calculate_pnl(trades_df):
