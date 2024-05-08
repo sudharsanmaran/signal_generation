@@ -117,7 +117,7 @@ def check_entry_conditions(row, last_fractal):
             last_fractal['long'] and
             row['Close'] > row['mean_band']
     ):
-        entry_signal = row['tag']
+        return True
 
     elif (
             market_direction == 'short' and
@@ -125,9 +125,9 @@ def check_entry_conditions(row, last_fractal):
             last_fractal['short'] and
             row['Close'] < row['mean_band']
     ):
-        entry_signal = row['tag']
+        return True
 
-    return entry_signal, entry_datetime, entry_price, market_direction
+    return False
 
 
 def identify_exit_signals(merged_df, fractal_exit):

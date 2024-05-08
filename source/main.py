@@ -35,9 +35,14 @@ def main():
     for index, row in merged_df.iterrows():
 
         # Check for entry using check_entry_conditions
-        entry_signal, entry_datetime, entry_price, market_direction = check_entry_conditions(
-            row, last_fractal)
-
+        if check_entry_conditions(row, last_fractal):
+            trade = Trade(
+                entry_signal=row['tag'],
+                entry_datetime=row.name,
+                entry_price=row['Close'],
+                max_exits=fractal_exit
+            )
+            active_trades.append(trade)
     #     # Check for trade exits
 #         exit = check_exit_conditions(row, trade, market_direction)
     #     for trade in active_trades[:]:  # Create a copy of the list to modify it during iteration
