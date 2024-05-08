@@ -35,3 +35,4 @@ archive.zip
 deployment-docker-compose.yml
 
 alembic/versions/*
+output.csv
