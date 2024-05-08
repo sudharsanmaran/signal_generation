@@ -1,6 +1,5 @@
 import pandas as pd
-from dotenv import load_dotenv, find_dotenv
-import os
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -9,6 +8,8 @@ class Trade:
     entry_id_counter = 0
     max_exits = float('inf')
     consider_all_exits = False
+    instrument = None
+    strategy_id = None
 
     def __init__(self, entry_signal, entry_datetime, entry_price):
         Trade.entry_id_counter += 1
@@ -43,22 +44,30 @@ class Trade:
             )
 
             # Check for trade closure based on max_exits and exit_type
-            if ((Trade.consider_all_exits and len(self.exit_id_counter) >= Trade.max_exits)
-                    or exit_type == 'tag_change'):
+            if ((self.exit_id_counter >= Trade.max_exits)
+                    or exit_type == 'Tag Change Exit'):
                 self.trade_closed = True
 
     def is_trade_closed(self):
         return self.trade_closed
 
-    def to_dict(self):
-        return {
-            'entry_id': self.entry_id,
-            'entry_signal': self.entry_signal,
-            'entry_datetime': self.entry_datetime,
-            'entry_price': self.entry_price,
-            'exits': self.exits,
-            'trade_closed': self.trade_closed
-        }
+    def formulate_output(self):
+        return [
+            {
+                'Instrument': Trade.instrument,
+                'Strategy ID': Trade.strategy_id,
+                'Signal': self.entry_signal,
+                'Entry Datetime': self.entry_datetime,
+                'Entry ID': self.entry_id,
+                'Exit ID': exit['exit_id'],
+                'Exit Datetime': exit['exit_datetime'],
+                'Exit Type': exit['exit_type'],
+                'Entry Price': self.entry_price,
+                'Exit Price': exit['exit_price'],
+                'Profit/Loss': exit['pnl']
+            }
+            for exit in self.exits
+        ]
 
 
 def validate_input(instrument, strategy_id, start_date, end_date, fractal_file_number, bb_file_number, bb_band_sd):
@@ -192,43 +201,25 @@ def check_entry_conditions(row, last_fractal):
     return False
 
 
-def identify_exit_signals(row, trade, fractal_exit, exit_counter):
-    exit_signal = None
-    exit_datetime = None
-    exit_price = None
-    exit_type = None
+def identify_exit_signals(row, last_fractal):
+    market_direction = row["tag"]
+    exit_type, is_fractal_change_exit = None, False
+    if market_direction == "GREEN" and row["P_1_FRACTAL_CONFIRMED_SHORT"]:
+        exit_type = "Fractal Change Exit"
+        is_fractal_change_exit = True
+    elif market_direction == "RED" and row["P_1_FRACTAL_CONFIRMED_LONG"]:
+        exit_type = "Fractal Change Exit"
+        is_fractal_change_exit = True
 
-    # Tag Change Exit
-    if row['tag'] != trade.entry_signal.upper():
-        exit_signal = True
-        exit_datetime = row.name
-        exit_price = row['Close']
-        exit_type = 'Signal Change Exit'
+    previous_direction = last_fractal.get("previous_direction")
+    if not previous_direction and not is_fractal_change_exit:
+        return False, None
 
-    # New Entry Signal Exit
-    elif trade.entry_signal == 'long' and row['P_1_FRACTAL_CONFIRMED_SHORT']:
-        if fractal_exit == 'ALL' or exit_counter < fractal_exit:
-            exit_signal = True
-            exit_datetime = row.name
-            exit_price = row['Close']
-            exit_type = 'Fractal Change Exit'
-            exit_counter += 1
+    if market_direction != previous_direction:
+        exit_type = "Tag Change Exit"
+        return True, exit_type
 
-    elif trade.entry_signal == 'short' and row['P_1_FRACTAL_CONFIRMED_LONG']:
-        if fractal_exit == 'ALL' or exit_counter < fractal_exit:
-            exit_signal = True
-            exit_datetime = row.name
-            exit_price = row['Close']
-            exit_type = 'Fractal Change Exit'
-            exit_counter += 1
-
-    return exit_signal, exit_datetime, exit_price, exit_type, exit_counter
-
-
-def calculate_pnl(trades_df):
-    # Calculate profit and loss for each trade
-    # Return DataFrame with P&L information
-    pass
+    return is_fractal_change_exit, exit_type
 
 
 pd.set_option('display.max_rows', None)  # None means show all rows
@@ -243,9 +234,18 @@ def main():
     start_date = "3/1/2019 9:35:00"
     end_date = "3/1/2019 11:00:00"
     fractal_file_number = 136
-    fractal_exit = "ALL"  # or 1, 2, 3, etc.
+    fractal_exit = "2"  # or 1 or 2 or 3 etc.
     bb_file_number = 1
     bb_band_sd = 2.0  # version number (2.0, 2.25, 2.5, 2.75, 3)
+
+    # set the class variables
+    Trade.instrument = instrument
+    Trade.strategy_id = strategy_id
+    # upadate the max exits if fractal_exit is numeric identify by try block
+    try:
+        Trade.max_exits = int(fractal_exit)
+    except ValueError:
+        Trade.consider_all_exits = True
 
     # Read and filter data
     strategy_df, fractal_df, bb_band_df = read_data(
@@ -257,14 +257,13 @@ def main():
     merged_df = merge_data(strategy_df, fractal_df, bb_band_df)
 
     # Dictionary to track last fractals for both directions
-    last_fractal = {'long': None, 'short': None}
-
+    last_fractal = {'long': None, 'short': None, "previous_direction": None}
     active_trades, completed_trades = [], []
-
     for index, row in merged_df.iterrows():
-
+        is_entry = check_entry_conditions(row, last_fractal)
+        is_exit, exit_type = identify_exit_signals(row, last_fractal)
         # Check for entry using check_entry_conditions
-        if check_entry_conditions(row, last_fractal):
+        if is_entry:
             trade = Trade(
                 entry_signal=row['tag'],
                 entry_datetime=index,
@@ -272,21 +271,24 @@ def main():
             )
             active_trades.append(trade)
 
-    a = 10
-    #     # Check for trade exits
-#         exit = check_exit_conditions(row, trade, market_direction)
-    #     for trade in active_trades[:]:  # Create a copy of the list to modify it during iteration
-    #         if exit:
-    #             trade.add_exit(*exit)
-    #             if trade_is_completed(trade, exit_condition):  # Define trade_is_completed based on your exit logic
-    #                 active_trades.remove(trade)
-    #                 completed_trades.append(trade)
+        if is_exit:
+            for trade in active_trades[:]:
+                trade.add_exit(row.name, row['Close'], exit_type)
+                if trade.is_trade_closed():
+                    completed_trades.append(trade)
+                    active_trades.remove(trade)
 
-    # # Calculate P&L for completed trades
-    # for trade in completed_trades:
-    #     trade_pnl = trade.calculate_pnl()
-    #     # Store or print P&L information
-    #     a = 12
+        last_fractal["previous_direction"] = row["tag"]
+
+    trade_outputs = []
+    for trade in completed_trades:
+        trade_outputs.extend(trade.formulate_output())
+
+    output_df = pd.DataFrame(trade_outputs)
+
+    print(output_df)
+    # write the output to csv
+    output_df.to_csv("output.csv", index=False)
 
 
 if __name__ == "__main__":
