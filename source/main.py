@@ -85,10 +85,12 @@ def read_data(
     # Read the strategy file with date filtering, parsing, and indexing
     strategy_df = pd.read_csv(
         strategy_path, parse_dates=['dt'], date_format='%Y-%m-%d %H:%M:%S',
-        usecols=['dt', 'Close',
-                 'Strategy Number'],
+        usecols=['dt', 'Close', 'TAG', 'Strategy Number'],
         dtype={'Strategy Number': int},
         index_col='dt')
+    strategy_df.rename(columns={
+        f'TAG': 'tag',
+    }, inplace=True)
 
     # Read the fractal file with date filtering, parsing, and indexing
     fractal_df = pd.read_csv(
@@ -107,8 +109,8 @@ def read_data(
 
     bb_band_cols = [
         'DT', f'P_1_MEAN_BAND_{bb_band_sd}',
-        f'P_1_UPPER_BAND_{bb_band_sd}', f'P_1_LOWER_BAND_{bb_band_sd}',
-        f'P_1_TAG_{bb_band_sd}']
+        f'P_1_UPPER_BAND_{bb_band_sd}', f'P_1_LOWER_BAND_{bb_band_sd}'
+    ]
 
     # Read the BB band file with date filtering, parsing, and indexing
     bb_band_df = pd.read_csv(
@@ -122,7 +124,6 @@ def read_data(
         f'P_1_MEAN_BAND_{bb_band_sd}': 'mean_band',
         f'P_1_UPPER_BAND_{bb_band_sd}': 'upper_band',
         f'P_1_LOWER_BAND_{bb_band_sd}': 'lower_band',
-        f'P_1_TAG_{bb_band_sd}': 'tag',
     }, inplace=True)
 
     # Convert start and end dates to datetime
@@ -183,7 +184,7 @@ def check_entry_conditions(row, last_fractal):
             market_direction == 'long' and
             row['P_1_FRACTAL_CONFIRMED_LONG'] and
             last_fractal['long'] and
-            row['Close'] > row['mean_band']
+            last_fractal['long'][1] < row['mean_band']
     ):
         return True
 
@@ -191,7 +192,7 @@ def check_entry_conditions(row, last_fractal):
             market_direction == 'short' and
             row['P_1_FRACTAL_CONFIRMED_SHORT'] and
             last_fractal['short'] and
-            row['Close'] < row['mean_band']
+            last_fractal['short'][1] > row['mean_band']
     ):
         return True
 
@@ -229,8 +230,8 @@ def main():
     start = time.time()
     instrument = "BANKNIFTY"
     strategy_id = 1
-    start_date = "1/1/2017 9:35:00"
-    end_date = "31/12/2022 11:00:00"
+    start_date = "3/1/2017 9:35:00"
+    end_date = "31/12/2023 11:00:00"
     fractal_file_number = 136
     fractal_exit = "ALL"  # or 1 or 2 or 3 etc.
     bb_file_number = 1
@@ -284,11 +285,10 @@ def main():
 
     output_df = pd.DataFrame(trade_outputs)
 
-    stop = time.time()
-
-    print(len(active_trades), "active trades")
+    # print(len(trade_outputs))
     # write the output to csv
-    # output_df.to_csv("output.csv", index=False)
+    output_df.to_csv("output.csv", index=False)
+    stop = time.time()
     print(f"Time taken: {stop-start} seconds")
 
 
