@@ -1,13 +1,10 @@
+import time
 import pandas as pd
-from dotenv import load_dotenv
-
-load_dotenv()
 
 
 class Trade:
     entry_id_counter = 0
     max_exits = float('inf')
-    consider_all_exits = False
     instrument = None
     strategy_id = None
 
@@ -229,12 +226,13 @@ pd.set_option('display.max_colwidth', None)
 
 
 def main():
+    start = time.time()
     instrument = "BANKNIFTY"
     strategy_id = 1
-    start_date = "3/1/2019 9:35:00"
-    end_date = "3/1/2019 11:00:00"
+    start_date = "1/1/2017 9:35:00"
+    end_date = "31/12/2022 11:00:00"
     fractal_file_number = 136
-    fractal_exit = "2"  # or 1 or 2 or 3 etc.
+    fractal_exit = "ALL"  # or 1 or 2 or 3 etc.
     bb_file_number = 1
     bb_band_sd = 2.0  # version number (2.0, 2.25, 2.5, 2.75, 3)
 
@@ -245,7 +243,7 @@ def main():
     try:
         Trade.max_exits = int(fractal_exit)
     except ValueError:
-        Trade.consider_all_exits = True
+        pass
 
     # Read and filter data
     strategy_df, fractal_df, bb_band_df = read_data(
@@ -286,9 +284,12 @@ def main():
 
     output_df = pd.DataFrame(trade_outputs)
 
-    print(output_df)
+    stop = time.time()
+
+    print(len(active_trades), "active trades")
     # write the output to csv
-    output_df.to_csv("output.csv", index=False)
+    # output_df.to_csv("output.csv", index=False)
+    print(f"Time taken: {stop-start} seconds")
 
 
 if __name__ == "__main__":
