@@ -1,3 +1,4 @@
+from itertools import chain
 import time
 import pandas as pd
 
@@ -41,8 +42,10 @@ class Trade:
             )
 
             # Check for trade closure based on max_exits and exit_type
-            if ((self.exit_id_counter >= Trade.max_exits)
-                    or exit_type == 'Tag Change Exit'):
+            if (
+                    self.exit_id_counter >= Trade.max_exits or
+                    exit_type == 'Tag Change Exit'
+            ):
                 self.trade_closed = True
 
     def is_trade_closed(self):
@@ -88,9 +91,7 @@ def read_data(
         usecols=['dt', 'Close', 'TAG', 'Strategy Number'],
         dtype={'Strategy Number': int},
         index_col='dt')
-    strategy_df.rename(columns={
-        f'TAG': 'tag',
-    }, inplace=True)
+    strategy_df.rename(columns={'TAG': 'tag'}, inplace=True)
 
     # Read the fractal file with date filtering, parsing, and indexing
     fractal_df = pd.read_csv(
@@ -106,7 +107,6 @@ def read_data(
     fractal_df.index = pd.to_datetime(fractal_df.index)
 
     # Define the columns to read from BB band file based on bb_band_sd
-
     bb_band_cols = [
         'DT', f'P_1_MEAN_BAND_{bb_band_sd}',
         f'P_1_UPPER_BAND_{bb_band_sd}', f'P_1_LOWER_BAND_{bb_band_sd}'
@@ -151,7 +151,6 @@ def merge_data(strategy_df, fractal_df, bb_band_df):
 
     # Join the resulting dataframe with the BB band dataframe on the index (datetime)
     merged_df = merged_df.join(bb_band_df, how='left')
-
     return merged_df
 
 
@@ -280,7 +279,7 @@ def main():
         last_fractal["previous_direction"] = row["tag"]
 
     trade_outputs = []
-    for trade in completed_trades:
+    for trade in chain(completed_trades, active_trades):
         trade_outputs.extend(trade.formulate_output())
 
     output_df = pd.DataFrame(trade_outputs)
