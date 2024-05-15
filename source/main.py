@@ -133,6 +133,7 @@ def read_data(
         dtype={"Strategy Number": int},
         index_col="dt",
     )
+    strategy_df.index = pd.to_datetime(strategy_df.index)
     strategy_df.rename(columns={"TAG": "tag"}, inplace=True)
 
     # Read the fractal file with date filtering, parsing, and indexing
@@ -208,7 +209,8 @@ def read_data(
         (bb_band_df.index >= start_date) & (bb_band_df.index <= end_date)
     ]
     trail_bb_band_df = trail_bb_band_df[
-        (trail_bb_band_df.index >= start_date) & (trail_bb_band_df.index <= end_date)
+        (trail_bb_band_df.index >= start_date) & (
+            trail_bb_band_df.index <= end_date)
     ]
 
     strategy_df = strategy_df.dropna(axis=0)
@@ -233,7 +235,8 @@ def merge_data(strategy_df, fractal_df, bb_band_df, trail_bb_band_df):
 
 def merge_data_without_duplicates(strategy_df, fractal_df, bb_band_df):
     # Concatenate DataFrames with how='outer' to keep all rows from any DataFrame
-    merged_df = pd.concat([strategy_df, fractal_df, bb_band_df], axis=1, join="outer")
+    merged_df = pd.concat(
+        [strategy_df, fractal_df, bb_band_df], axis=1, join="outer")
     # Forward fill missing values to propagate non-NaN values from previous rows
     merged_df.fillna(method="ffill", inplace=True)
     return merged_df
@@ -346,9 +349,11 @@ def check_entry_conditions(row, last_fractal, strategy_id):
     update_last_fractal(last_fractal, market_direction, row)
 
     if Trade.check_fractal:
-        is_fractal_entry = check_fractal_conditions(row, last_fractal, market_direction)
+        is_fractal_entry = check_fractal_conditions(
+            row, last_fractal, market_direction)
     if Trade.check_bb_band:
-        is_bb_band_entry = check_bb_band_entry(row, last_fractal, market_direction)
+        is_bb_band_entry = check_bb_band_entry(
+            row, last_fractal, market_direction)
 
     if Trade.check_fractal and Trade.check_bb_band:
         return is_fractal_entry and is_bb_band_entry
@@ -414,7 +419,8 @@ def identify_exit_signals(row, last_fractal, strategy_id):
         )
 
     if Trade.check_fractal:
-        is_fractal_exit = check_fractal_conditions(row, last_fractal, market_direction)
+        is_fractal_exit = check_fractal_conditions(
+            row, last_fractal, market_direction)
 
     previous_direction = last_fractal.get(MarketDirection.PREVIOUS, None)
     # if not previous_direction and not is_fractal_exit and not is_trail_bb_band_exit:
@@ -446,28 +452,28 @@ def main():
     start = time.time()
     instrument = "BANKNIFTY"
     portfolio_ids = 1, 2
-    strategy_ids = 1, 2
+    strategy_ids = 1, 4
     long_entry_signals = "GREEN, GREEN"
     long_exit_signals = "RED, RED"
     short_entry_signals = "RED, RED"
     short_exit_signals = "GREEN, GREEN"
-    start_date = "3/1/2017 9:55:00"
-    end_date = "3/1/2017 11:00:00"
+    start_date = "3/01/2017 9:55:00"
+    end_date = "3/07/2017 11:00:00"
     fractal_file_number = 136
     fractal_exit_count = "ALL"  # or 1 or 2 or 3 etc.
     bb_file_number = 1
     trail_bb_file_number = 1
     bb_band_sd = 2.0  # standard deviations (2.0, 2.25, 2.5, 2.75, 3.0)
     trail_bb_band_sd = 2.0  # standard deviations (2.0, 2.25, 2.5, 2.75, 3.0)
-    bb_band_column = "mean"
+    bb_band_column = "mean"  # (mean, upper, lower)
     trail_bb_band_column = "mean"
-    trade_start_time = "10:00:00"
-    trade_end_time = "10:55:00"
+    trade_start_time = "09:15:00"
+    trade_end_time = "15:20:00"
     check_fractal = True
     check_bb_band = True
-    check_trail_bb_band = True
+    check_trail_bb_band = False
     trail_bb_band_direction = "higher"  # or "lower"
-    trade_type = TradeType.INTRADAY
+    trade_type = TradeType.POSITIONAL
     allowed_direction = MarketDirection.ALL
 
     # todo
@@ -533,7 +539,8 @@ def main():
         )
 
         # Merge data
-        merged_df = merge_data(strategy_df, fractal_df, bb_band_df, trail_bb_band_df)
+        merged_df = merge_data(strategy_df, fractal_df,
+                               bb_band_df, trail_bb_band_df)
 
         merged_df.to_csv(f"merged_df_{strategy_id}.csv", index=True)
 
@@ -549,7 +556,8 @@ def main():
         }
         active_trades, completed_trades = [], []
         for index, row in merged_df.iterrows():
-            is_entry = check_entry_conditions(row, entry_last_fractal, strategy_id)
+            is_entry = check_entry_conditions(
+                row, entry_last_fractal, strategy_id)
             is_exit, exit_type = identify_exit_signals(
                 row, exit_last_fractal, strategy_id
             )
