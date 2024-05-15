@@ -36,3 +36,8 @@ deployment-docker-compose.yml
 
 alembic/versions/*
 output.csv
+merged_df.csv
+.~lock.output.csv#
+.~lock.merged_df.csv#
+merged_df_1.csv
+merged_df_2.csv
