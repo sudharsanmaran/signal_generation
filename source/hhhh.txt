@@ -1,8 +1,10 @@
 portfolio => 1,2,3... ect
 
 CONDITIONS:
-1. combination number(red & green & yellow , yellow & green & red) depends on  no. of. portfolio
-2. combination count(4, 20, 36,...) can increase based on the no. of. condition that the portfolio has
+1. how many tags to include for combination (red & green & yellow , yellow & green & red) is depends on  no. of. portfolio.
+2. combination count is depends on the no. of. condition(red | green | None | yellow ...ect) that all the mentioned portfolio have.
+
+=> code need to generate combination for all long-short entry and exit conditions as a options. <=
 
 STRATEGIES:
 strategy_file_combination => 1_2_3, 2_3_4, ....ect
