@@ -23,8 +23,9 @@ class Trade:
     trail_bb_band_direction: Optional[str] = None
     trail_compare_func: Optional[callable] = None
     trail_opposite_compare_func: Optional[callable] = None
+    signal_columns: Optional[List] = None
 
-    def __init__(self, entry_signal, entry_datetime, entry_price, strategy_id):
+    def __init__(self, entry_signal, entry_datetime, entry_price, strategy_id=None):
         Trade.entry_id_counter += 1
         self.entry_id = Trade.entry_id_counter
 
@@ -58,18 +59,27 @@ class Trade:
             if (
                 exit_type == TradeExitType.FRACTAL
                 and Trade.fractal_exit_count
-                and self.exit_id_counter != Trade.fractal_exit_count
             ):
-                return
-            self.exits.append(
-                {
-                    "exit_id": self.exit_id_counter,
-                    "exit_datetime": exit_datetime,
-                    "exit_price": exit_price,
-                    "exit_type": exit_type,
-                    "pnl": self.calculate_pnl(exit_price),
-                }
-            )
+                if self.exit_id_counter == Trade.fractal_exit_count:
+                    self.exits.append(
+                        {
+                            "exit_id": self.exit_id_counter,
+                            "exit_datetime": exit_datetime,
+                            "exit_price": exit_price,
+                            "exit_type": exit_type,
+                            "pnl": self.calculate_pnl(exit_price),
+                        }
+                    )
+            else:
+                self.exits.append(
+                    {
+                        "exit_id": self.exit_id_counter,
+                        "exit_datetime": exit_datetime,
+                        "exit_price": exit_price,
+                        "exit_type": exit_type,
+                        "pnl": self.calculate_pnl(exit_price),
+                    }
+                )
 
     def is_trade_closed(self):
         return self.trade_closed
@@ -78,7 +88,7 @@ class Trade:
         return [
             {
                 "Instrument": Trade.instrument,
-                # "Strategy ID": self.strategy_id,
+                "Strategy ID": Trade.strategy_ids,
                 "Signal": self.entry_signal,
                 "Entry Datetime": self.entry_datetime,
                 "Entry ID": self.entry_id,
@@ -272,8 +282,7 @@ class MarketDirection(Enum):
 def get_market_direction(row, condition_key):
     """Get the market direction based on the entry or exit conditions for a trade."""
 
-    columns = [f"tag_{id}" for id in Trade.strategy_ids]
-    row_directions = row.get(columns)
+    row_directions = row.get(Trade.signal_columns)
     for direction, signals in Trade.market_direction_conditions[condition_key].items():
         for signal in signals:
             if all(dir == sig for dir, sig in zip(row_directions, signal)):
@@ -283,6 +292,8 @@ def get_market_direction(row, condition_key):
 
 def reset_last_fractal(last_fractal, market_direction):
     """Reset the last fractal for the opposite direction when the market direction changes"""
+    if not market_direction:
+        return
     opposite_direction = (
         MarketDirection.SHORT
         if market_direction == MarketDirection.LONG
@@ -293,6 +304,8 @@ def reset_last_fractal(last_fractal, market_direction):
 
 def update_last_fractal(last_fractal, market_direction, row):
     """Update the last fractal for the current market direction if a new fractal is found"""
+    if not market_direction:
+        return
     fractal_keys = {
         MarketDirection.LONG: "P_1_FRACTAL_LONG",
         MarketDirection.SHORT: "P_1_FRACTAL_SHORT",
@@ -341,6 +354,7 @@ def check_entry_conditions(row, last_fractal):
         return False
 
     market_direction = get_market_direction(row, "entry")
+
     if (
         not Trade.allowed_direction == MarketDirection.ALL
         and not market_direction == Trade.allowed_direction
@@ -405,12 +419,13 @@ class TradeExitType(Enum):
     END = "End"
 
 
-def identify_exit_signals(row, last_fractal, strategy_id):
+def identify_exit_signals(row, last_fractal):
+    # market direction
+    market_direction = get_market_direction(row, "exit")
 
     if is_trade_end_time_reached(row):
-        return True, TradeExitType.END
+        return True, TradeExitType.END, market_direction
 
-    market_direction = get_market_direction(row, "exit", strategy_id)
     reset_last_fractal(last_fractal, market_direction)
     update_last_fractal(last_fractal, market_direction, row)
 
@@ -425,10 +440,9 @@ def identify_exit_signals(row, last_fractal, strategy_id):
             row, last_fractal, market_direction)
 
     previous_direction = last_fractal.get(MarketDirection.PREVIOUS, None)
-    # if not previous_direction and not is_fractal_exit and not is_trail_bb_band_exit:
-    #     return False, None
-    if previous_direction and tag_change_exit(previous_direction, row["tag"]):
-        return True, TradeExitType.SIGNAL
+    if previous_direction and tag_change_exit(previous_direction, market_direction):
+        return True, TradeExitType.SIGNAL, market_direction
+    last_fractal[MarketDirection.PREVIOUS] = market_direction
 
     if is_trail_bb_band_exit and is_fractal_exit:
         exit_type = TradeExitType.FRACTAL
@@ -436,7 +450,7 @@ def identify_exit_signals(row, last_fractal, strategy_id):
         exit_type = TradeExitType.TRAILING
     elif is_fractal_exit:
         exit_type = TradeExitType.FRACTAL
-    return is_trail_bb_band_exit or is_fractal_exit, exit_type
+    return is_trail_bb_band_exit or is_fractal_exit, exit_type, market_direction
 
 
 pd.set_option("display.max_rows", None)  # None means show all rows
@@ -454,13 +468,13 @@ def main():
     start = time.time()
     instrument = "BANKNIFTY"
     portfolio_ids = "1, 2"
-    strategy_ids = '1, 2, 3'
-    long_entry_signals = "GREEN, GREEN, GREEN | RED, GREEN, GREEN | RED, RED ,  GREEN"
-    long_exit_signals = "RED, RED, RED | GREEN, RED, RED"
-    short_entry_signals = "RED, RED, RED | GREEN, RED, RED"
-    short_exit_signals = "GREEN, GREEN, GREEN | RED, GREEN, GREEN"
+    strategy_ids = '1, 4'
+    long_entry_signals = "GREEN, GREEN"
+    long_exit_signals = "RED, GREEN"
+    short_entry_signals = "RED, RED"
+    short_exit_signals = "GREEN, GREEN"
     start_date = "3/01/2017 9:55:00"
-    end_date = "3/01/2017 11:00:00"
+    end_date = "4/07/2017 11:00:00"
     fractal_file_number = 136
     fractal_exit_count = "ALL"  # or 1 or 2 or 3 etc.
     bb_file_number = 1
@@ -520,6 +534,7 @@ def main():
         f"P_1_{trail_bb_band_column.upper()}_BAND_{trail_bb_band_sd}"
     )
     Trade.allowed_direction = allowed_direction
+    Trade.signal_columns = [f"tag_{id}" for id in Trade.strategy_ids]
 
     if trail_bb_band_direction == "higher":
         Trade.trail_compare_func = lambda a, b: a > b
@@ -567,12 +582,12 @@ def main():
     for index, row in merged_df.iterrows():
         is_entry = check_entry_conditions(
             row, entry_last_fractal)
-        is_exit, exit_type = identify_exit_signals(
+        is_exit, exit_type, direction = identify_exit_signals(
             row, exit_last_fractal
         )
         if is_entry:
             trade = Trade(
-                entry_signal=row["tag"],
+                entry_signal=direction,
                 entry_datetime=index,
                 entry_price=row["Close"],
                 # strategy_id=strategy_id,
@@ -585,8 +600,6 @@ def main():
                 if trade.is_trade_closed():
                     completed_trades.append(trade)
                     active_trades.remove(trade)
-
-        exit_last_fractal[MarketDirection.PREVIOUS] = row["tag"]
 
     trade_outputs = []
     for trade in chain(completed_trades, active_trades):
