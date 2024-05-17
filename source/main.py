@@ -168,16 +168,16 @@ def read_data(
         date_format="%Y-%m-%d %H:%M",
         usecols=[
             "TIMESTAMP",
-            "P_1_PRE_FRACTAL_LONG",
-            "P_1_PRE_FRACTAL_SHORT",
+            "P_1_FRACTAL_LONG",
+            "P_1_FRACTAL_SHORT",
             "P_1_FRACTAL_CONFIRMED_LONG",
             "P_1_FRACTAL_CONFIRMED_SHORT",
         ],
         dtype={
-            "P_1_PRE_FRACTAL_LONG": "boolean",
+            "P_1_FRACTAL_LONG": "boolean",
             "P_1_FRACTAL_CONFIRMED_LONG": "boolean",
             "P_1_FRACTAL_CONFIRMED_SHORT": "boolean",
-            "P_1_PRE_FRACTAL_SHORT": "boolean",
+            "P_1_FRACTAL_SHORT": "boolean",
         },
         index_col="TIMESTAMP",
     )
@@ -190,16 +190,16 @@ def read_data(
         date_format="%Y-%m-%d %H:%M",
         usecols=[
             "TIMESTAMP",
-            "P_1_PRE_FRACTAL_LONG",
-            "P_1_PRE_FRACTAL_SHORT",
+            "P_1_FRACTAL_LONG",
+            "P_1_FRACTAL_SHORT",
             "P_1_FRACTAL_CONFIRMED_LONG",
             "P_1_FRACTAL_CONFIRMED_SHORT",
         ],
         dtype={
-            "P_1_PRE_FRACTAL_LONG": "boolean",
+            "P_1_FRACTAL_LONG": "boolean",
             "P_1_FRACTAL_CONFIRMED_LONG": "boolean",
             "P_1_FRACTAL_CONFIRMED_SHORT": "boolean",
-            "P_1_PRE_FRACTAL_SHORT": "boolean",
+            "P_1_FRACTAL_SHORT": "boolean",
         },
         index_col="TIMESTAMP",
     )
@@ -322,8 +322,8 @@ def update_last_fractal(last_fractal, market_direction, row):
     if not market_direction:
         return
     fractal_keys = {
-        MarketDirection.LONG: "P_1_PRE_FRACTAL_LONG",
-        MarketDirection.SHORT: "P_1_PRE_FRACTAL_SHORT",
+        MarketDirection.LONG: "P_1_FRACTAL_LONG",
+        MarketDirection.SHORT: "P_1_FRACTAL_SHORT",
     }
     if row[fractal_keys[market_direction]]:
         last_fractal[market_direction] = (row.name, row["Close"])
@@ -335,7 +335,6 @@ def check_fractal_conditions(row, last_fractal, market_direction):
         MarketDirection.LONG: "P_1_FRACTAL_CONFIRMED_LONG",
         MarketDirection.SHORT: "P_1_FRACTAL_CONFIRMED_SHORT",
     }
-
     if last_fractal.get(market_direction) and row[fractal_columns[market_direction]]:
         return True
 
@@ -484,13 +483,13 @@ def main():
     start = time.time()
     instrument = "BANKNIFTY"
     portfolio_ids = "F13, F13_1"
-    strategy_ids = "1, 4 | 1, 3 | 2,3 "
-    long_entry_signals = "RED, GREEN"
-    long_exit_signals = "GREEN, RED | RED, RED | GREEN, GREEN"
-    short_entry_signals = "GREEN, RED"
-    short_exit_signals = "GREEN, GREEN | RED, GREEN | RED, RED"
-    start_date = "3/01/2017 12:30:00"
-    end_date = "3/07/2017 16:00:00"
+    strategy_ids = "1, 4"
+    long_entry_signals = "GREEN, GREEN"
+    long_exit_signals = "RED, GREEN"
+    short_entry_signals = "RED, RED"
+    short_exit_signals = "GREEN, RED"
+    start_date = "3/01/2019 09:15:00"
+    end_date = "3/07/2019 16:00:00"
     entry_fractal_file_number = 1
     exit_fractal_file_number = 2
     fractal_exit_count = "ALL"  # or 1 or 2 or 3 etc.
@@ -568,6 +567,7 @@ def main():
         pass
 
     for strategy_pair in Trade.strategy_ids:
+        strategy_pair_str = "_".join(strategy_pair)
         strategy_df, entry_fractal_df, exit_fractal_df, bb_band_df, trail_bb_band_df = (
             read_data(
                 Trade.instrument,
@@ -593,7 +593,7 @@ def main():
             trail_bb_band_df,
         )
 
-        merged_df.to_csv(f"merged_df_{''.join(strategy_pair)}.csv", index=True)
+        merged_df.to_csv(f"merged_df_{strategy_pair_str}.csv", index=True)
 
         # Dictionaries to track last fractals for both entry and exit
         entry_last_fractal = {
@@ -626,11 +626,11 @@ def main():
 
         trade_outputs = []
         for trade in chain(completed_trades, active_trades):
-            trade_outputs.extend(trade.formulate_output(strategy_pair))
+            trade_outputs.extend(trade.formulate_output(strategy_pair_str))
 
         output_df = pd.DataFrame(trade_outputs)
 
-        output_df.to_csv(f"output_{''.join(strategy_pair)}.csv", index=False)
+        output_df.to_csv(f"output_{strategy_pair_str}.csv", index=False)
     stop = time.time()
     print(f"Time taken: {stop-start} seconds")
 
