@@ -119,10 +119,12 @@ def validate_input(
 
 def read_data(
     instrument,
+    portfolio_ids,
     strategy_ids,
     start_date,
     end_date,
-    fractal_file_number,
+    entry_fractal_file_number,
+    exit_fractal_file_number,
     bb_file_number,
     bb_band_column,
     trail_bb_file_number,
@@ -134,73 +136,86 @@ def read_data(
     end_date = pd.to_datetime(end_date, format="%d/%m/%Y %H:%M:%S")
 
     strategy_dfs, is_close_read = [], False
-    for strategy_id in strategy_ids:
-        strategy_path = f"~/Downloads/Test case Database/Strategy/F13/{instrument}/{strategy_id}_result.csv"
-
+    for portfolio_id, strategy_id in zip(portfolio_ids, strategy_ids):
+        strategy_path = f"~/Downloads/Portfolio Database/{portfolio_id}/{instrument}/{strategy_id}_result.csv"
+        columns = []
         if not is_close_read:
-            columns = ["dt", "Close", "TAG"]
+            columns = ["TIMESTAMP", "Close", f"TAG_{portfolio_id}"]
             is_close_read = True
         else:
-            columns = ["dt", "TAG"]
-
+            columns = ["TIMESTAMP", f"TAG_{portfolio_id}"]
         strategy_df = pd.read_csv(
             strategy_path,
-            parse_dates=["dt"],
+            parse_dates=["TIMESTAMP"],
             date_format="%Y-%m-%d %H:%M:%S",
             usecols=columns,
-            index_col="dt",
+            index_col="TIMESTAMP",
         )
         strategy_df.index = pd.to_datetime(strategy_df.index)
-
-        strategy_df.rename(
-            columns={
-                "TAG": f"tag_{strategy_id}",
-            },
-            inplace=True,
-        )
-
         strategy_df = strategy_df.loc[start_date:end_date]
-
         strategy_dfs.append(strategy_df)
 
     all_strategies_df = pd.concat(strategy_dfs, axis=1)
 
-    fractal_path = f"~/Downloads/Test case Database/Entry & Exit/Fractal/{instrument}/combined_{fractal_file_number}.csv"
-    bb_band_path = f"~/Downloads/Test case Database/Entry & Exit/BB/{instrument}/combined_{bb_file_number}.csv"
-    trail_bb_band_path = f"~/Downloads/Test case Database/Entry & Exit/BB/{instrument}/combined_{trail_bb_file_number}.csv"
+    entry_fractal_path = f"~/Downloads/Portfolio Database/Fractal/{instrument}/{entry_fractal_file_number}_result.csv"
+    exit_fractal_path = f"~/Downloads/Portfolio Database/Fractal/{instrument}/{exit_fractal_file_number}_result.csv"
+    bb_band_path = f"~/Downloads/Portfolio Database/BB Band/{instrument}/{bb_file_number}_result.csv"
+    trail_bb_band_path = f"~/Downloads/Portfolio Database/BB Band/{instrument}/{trail_bb_file_number}_result.csv"
 
-    fractal_df = pd.read_csv(
-        fractal_path,
-        parse_dates=["dt"],
+    entry_fractal_df = pd.read_csv(
+        entry_fractal_path,
+        parse_dates=["TIMESTAMP"],
         date_format="%Y-%m-%d %H:%M",
         usecols=[
-            "dt",
-            "P_1_FRACTAL_LONG",
-            "P_1_FRACTAL_SHORT",
+            "TIMESTAMP",
+            "P_1_PRE_FRACTAL_LONG",
+            "P_1_PRE_FRACTAL_SHORT",
             "P_1_FRACTAL_CONFIRMED_LONG",
             "P_1_FRACTAL_CONFIRMED_SHORT",
         ],
         dtype={
-            "P_1_FRACTAL_LONG": "boolean",
+            "P_1_PRE_FRACTAL_LONG": "boolean",
             "P_1_FRACTAL_CONFIRMED_LONG": "boolean",
             "P_1_FRACTAL_CONFIRMED_SHORT": "boolean",
-            "P_1_FRACTAL_SHORT": "boolean",
+            "P_1_PRE_FRACTAL_SHORT": "boolean",
         },
-        index_col="dt",
+        index_col="TIMESTAMP",
     )
     # convert dt to datetime
-    fractal_df.index = pd.to_datetime(fractal_df.index)
+    entry_fractal_df.index = pd.to_datetime(entry_fractal_df.index)
+
+    exit_fractal_df = pd.read_csv(
+        exit_fractal_path,
+        parse_dates=["TIMESTAMP"],
+        date_format="%Y-%m-%d %H:%M",
+        usecols=[
+            "TIMESTAMP",
+            "P_1_PRE_FRACTAL_LONG",
+            "P_1_PRE_FRACTAL_SHORT",
+            "P_1_FRACTAL_CONFIRMED_LONG",
+            "P_1_FRACTAL_CONFIRMED_SHORT",
+        ],
+        dtype={
+            "P_1_PRE_FRACTAL_LONG": "boolean",
+            "P_1_FRACTAL_CONFIRMED_LONG": "boolean",
+            "P_1_FRACTAL_CONFIRMED_SHORT": "boolean",
+            "P_1_PRE_FRACTAL_SHORT": "boolean",
+        },
+        index_col="TIMESTAMP",
+    )
+    # convert dt to datetime
+    exit_fractal_df.index = pd.to_datetime(entry_fractal_df.index)
 
     # Define the columns to read from BB band file based on bb_band_sd
-    bb_band_cols = ["DT", bb_band_column]
+    bb_band_cols = ["TIMESTAMP", bb_band_column]
 
     # Read the BB band file with date filtering, parsing, and indexing
     bb_band_df = pd.read_csv(
         bb_band_path,
-        parse_dates=["DT"],
+        parse_dates=["TIMESTAMP"],
         date_format="%Y-%m-%d %H:%M:%S",
         usecols=bb_band_cols,
-        index_col="DT",
+        index_col="TIMESTAMP",
     )
 
     # Rename BB band columns for consistency
@@ -210,15 +225,15 @@ def read_data(
     )
 
     # Define the columns to read from Trail BB band file based on bb_band_sd
-    trail_bb_band_cols = ["DT", trail_bb_band_column]
+    trail_bb_band_cols = ["TIMESTAMP", trail_bb_band_column]
 
     # Read the Trail BB band file with date filtering, parsing, and indexing
     trail_bb_band_df = pd.read_csv(
         trail_bb_band_path,
-        parse_dates=["DT"],
+        parse_dates=["TIMESTAMP"],
         date_format="%Y-%m-%d %H:%M:%S",
         usecols=trail_bb_band_cols,
-        index_col="DT",
+        index_col="TIMESTAMP",
     )
 
     trail_bb_band_df.rename(
@@ -226,13 +241,11 @@ def read_data(
         inplace=True,
     )
 
-    # Filter data by date range
-    # strategy_df = all_strategies_df[
-    #     (all_strategies_df.index >= start_date) & (
-    #         all_strategies_df.index <= end_date)
-    # ]
-    fractal_df = fractal_df[
-        (fractal_df.index >= start_date) & (fractal_df.index <= end_date)
+    entry_fractal_df = entry_fractal_df[
+        (entry_fractal_df.index >= start_date) & (entry_fractal_df.index <= end_date)
+    ]
+    exit_fractal_df = exit_fractal_df[
+        (exit_fractal_df.index >= start_date) & (exit_fractal_df.index <= end_date)
     ]
     bb_band_df = bb_band_df[
         (bb_band_df.index >= start_date) & (bb_band_df.index <= end_date)
@@ -241,26 +254,28 @@ def read_data(
         (trail_bb_band_df.index >= start_date) & (trail_bb_band_df.index <= end_date)
     ]
 
-    strategy_df = strategy_df.dropna(axis=0)
-    fractal_df = fractal_df.dropna(axis=0)
+    all_strategies_df = all_strategies_df.dropna(axis=0)
+    entry_fractal_df = entry_fractal_df.dropna(axis=0)
+    exit_fractal_df = exit_fractal_df.dropna(axis=0)
     bb_band_df = bb_band_df.dropna(axis=0)
     trail_bb_band_df = trail_bb_band_df.dropna(axis=0)
 
-    return all_strategies_df, fractal_df, bb_band_df, trail_bb_band_df
+    return (
+        all_strategies_df,
+        entry_fractal_df,
+        exit_fractal_df,
+        bb_band_df,
+        trail_bb_band_df,
+    )
 
 
-def merge_data(strategy_df, fractal_df, bb_band_df, trail_bb_band_df):
-    merged_df = strategy_df.join(fractal_df, how="left")
+def merge_data(
+    strategy_df, entry_fractal_df, exit_fractal_df, bb_band_df, trail_bb_band_df
+):
+    merged_df = strategy_df.join(entry_fractal_df, how="left")
+    merged_df = strategy_df.join(exit_fractal_df, how="left")
     merged_df = merged_df.join(bb_band_df, how="left")
     merged_df = merged_df.join(trail_bb_band_df, how="left")
-    return merged_df
-
-
-def merge_data_without_duplicates(strategy_df, fractal_df, bb_band_df):
-    # Concatenate DataFrames with how='outer' to keep all rows from any DataFrame
-    merged_df = pd.concat([strategy_df, fractal_df, bb_band_df], axis=1, join="outer")
-    # Forward fill missing values to propagate non-NaN values from previous rows
-    merged_df.fillna(method="ffill", inplace=True)
     return merged_df
 
 
@@ -283,6 +298,8 @@ def get_market_direction(row, condition_key):
     """Get the market direction based on the entry or exit conditions for a trade."""
 
     row_directions = row.get(Trade.signal_columns)
+    if not row_directions:
+        a = 10
     for direction, signals in Trade.market_direction_conditions[condition_key].items():
         for signal in signals:
             if all(dir == sig for dir, sig in zip(row_directions, signal)):
@@ -354,6 +371,8 @@ def check_entry_conditions(row, last_fractal):
         return False, None
 
     market_direction = get_market_direction(row, "entry")
+    if not market_direction:
+        return False, None
 
     if (
         not Trade.allowed_direction == MarketDirection.ALL
@@ -418,11 +437,13 @@ class TradeExitType(Enum):
 
 
 def identify_exit_signals(row, last_fractal):
-    # market direction
-    market_direction = get_market_direction(row, "exit")
 
     if is_trade_end_time_reached(row):
         return True, TradeExitType.END
+
+    market_direction = get_market_direction(row, "exit")
+    if not market_direction:
+        return False, None
 
     reset_last_fractal(last_fractal, market_direction)
     update_last_fractal(last_fractal, market_direction, row)
@@ -464,16 +485,17 @@ class TradeType(Enum):
 def main():
     start = time.time()
     instrument = "BANKNIFTY"
-    portfolio_ids = "1, 2"
-    strategy_ids = "1, 3"
+    portfolio_ids = "F13, F13_1"
+    strategy_ids = "1, 4"
     long_entry_signals = "GREEN, GREEN"
     long_exit_signals = "RED, RED"
     short_entry_signals = "RED, RED"
     short_exit_signals = "GREEN, GREEN"
-    start_date = "3/01/2017 9:55:00"
-    end_date = "3/07/2017 11:00:00"
-    fractal_file_number = 136
-    fractal_exit_count = "2"  # or 1 or 2 or 3 etc.
+    start_date = "3/01/2017 12:30:00"
+    end_date = "3/07/2017 16:00:00"
+    entry_fractal_file_number = 1
+    exit_fractal_file_number = 2
+    fractal_exit_count = "ALL"  # or 1 or 2 or 3 etc.
     bb_file_number = 1
     trail_bb_file_number = 1
     bb_band_sd = 2.0  # standard deviations (2.0, 2.25, 2.5, 2.75, 3.0)
@@ -483,7 +505,7 @@ def main():
     trade_start_time = "09:15:00"
     trade_end_time = "15:20:00"
     check_fractal = True
-    check_bb_band = True
+    check_bb_band = False
     check_trail_bb_band = False
     trail_bb_band_direction = "higher"  # or "lower"
     trade_type = TradeType.INTRADAY
@@ -491,6 +513,7 @@ def main():
 
     # todo
     # Validate the input parameters
+    portfolio_ids = [id.strip() for id in portfolio_ids.split(",")]
     strategy_ids = [id.strip() for id in strategy_ids.split(",")]
 
     def parse_signals(signals):
@@ -545,23 +568,27 @@ def main():
         Trade.fractal_exit_count = int(fractal_exit_count)
     except ValueError:
         pass
-    # output = []
-    # for strategy_id in strategy_ids:
 
-    strategy_df, fractal_df, bb_band_df, trail_bb_band_df = read_data(
-        Trade.instrument,
-        strategy_ids,
-        start_date,
-        end_date,
-        fractal_file_number,
-        bb_file_number,
-        Trade.bb_band_column,
-        trail_bb_file_number,
-        Trade.trail_bb_band_column,
+    strategy_df, entry_fractal_df, exit_fractal_df, bb_band_df, trail_bb_band_df = (
+        read_data(
+            Trade.instrument,
+            portfolio_ids,
+            strategy_ids,
+            start_date,
+            end_date,
+            entry_fractal_file_number,
+            exit_fractal_file_number,
+            bb_file_number,
+            Trade.bb_band_column,
+            trail_bb_file_number,
+            Trade.trail_bb_band_column,
+        )
     )
 
     # Merge data
-    merged_df = merge_data(strategy_df, fractal_df, bb_band_df, trail_bb_band_df)
+    merged_df = merge_data(
+        strategy_df, entry_fractal_df, entry_fractal_df, bb_band_df, trail_bb_band_df
+    )
 
     merged_df.to_csv(f"merged_df.csv", index=True)
 
@@ -600,8 +627,6 @@ def main():
 
     output_df = pd.DataFrame(trade_outputs)
 
-    # print(len(trade_outputs))
-    # write the output to csv
     output_df.to_csv("output.csv", index=False)
     stop = time.time()
     print(f"Time taken: {stop-start} seconds")
