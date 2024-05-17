@@ -83,11 +83,11 @@ class Trade:
     def is_trade_closed(self):
         return self.trade_closed
 
-    def formulate_output(self):
+    def formulate_output(self, strategy_pair):
         return [
             {
                 "Instrument": Trade.instrument,
-                "Strategy ID": Trade.strategy_ids,
+                "Strategy ID": strategy_pair,
                 "Signal": self.entry_signal.value,
                 "Entry Datetime": self.entry_datetime,
                 "Entry ID": self.entry_id,
@@ -486,13 +486,13 @@ def main():
     portfolio_ids = "F13, F13_1"
     # todo
     # 1. handle multiple strategy pair sequently
-    strategy_ids = "1, 4"
+    strategy_ids = "1, 4 | 1, 3"
     long_entry_signals = "RED, GREEN"
     long_exit_signals = "GREEN, RED | RED, RED | GREEN, GREEN"
     short_entry_signals = "GREEN, RED"
     short_exit_signals = "GREEN, GREEN | RED, GREEN | RED, RED"
     start_date = "3/01/2017 12:30:00"
-    end_date = "3/07/2023 16:00:00"
+    end_date = "3/07/2017 16:00:00"
     entry_fractal_file_number = 1
     exit_fractal_file_number = 2
     fractal_exit_count = "ALL"  # or 1 or 2 or 3 etc.
@@ -514,11 +514,11 @@ def main():
     # todo
     # Validate the input parameters
     portfolio_ids = [id.strip() for id in portfolio_ids.split(",")]
-    strategy_ids = [id.strip() for id in strategy_ids.split(",")]
 
     def parse_signals(signals):
         return [signal.strip() for signal in signals]
 
+    strategy_ids = [parse_signals(id.split(",")) for id in strategy_ids.split("|")]
     # Create the strategy_signal_map for each strategy
     conditions = {
         "entry": {
@@ -569,65 +569,70 @@ def main():
     except ValueError:
         pass
 
-    strategy_df, entry_fractal_df, exit_fractal_df, bb_band_df, trail_bb_band_df = (
-        read_data(
-            Trade.instrument,
-            portfolio_ids,
-            strategy_ids,
-            start_date,
-            end_date,
-            entry_fractal_file_number,
-            exit_fractal_file_number,
-            bb_file_number,
-            Trade.bb_band_column,
-            trail_bb_file_number,
-            Trade.trail_bb_band_column,
-        )
-    )
-
-    # Merge data
-    merged_df = merge_data(
-        strategy_df, entry_fractal_df, entry_fractal_df, bb_band_df, trail_bb_band_df
-    )
-
-    merged_df.to_csv(f"merged_df.csv", index=True)
-
-    # Dictionaries to track last fractals for both entry and exit
-    entry_last_fractal = {
-        MarketDirection.LONG: None,
-        MarketDirection.SHORT: None,
-    }
-    exit_last_fractal = {
-        MarketDirection.LONG: None,
-        MarketDirection.SHORT: None,
-        MarketDirection.PREVIOUS: None,
-    }
-    active_trades, completed_trades = [], []
-    for index, row in merged_df.iterrows():
-        is_entry, direction = check_entry_conditions(row, entry_last_fractal)
-        is_exit, exit_type = identify_exit_signals(row, exit_last_fractal)
-        if is_entry:
-            trade = Trade(
-                entry_signal=direction,
-                entry_datetime=index,
-                entry_price=row["Close"],
+    for strategy_pair in Trade.strategy_ids:
+        strategy_df, entry_fractal_df, exit_fractal_df, bb_band_df, trail_bb_band_df = (
+            read_data(
+                Trade.instrument,
+                portfolio_ids,
+                strategy_pair,
+                start_date,
+                end_date,
+                entry_fractal_file_number,
+                exit_fractal_file_number,
+                bb_file_number,
+                Trade.bb_band_column,
+                trail_bb_file_number,
+                Trade.trail_bb_band_column,
             )
-            active_trades.append(trade)
+        )
 
-        if is_exit:
-            for trade in active_trades[:]:
-                trade.add_exit(row.name, row["Close"], exit_type)
-                if trade.is_trade_closed():
-                    completed_trades.append(trade)
-                    active_trades.remove(trade)
+        # Merge data
+        merged_df = merge_data(
+            strategy_df,
+            entry_fractal_df,
+            exit_fractal_df,
+            bb_band_df,
+            trail_bb_band_df,
+        )
 
-    trade_outputs = []
-    for trade in chain(completed_trades, active_trades):
-        trade_outputs.extend(trade.formulate_output())
+        merged_df.to_csv(f"merged_df_{''.join(strategy_pair)}.csv", index=True)
 
-    output_df = pd.DataFrame(trade_outputs)
+        # Dictionaries to track last fractals for both entry and exit
+        entry_last_fractal = {
+            MarketDirection.LONG: None,
+            MarketDirection.SHORT: None,
+        }
+        exit_last_fractal = {
+            MarketDirection.LONG: None,
+            MarketDirection.SHORT: None,
+            MarketDirection.PREVIOUS: None,
+        }
+        active_trades, completed_trades = [], []
+        for index, row in merged_df.iterrows():
+            is_entry, direction = check_entry_conditions(row, entry_last_fractal)
+            is_exit, exit_type = identify_exit_signals(row, exit_last_fractal)
+            if is_entry:
+                trade = Trade(
+                    entry_signal=direction,
+                    entry_datetime=index,
+                    entry_price=row["Close"],
+                )
+                active_trades.append(trade)
 
-    output_df.to_csv("output.csv", index=False)
+            if is_exit:
+                for trade in active_trades[:]:
+                    trade.add_exit(row.name, row["Close"], exit_type)
+                    if trade.is_trade_closed():
+                        completed_trades.append(trade)
+                        active_trades.remove(trade)
+
+        trade_outputs = []
+        for trade in chain(completed_trades, active_trades):
+            trade_outputs.extend(trade.formulate_output(strategy_pair))
+
+        output_df = pd.DataFrame(trade_outputs)
+
+        output_df.to_csv(f"output_{''.join(strategy_pair)}.csv", index=False)
     stop = time.time()
     print(f"Time taken: {stop-start} seconds")
 
