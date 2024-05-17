@@ -484,9 +484,7 @@ def main():
     start = time.time()
     instrument = "BANKNIFTY"
     portfolio_ids = "F13, F13_1"
-    # todo
-    # 1. handle multiple strategy pair sequently
-    strategy_ids = "1, 4 | 1, 3"
+    strategy_ids = "1, 4 | 1, 3 | 2,3 "
     long_entry_signals = "RED, GREEN"
     long_exit_signals = "GREEN, RED | RED, RED | GREEN, GREEN"
     short_entry_signals = "GREEN, RED"
