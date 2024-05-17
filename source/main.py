@@ -55,8 +55,11 @@ class Trade:
             ):
                 self.trade_closed = True
 
-            if exit_type == TradeExitType.FRACTAL and Trade.fractal_exit_count:
-                if self.exit_id_counter == Trade.fractal_exit_count:
+            if Trade.fractal_exit_count:
+                if (
+                    exit_type == TradeExitType.FRACTAL
+                    and self.exit_id_counter == Trade.fractal_exit_count
+                ):
                     self.exits.append(
                         {
                             "exit_id": self.exit_id_counter,
@@ -468,9 +471,9 @@ def main():
     short_entry_signals = "RED, RED"
     short_exit_signals = "GREEN, GREEN"
     start_date = "3/01/2017 9:55:00"
-    end_date = "31/12/2023 11:00:00"
+    end_date = "3/07/2017 11:00:00"
     fractal_file_number = 136
-    fractal_exit_count = "ALL"  # or 1 or 2 or 3 etc.
+    fractal_exit_count = "2"  # or 1 or 2 or 3 etc.
     bb_file_number = 1
     trail_bb_file_number = 1
     bb_band_sd = 2.0  # standard deviations (2.0, 2.25, 2.5, 2.75, 3.0)
@@ -478,7 +481,7 @@ def main():
     bb_band_column = "mean"  # (mean, upper, lower)
     trail_bb_band_column = "mean"
     trade_start_time = "09:15:00"
-    trade_end_time = "10:55:00"
+    trade_end_time = "15:20:00"
     check_fractal = True
     check_bb_band = True
     check_trail_bb_band = False
@@ -581,7 +584,6 @@ def main():
                 entry_signal=direction,
                 entry_datetime=index,
                 entry_price=row["Close"],
-                # strategy_id=strategy_id,
             )
             active_trades.append(trade)
 
