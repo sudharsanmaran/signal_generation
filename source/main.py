@@ -298,8 +298,6 @@ def get_market_direction(row, condition_key):
     """Get the market direction based on the entry or exit conditions for a trade."""
 
     row_directions = row.get(Trade.signal_columns)
-    if not row_directions:
-        a = 10
     for direction, signals in Trade.market_direction_conditions[condition_key].items():
         for signal in signals:
             if all(dir == sig for dir, sig in zip(row_directions, signal)):
@@ -324,8 +322,8 @@ def update_last_fractal(last_fractal, market_direction, row):
     if not market_direction:
         return
     fractal_keys = {
-        MarketDirection.LONG: "P_1_FRACTAL_LONG",
-        MarketDirection.SHORT: "P_1_FRACTAL_SHORT",
+        MarketDirection.LONG: "P_1_PRE_FRACTAL_LONG",
+        MarketDirection.SHORT: "P_1_PRE_FRACTAL_SHORT",
     }
     if row[fractal_keys[market_direction]]:
         last_fractal[market_direction] = (row.name, row["Close"])
@@ -486,13 +484,15 @@ def main():
     start = time.time()
     instrument = "BANKNIFTY"
     portfolio_ids = "F13, F13_1"
+    # todo
+    # 1. handle multiple strategy pair sequently
     strategy_ids = "1, 4"
-    long_entry_signals = "GREEN, GREEN"
-    long_exit_signals = "RED, RED"
-    short_entry_signals = "RED, RED"
-    short_exit_signals = "GREEN, GREEN"
+    long_entry_signals = "RED, GREEN"
+    long_exit_signals = "GREEN, RED | RED, RED | GREEN, GREEN"
+    short_entry_signals = "GREEN, RED"
+    short_exit_signals = "GREEN, GREEN | RED, GREEN | RED, RED"
     start_date = "3/01/2017 12:30:00"
-    end_date = "3/07/2017 16:00:00"
+    end_date = "3/07/2023 16:00:00"
     entry_fractal_file_number = 1
     exit_fractal_file_number = 2
     fractal_exit_count = "ALL"  # or 1 or 2 or 3 etc.
@@ -505,10 +505,10 @@ def main():
     trade_start_time = "09:15:00"
     trade_end_time = "15:20:00"
     check_fractal = True
-    check_bb_band = False
+    check_bb_band = True
     check_trail_bb_band = False
     trail_bb_band_direction = "higher"  # or "lower"
-    trade_type = TradeType.INTRADAY
+    trade_type = TradeType.POSITIONAL
     allowed_direction = MarketDirection.ALL
 
     # todo
@@ -555,7 +555,7 @@ def main():
         f"P_1_{trail_bb_band_column.upper()}_BAND_{trail_bb_band_sd}"
     )
     Trade.allowed_direction = allowed_direction
-    Trade.signal_columns = [f"tag_{id}" for id in Trade.strategy_ids]
+    Trade.signal_columns = [f"TAG_{id}" for id in portfolio_ids]
 
     if trail_bb_band_direction == "higher":
         Trade.trail_compare_func = lambda a, b: a > b
