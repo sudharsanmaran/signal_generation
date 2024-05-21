@@ -4,7 +4,7 @@ from source.constants import MarketDirection, TradeExitType
 
 
 class Trade:
-    strategy_ids: Optional[List] = None
+    strategy_ids: Optional[tuple] = None
     entry_id_counter: int = 0
     fractal_exit_count: Optional[int] = None
     instrument: Optional[str] = None
@@ -21,7 +21,7 @@ class Trade:
     trail_bb_band_direction: Optional[str] = None
     trail_compare_func: Optional[callable] = None
     trail_opposite_compare_func: Optional[callable] = None
-    signal_columns: Optional[List] = None
+    signal_columns: Optional[tuple] = None
 
     def __init__(self, entry_signal, entry_datetime, entry_price):
         Trade.entry_id_counter += 1
@@ -98,3 +98,42 @@ class Trade:
             }
             for exit in self.exits
         ]
+
+
+def initialize(**kwargs):
+    Trade.strategy_ids = kwargs.get("strategy_ids")
+    Trade.instrument = kwargs.get("instrument")
+    Trade.trade_start_time = kwargs.get("trade_start_time")
+    Trade.trade_end_time = kwargs.get("trade_end_time")
+    Trade.check_fractal = kwargs.get("check_fractal")
+    Trade.check_bb_band = kwargs.get("check_bb_band")
+    Trade.check_trail_bb_band = kwargs.get("check_trail_bb_band")
+    Trade.type = kwargs.get("trade_type")
+    Trade.market_direction_conditions = {
+        "entry": {
+            MarketDirection.LONG: kwargs.get("long_entry_signals"),
+            MarketDirection.SHORT: kwargs.get("short_entry_signals"),
+        },
+        "exit": {
+            MarketDirection.LONG: kwargs.get("long_exit_signals"),
+            MarketDirection.SHORT: kwargs.get("short_exit_signals"),
+        },
+    }
+    Trade.bb_band_column = (
+        f"P_1_{kwargs.get('bb_band_column').upper()}_BAND_{kwargs.get('bb_band_sd')}"
+    )
+    Trade.trail_bb_band_column = f"P_1_{kwargs.get('trail_bb_band_column').upper()}_BAND_{kwargs.get('trail_bb_band_sd')}"
+    Trade.allowed_direction = kwargs.get("allowed_direction")
+    Trade.signal_columns = [f"TAG_{id}" for id in kwargs.get("portfolio_ids")]
+
+    fractal_exit_count = kwargs.get("fractal_exit_count")
+    Trade.fractal_exit_count = (
+        fractal_exit_count if isinstance(fractal_exit_count, int) else None
+    )
+
+    if kwargs.get("trail_bb_band_direction") == "higher":
+        Trade.trail_compare_func = lambda a, b: a > b
+        Trade.trail_opposite_compare_func = lambda a, b: a < b
+    else:
+        Trade.trail_compare_func = lambda a, b: a < b
+        Trade.trail_opposite_compare_func = lambda a, b: a > b

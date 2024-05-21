@@ -9,8 +9,8 @@ class TradeExitType(Enum):
 
 
 class TradeType(Enum):
-    INTRADAY = "Intraday"
-    POSITIONAL = "Positional"
+    INTRADAY = "intraday"
+    POSITIONAL = "positional"
 
 
 class MarketDirection(Enum):
