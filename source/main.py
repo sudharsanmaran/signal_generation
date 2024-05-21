@@ -1,8 +1,6 @@
 import time
-import pandas as pd
 
-from source.constants import MarketDirection, TradeType
-from source.trade import Trade, initialize
+from source.trade import initialize
 from source.trade_processor import process_trade
 from source.validations import validate_input
 
