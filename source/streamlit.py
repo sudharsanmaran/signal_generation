@@ -1,5 +1,10 @@
+import time
 import streamlit as st
 from itertools import product
+
+from source.trade import initialize
+from source.trade_processor import process_trade
+from source.validations import validate_input
 
 POSSIBLE_STRATEGY_IDS = list(range(1, 11))
 
@@ -77,7 +82,7 @@ def main():
         "Portfolio IDs (comma-separated, e.g., 1, 2, 3)"
     )
     if portfolio_ids_input:
-        portfolio_ids = tuple(portfolio_ids_input.split(","))
+        portfolio_ids = tuple(map(lambda a: a.strip(), portfolio_ids_input.split(",")))
         possible_flags_per_portfolio = get_portfolio_flags(portfolio_ids)
         filtered_flag_combinations = get_flag_combinations(
             portfolio_ids, possible_flags_per_portfolio
@@ -141,7 +146,7 @@ def main():
         instrument = st.text_input("Instrument", value="BANKNIFTY")
 
         start_date = st.text_input(
-            "Start Date (format: dd/mm/yyyy hh:mm:ss)", value="3/01/2019 09:15:00"
+            "Start Date (format: dd/mm/yyyy hh:mm:ss)", value="3/01/2019 09:00:00"
         )
         end_date = st.text_input(
             "End Date (format: dd/mm/yyyy hh:mm:ss)", value="3/04/2019 16:00:00"
@@ -170,7 +175,7 @@ def main():
             "Trail BB Band Column", options=["mean", "upper", "lower"], index=0
         )
         trade_start_time = st.text_input(
-            "Trade Start Time (format: hh:mm:ss)", value="13:15:00"
+            "Trade Start Time (format: hh:mm:ss)", value="09:15:00"
         )
         trade_end_time = st.text_input(
             "Trade End Time (format: hh:mm:ss)", value="15:20:00"
@@ -188,14 +193,55 @@ def main():
             "Allowed Direction", options=["all", "long", "short"], index=0
         )
 
-        # Submit button to process the selections
         if st.button("Submit"):
-            st.write("Long Entry Signals:", long_entry_signals)
-            st.write("Short Entry Signals:", short_entry_signals)
-            st.write("Long Exit Signals:", long_exit_signals)
-            st.write("Short Exit Signals:", short_exit_signals)
-            st.write("Selected Strategy Pairs:", strategy_pairs)
-            # Here you can also save the selections or perform further processing
+
+            input_data = {
+                "instrument": instrument,
+                "portfolio_ids": portfolio_ids,
+                "strategy_ids": strategy_pairs,
+                "long_entry_signals": long_entry_signals,
+                "long_exit_signals": long_exit_signals,
+                "short_entry_signals": short_entry_signals,
+                "short_exit_signals": short_exit_signals,
+                "start_date": start_date,
+                "end_date": end_date,
+                "entry_fractal_file_number": entry_fractal_file_number,
+                "exit_fractal_file_number": exit_fractal_file_number,
+                "fractal_exit_count": fractal_exit_count,
+                "bb_file_number": bb_file_number,
+                "trail_bb_file_number": trail_bb_file_number,
+                "bb_band_sd": bb_band_sd,
+                "trail_bb_band_sd": trail_bb_band_sd,
+                "bb_band_column": bb_band_column,
+                "trail_bb_band_column": trail_bb_band_column,
+                "trade_start_time": trade_start_time,
+                "trade_end_time": trade_end_time,
+                "check_fractal": check_fractal,
+                "check_bb_band": check_bb_band,
+                "check_trail_bb_band": check_trail_bb_band,
+                "trail_bb_band_direction": trail_bb_band_direction,
+                "trade_type": trade_type,
+                "allowed_direction": allowed_direction,
+            }
+            validated_input = validate_input(**input_data)
+
+            start = time.time()
+
+            initialize(**validated_input)
+
+            process_trade(
+                validated_input.get("portfolio_ids"),
+                validated_input.get("start_date"),
+                validated_input.get("end_date"),
+                validated_input.get("entry_fractal_file_number"),
+                validated_input.get("exit_fractal_file_number"),
+                validated_input.get("bb_file_number"),
+                validated_input.get("trail_bb_file_number"),
+            )
+            stop = time.time()
+            st.success(
+                f"Trade processing completed successfully! Total time taken: {stop-start} seconds"
+            )
 
 
 # Run the main function when the script is executed

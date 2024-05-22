@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import datetime, time
 from itertools import chain
-from typing import Union
+from typing import List, Union
 from pydantic import BaseModel, field_validator
 
 from source.constants import MarketDirection, TradeType
@@ -8,9 +8,9 @@ from source.constants import MarketDirection, TradeType
 
 class StrategyInput(BaseModel):
     instrument: str
-    strategy_ids: str
-    start_date: str
-    end_date: str
+    strategy_ids: List[tuple]
+    start_date: Union[str, datetime]
+    end_date: Union[str, datetime]
     entry_fractal_file_number: str
     exit_fractal_file_number: str
     bb_file_number: str
@@ -19,8 +19,8 @@ class StrategyInput(BaseModel):
     trail_bb_band_sd: float
     bb_band_column: str
     trail_bb_band_column: str
-    trade_start_time: str
-    trade_end_time: str
+    trade_start_time: time
+    trade_end_time: time
     check_fractal: bool
     check_bb_band: bool
     check_trail_bb_band: bool
@@ -28,23 +28,20 @@ class StrategyInput(BaseModel):
     trade_type: TradeType
     allowed_direction: MarketDirection
     fractal_exit_count: Union[int, str]
-    long_entry_signals: str
-    long_exit_signals: str
-    short_entry_signals: str
-    short_exit_signals: str
-    portfolio_ids: str
+    long_entry_signals: List[tuple]
+    long_exit_signals: List[tuple]
+    short_entry_signals: List[tuple]
+    short_exit_signals: List[tuple]
+    portfolio_ids: tuple
 
-    @field_validator("portfolio_ids")
-    def split_portfolio_ids(cls, v):
-        return tuple(id.strip() for id in v.split(","))
-
-    @field_validator("trade_start_time", "trade_end_time")
-    def convert_to_time(cls, v):
-        if isinstance(v, str):
-            return datetime.strptime(v, "%H:%M:%S").time()
-        elif isinstance(v, datetime):
-            return v.time()
-        raise ValueError('Invalid time format, should be "hh:mm:ss"')
+    # @field_validator("trade_start_time", "trade_end_time")
+    # def convert_to_time(cls, v):
+    #     if isinstance(v, str):
+    #         return datetime.strptime(v, "%H:%M:%S").time()
+    #     elif isinstance(v, datetime):
+    #         return v.time()
+    #     elif
+    #     raise ValueError('Invalid time format, should be "hh:mm:ss"')
 
     @field_validator("start_date", "end_date")
     def convert_to_datetime(cls, v):
@@ -53,25 +50,6 @@ class StrategyInput(BaseModel):
         elif isinstance(v, datetime):
             return v
         raise ValueError('Invalid datetime format, should be "dd/mm/yyyy hh:mm:ss"')
-
-    @field_validator("strategy_ids")
-    def split_strategy_ids(cls, v):
-        def parse_signals(signals):
-            return tuple(signal.strip() for signal in signals.split(","))
-
-        return tuple(parse_signals(id) for id in v.split("|"))
-
-    @field_validator(
-        "long_entry_signals",
-        "long_exit_signals",
-        "short_entry_signals",
-        "short_exit_signals",
-    )
-    def split_conditions(cls, v, values):
-        def parse_signals(signals):
-            return tuple(signal.strip() for signal in signals.split(","))
-
-        return tuple(parse_signals(cond) for cond in v.split("|"))
 
     @field_validator("bb_band_sd", "trail_bb_band_sd")
     def validate_bb_band_sd(cls, v):

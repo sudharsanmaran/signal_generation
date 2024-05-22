@@ -189,7 +189,7 @@ def process_trade(
     trail_bb_file_number,
 ):
     for strategy_pair in Trade.strategy_ids:
-        strategy_pair_str = "_".join(strategy_pair)
+        strategy_pair_str = "_".join(map(lambda a: str(a), strategy_pair))
         strategy_df, entry_fractal_df, exit_fractal_df, bb_band_df, trail_bb_band_df = (
             read_data(
                 Trade.instrument,
