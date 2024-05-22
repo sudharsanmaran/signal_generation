@@ -134,7 +134,7 @@ def read_data(
     )
 
     trail_bb_band_df.rename(
-        columns={bb_band_column: f"trail_{trail_bb_band_column}"},
+        columns={trail_bb_band_column: f"trail_{trail_bb_band_column}"},
         inplace=True,
     )
 
@@ -151,11 +151,6 @@ def read_data(
         (trail_bb_band_df.index >= start_date) & (trail_bb_band_df.index <= end_date)
     ]
 
-    all_strategies_df = all_strategies_df.dropna(axis=0)
-    entry_fractal_df = entry_fractal_df.dropna(axis=0)
-    exit_fractal_df = exit_fractal_df.dropna(axis=0)
-    bb_band_df = bb_band_df.dropna(axis=0)
-    trail_bb_band_df = trail_bb_band_df.dropna(axis=0)
 
     return (
         all_strategies_df,
