@@ -155,47 +155,65 @@ def main():
         end_date = st.text_input(
             "End Date (format: dd/mm/yyyy hh:mm:ss)", value="3/04/2019 16:00:00"
         )
-        entry_fractal_file_number = st.text_input(
-            "Entry Fractal File Number", value="1"
-        )
-        exit_fractal_file_number = st.text_input("Exit Fractal File Number", value="2")
-        fractal_exit_count = st.text_input(
-            "Fractal Exit Count (e.g., 6, ALL)", value="ALL"
-        )
-        bb_file_number = st.text_input("BB File Number", value="1")
-        trail_bb_file_number = st.text_input("Trail BB File Number", value="1")
-        bb_band_sd = st.selectbox(
-            "BB Band Standard Deviations", options=[2.0, 2.25, 2.5, 2.75, 3.0], index=0
-        )
-        trail_bb_band_sd = st.selectbox(
-            "Trail BB Band Standard Deviations",
-            options=[2.0, 2.25, 2.5, 2.75, 3.0],
-            index=0,
-        )
-        bb_band_column = st.selectbox(
-            "BB Band Column", options=["mean", "upper", "lower"], index=0
-        )
-        trail_bb_band_column = st.selectbox(
-            "Trail BB Band Column", options=["mean", "upper", "lower"], index=0
-        )
         trade_start_time = st.text_input(
             "Trade Start Time (format: hh:mm:ss)", value="09:15:00"
         )
         trade_end_time = st.text_input(
             "Trade End Time (format: hh:mm:ss)", value="15:20:00"
         )
-        check_fractal = st.checkbox("Check Fractal", value=True)
-        check_bb_band = st.checkbox("Check BB Band", value=False)
-        check_trail_bb_band = st.checkbox("Check Trail BB Band", value=False)
-        trail_bb_band_direction = st.selectbox(
-            "Trail BB Band Direction", options=["higher", "lower"], index=0
-        )
+
         trade_type = st.selectbox(
             "Trade Type", options=["positional", "intraday"], index=0
         )
         allowed_direction = st.selectbox(
             "Allowed Direction", options=["all", "long", "short"], index=0
         )
+
+        # Entry Fractal Inputs (conditionally displayed)
+        entry_fractal_check = st.checkbox("Check Entry Fractal", value=False)
+        if entry_fractal_check:
+            entry_fractal_file_number = st.text_input(
+                "Entry Fractal File Number", value="1"
+            )
+
+        # Exit Fractal Inputs (conditionally displayed)
+        exit_fractal_check = st.checkbox("Check Exit Fractal", value=False)
+        if exit_fractal_check:
+            exit_fractal_file_number = st.text_input(
+                "Exit Fractal File Number", value="2"
+            )
+            fractal_exit_count = st.text_input(
+                "Fractal Exit Count (e.g., 6, ALL)", value="ALL"
+            )
+
+        # Bollinger Band Inputs (conditionally displayed)
+        check_bb_band = st.checkbox("Check BB Band", value=False)
+        if check_bb_band:
+            bb_file_number = st.text_input("BB File Number", value="1")
+            bb_band_sd = st.selectbox(
+                "BB Band Standard Deviations",
+                options=[2.0, 2.25, 2.5, 2.75, 3.0],
+                index=0,
+            )
+            bb_band_column = st.selectbox(
+                "BB Band Column", options=["mean", "upper", "lower"], index=0
+            )
+
+        # Trail BB Band Inputs (conditionally displayed)
+        check_trail_bb_band = st.checkbox("Check Trail BB Band", value=False)
+        if check_trail_bb_band:
+            trail_bb_file_number = st.text_input("Trail BB File Number", value="1")
+            trail_bb_band_sd = st.selectbox(
+                "Trail BB Band Standard Deviations",
+                options=[2.0, 2.25, 2.5, 2.75, 3.0],
+                index=0,
+            )
+            trail_bb_band_column = st.selectbox(
+                "Trail BB Band Column", options=["mean", "upper", "lower"], index=0
+            )
+            trail_bb_band_direction = st.selectbox(
+                "Trail BB Band Direction", options=["higher", "lower"], index=0
+            )
 
         if st.button("Submit"):
 
