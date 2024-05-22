@@ -4,6 +4,7 @@ from source.constants import MarketDirection, TradeExitType
 
 
 class Trade:
+    portfolio_ids: tuple
     strategy_ids: Optional[tuple] = None
     entry_id_counter: int = 0
     fractal_exit_count: Optional[int] = None
@@ -23,11 +24,12 @@ class Trade:
     trail_opposite_compare_func: Optional[callable] = None
     signal_columns: Optional[tuple] = None
 
-    def __init__(self, entry_signal, entry_datetime, entry_price):
+    def __init__(self, entry_signal, entry_datetime, entry_price, signal_count):
         Trade.entry_id_counter += 1
         self.entry_id = Trade.entry_id_counter
 
         self.entry_signal = entry_signal
+        self.signal_count = signal_count
         self.entry_datetime = entry_datetime
         self.entry_price = entry_price
         self.exits = []
@@ -81,26 +83,30 @@ class Trade:
     def is_trade_closed(self):
         return self.trade_closed
 
-    def formulate_output(self, strategy_pair):
+    def formulate_output(self, strategy_pair, portfolio_pair=None):
         return [
             {
                 "Instrument": Trade.instrument,
-                "Strategy ID": strategy_pair,
+                "Portfolios": portfolio_pair,
+                "Strategy IDs": strategy_pair,
                 "Signal": self.entry_signal.value,
+                "Signal Number": self.signal_count,
                 "Entry Datetime": self.entry_datetime,
                 "Entry ID": self.entry_id,
                 "Exit ID": exit["exit_id"],
                 "Exit Datetime": exit["exit_datetime"],
                 "Exit Type": exit["exit_type"].value,
+                "Intraday/ Positional": Trade.type.value,
                 "Entry Price": self.entry_price,
                 "Exit Price": exit["exit_price"],
-                "Profit/Loss": exit["pnl"],
+                "Net points": exit["pnl"],
             }
             for exit in self.exits
         ]
 
 
 def initialize(**kwargs):
+    Trade.portfolio_ids = kwargs.get("portfolio_ids")
     Trade.strategy_ids = kwargs.get("strategy_ids")
     Trade.instrument = kwargs.get("instrument")
     Trade.trade_start_time = kwargs.get("trade_start_time")

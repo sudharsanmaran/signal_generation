@@ -66,7 +66,6 @@ def main():
     initialize(**validated_input)
 
     process_trade(
-        validated_input.get("portfolio_ids"),
         validated_input.get("start_date"),
         validated_input.get("end_date"),
         validated_input.get("entry_fractal_file_number"),

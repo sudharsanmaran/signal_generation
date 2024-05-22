@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 
 
@@ -19,9 +20,14 @@ def read_data(
     start_date = pd.to_datetime(start_date, format="%d/%m/%Y %H:%M:%S")
     end_date = pd.to_datetime(end_date, format="%d/%m/%Y %H:%M:%S")
 
+    base_path = os.getenv("DB_PATH")
+    base_path = os.path.expanduser(base_path)
+
     strategy_dfs, is_close_read = [], False
     for portfolio_id, strategy_id in zip(portfolio_ids, strategy_ids):
-        strategy_path = f"~/Downloads/Portfolio Database/{portfolio_id}/{instrument}/{strategy_id}_result.csv"
+        strategy_path = os.path.join(
+            base_path, portfolio_id, instrument, f"{strategy_id}_result.csv"
+        )
         columns = []
         if not is_close_read:
             columns = ["TIMESTAMP", "Close", f"TAG_{portfolio_id}"]
@@ -41,10 +47,18 @@ def read_data(
 
     all_strategies_df = pd.concat(strategy_dfs, axis=1)
 
-    entry_fractal_path = f"~/Downloads/Portfolio Database/Fractal/{instrument}/{entry_fractal_file_number}_result.csv"
-    exit_fractal_path = f"~/Downloads/Portfolio Database/Fractal/{instrument}/{exit_fractal_file_number}_result.csv"
-    bb_band_path = f"~/Downloads/Portfolio Database/BB Band/{instrument}/{bb_file_number}_result.csv"
-    trail_bb_band_path = f"~/Downloads/Portfolio Database/BB Band/{instrument}/{trail_bb_file_number}_result.csv"
+    entry_fractal_path = os.path.join(
+        base_path, "Fractal", instrument, f"{entry_fractal_file_number}_result.csv"
+    )
+    exit_fractal_path = os.path.join(
+        base_path, "Fractal", instrument, f"{exit_fractal_file_number}_result.csv"
+    )
+    bb_band_path = os.path.join(
+        base_path, "BB Band", instrument, f"{bb_file_number}_result.csv"
+    )
+    trail_bb_band_path = os.path.join(
+        base_path, "BB Band", instrument, f"{trail_bb_file_number}_result.csv"
+    )
 
     entry_fractal_df = pd.read_csv(
         entry_fractal_path,

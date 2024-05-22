@@ -1,10 +1,14 @@
 import time
 import streamlit as st
 from itertools import product
+from dotenv import load_dotenv
 
 from source.trade import initialize
 from source.trade_processor import process_trade
 from source.validations import validate_input
+
+
+load_dotenv()
 
 POSSIBLE_STRATEGY_IDS = list(range(1, 11))
 
@@ -230,7 +234,6 @@ def main():
             initialize(**validated_input)
 
             process_trade(
-                validated_input.get("portfolio_ids"),
                 validated_input.get("start_date"),
                 validated_input.get("end_date"),
                 validated_input.get("entry_fractal_file_number"),

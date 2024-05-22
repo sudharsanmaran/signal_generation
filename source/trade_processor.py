@@ -159,6 +159,7 @@ def identify_exit_signals(row, last_fractal):
     previous_direction = last_fractal.get(MarketDirection.PREVIOUS, None)
     last_fractal[MarketDirection.PREVIOUS] = market_direction
     if previous_direction and signal_change_exit(previous_direction, market_direction):
+        last_fractal["signal_count"] += 1
         return True, TradeExitType.SIGNAL
 
     exit_type, is_trail_bb_band_exit, is_fractal_exit = None, False, False
@@ -180,7 +181,6 @@ def identify_exit_signals(row, last_fractal):
 
 
 def process_trade(
-    portfolio_ids,
     start_date,
     end_date,
     entry_fractal_file_number,
@@ -188,12 +188,13 @@ def process_trade(
     bb_file_number,
     trail_bb_file_number,
 ):
+    portfolio_pair_str = " - ".join(Trade.portfolio_ids)
     for strategy_pair in Trade.strategy_ids:
-        strategy_pair_str = "_".join(map(lambda a: str(a), strategy_pair))
+        strategy_pair_str = " - ".join(map(lambda a: str(a), strategy_pair))
         strategy_df, entry_fractal_df, exit_fractal_df, bb_band_df, trail_bb_band_df = (
             read_data(
                 Trade.instrument,
-                portfolio_ids,
+                Trade.portfolio_ids,
                 strategy_pair,
                 start_date,
                 end_date,
@@ -226,6 +227,7 @@ def process_trade(
             MarketDirection.LONG: None,
             MarketDirection.SHORT: None,
             MarketDirection.PREVIOUS: None,
+            "signal_count": 1,
         }
         active_trades, completed_trades = [], []
         for index, row in merged_df.iterrows():
@@ -236,6 +238,7 @@ def process_trade(
                     entry_signal=direction,
                     entry_datetime=index,
                     entry_price=row["Close"],
+                    signal_count=exit_last_fractal["signal_count"],
                 )
                 active_trades.append(trade)
 
@@ -248,7 +251,9 @@ def process_trade(
 
         trade_outputs = []
         for trade in chain(completed_trades, active_trades):
-            trade_outputs.extend(trade.formulate_output(strategy_pair_str))
+            trade_outputs.extend(
+                trade.formulate_output(strategy_pair_str, portfolio_pair_str)
+            )
 
         output_df = pd.DataFrame(trade_outputs)
 
