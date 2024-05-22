@@ -35,25 +35,13 @@ archive.zip
 deployment-docker-compose.yml
 
 alembic/versions/*
-output.csv
-merged_df.csv
-.~lock.output.csv#
-.~lock.merged_df.csv#
-merged_df_1.csv
-merged_df_2.csv
-merged_df_4.csv
-.~lock.merged_df_14.csv#
-.~lock.output_13.csv#
-.~lock.output_14.csv#
-merged_df_13.csv
-merged_df_14.csv
-output_13.csv
-output_14.csv
-merged_df_23.csv
-output_23.csv
-.~lock.merged_df_1_4.csv#
-.~lock.output_1_4.csv#
-merged_df_1_4.csv
-output_1_4.csv
-merged_df_1_3.csv
-output_1_3.csv
+
+# Ignore all merged_df files
+merged_df*.csv
+
+# Ignore all output files
+output*.csv
+
+# Ignore lock files for merged_df and output files
+.~lock.merged_df*.csv#
+.~lock.output*.csv#
