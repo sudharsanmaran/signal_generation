@@ -21,7 +21,6 @@ def read_data(
     end_date = pd.to_datetime(end_date, format="%d/%m/%Y %H:%M:%S")
 
     base_path = os.getenv("DB_PATH")
-    base_path = os.path.expanduser(base_path)
 
     strategy_dfs, is_close_read = [], False
     for portfolio_id, strategy_id in zip(portfolio_ids, strategy_ids):
