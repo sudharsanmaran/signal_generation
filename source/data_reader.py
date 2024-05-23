@@ -1,5 +1,11 @@
+from functools import reduce
 import os
 import pandas as pd
+
+
+def merge_data(all_dfs):
+    merged_df = reduce(lambda x, y: x.join(y, how="left"), all_dfs)
+    return merged_df
 
 
 def read_data(
@@ -14,25 +20,25 @@ def read_data(
     bb_band_column,
     trail_bb_file_number,
     trail_bb_band_column,
+    read_entry_fractal,
+    read_exit_fractal,
+    read_bb_fractal,
+    read_trail_bb_fractal,
 ):
-
-    # Convert start and end dates to datetime
     start_date = pd.to_datetime(start_date, format="%d/%m/%Y %H:%M:%S")
     end_date = pd.to_datetime(end_date, format="%d/%m/%Y %H:%M:%S")
-
     base_path = os.getenv("DB_PATH")
+    strategy_dfs = []
 
-    strategy_dfs, is_close_read = [], False
+    is_close_read = False
     for portfolio_id, strategy_id in zip(portfolio_ids, strategy_ids):
         strategy_path = os.path.join(
             base_path, portfolio_id, instrument, f"{strategy_id}_result.csv"
         )
-        columns = []
+        columns = ["TIMESTAMP", f"TAG_{portfolio_id}"]
         if not is_close_read:
-            columns = ["TIMESTAMP", "Close", f"TAG_{portfolio_id}"]
+            columns.insert(1, "Close")
             is_close_read = True
-        else:
-            columns = ["TIMESTAMP", f"TAG_{portfolio_id}"]
         strategy_df = pd.read_csv(
             strategy_path,
             parse_dates=["TIMESTAMP"],
@@ -45,127 +51,69 @@ def read_data(
         strategy_dfs.append(strategy_df)
 
     all_strategies_df = pd.concat(strategy_dfs, axis=1)
+    all_dfs = [all_strategies_df]
 
-    entry_fractal_path = os.path.join(
-        base_path, "Fractal", instrument, f"{entry_fractal_file_number}_result.csv"
-    )
-    exit_fractal_path = os.path.join(
-        base_path, "Fractal", instrument, f"{exit_fractal_file_number}_result.csv"
-    )
-    bb_band_path = os.path.join(
-        base_path, "BB Band", instrument, f"{bb_file_number}_result.csv"
-    )
-    trail_bb_band_path = os.path.join(
-        base_path, "BB Band", instrument, f"{trail_bb_file_number}_result.csv"
-    )
+    fractal_columns = [
+        "P_1_FRACTAL_LONG",
+        "P_1_FRACTAL_SHORT",
+        "P_1_FRACTAL_CONFIRMED_LONG",
+        "P_1_FRACTAL_CONFIRMED_SHORT",
+    ]
+    index = "TIMESTAMP"
 
-    entry_fractal_df = pd.read_csv(
-        entry_fractal_path,
-        parse_dates=["TIMESTAMP"],
-        date_format="%Y-%m-%d %H:%M",
-        usecols=[
-            "TIMESTAMP",
-            "P_1_FRACTAL_LONG",
-            "P_1_FRACTAL_SHORT",
-            "P_1_FRACTAL_CONFIRMED_LONG",
-            "P_1_FRACTAL_CONFIRMED_SHORT",
-        ],
-        dtype={
-            "P_1_FRACTAL_LONG": "boolean",
-            "P_1_FRACTAL_CONFIRMED_LONG": "boolean",
-            "P_1_FRACTAL_CONFIRMED_SHORT": "boolean",
-            "P_1_FRACTAL_SHORT": "boolean",
+    file_details = {
+        "entry_fractal": {
+            "read": read_entry_fractal,
+            "path": "Fractal",
+            "file_number": entry_fractal_file_number,
+            "cols": [index, *fractal_columns],
+            "dtype": {col: "boolean" for col in fractal_columns},
+            "rename": {col: f"entry_{col}" for col in fractal_columns},
         },
-        index_col="TIMESTAMP",
-    )
-    # convert dt to datetime
-    entry_fractal_df.index = pd.to_datetime(entry_fractal_df.index)
-
-    exit_fractal_df = pd.read_csv(
-        exit_fractal_path,
-        parse_dates=["TIMESTAMP"],
-        date_format="%Y-%m-%d %H:%M",
-        usecols=[
-            "TIMESTAMP",
-            "P_1_FRACTAL_LONG",
-            "P_1_FRACTAL_SHORT",
-            "P_1_FRACTAL_CONFIRMED_LONG",
-            "P_1_FRACTAL_CONFIRMED_SHORT",
-        ],
-        dtype={
-            "P_1_FRACTAL_LONG": "boolean",
-            "P_1_FRACTAL_CONFIRMED_LONG": "boolean",
-            "P_1_FRACTAL_CONFIRMED_SHORT": "boolean",
-            "P_1_FRACTAL_SHORT": "boolean",
+        "exit_fractal": {
+            "read": read_exit_fractal,
+            "path": "Fractal",
+            "file_number": exit_fractal_file_number,
+            "cols": [index, *fractal_columns],
+            "dtype": {col: "boolean" for col in fractal_columns},
+            "rename": {col: f"exit_{col}" for col in fractal_columns},
         },
-        index_col="TIMESTAMP",
-    )
-    # convert dt to datetime
-    exit_fractal_df.index = pd.to_datetime(entry_fractal_df.index)
+        "bb_band": {
+            "read": read_bb_fractal,
+            "path": "BB Band",
+            "file_number": bb_file_number,
+            "cols": [index, bb_band_column],
+            "rename": {bb_band_column: f"bb_{bb_band_column}"},
+        },
+        "trail_bb_band": {
+            "read": read_trail_bb_fractal,
+            "path": "BB Band",
+            "file_number": trail_bb_file_number,
+            "cols": [index, trail_bb_band_column],
+            "rename": {trail_bb_band_column: f"trail_{trail_bb_band_column}"},
+        },
+    }
 
-    # Define the columns to read from BB band file based on bb_band_sd
-    bb_band_cols = ["TIMESTAMP", bb_band_column]
+    for _, details in file_details.items():
+        if details["read"]:
+            file_path = os.path.join(
+                base_path,
+                details["path"],
+                instrument,
+                f"{details['file_number']}_result.csv",
+            )
+            df = pd.read_csv(
+                file_path,
+                parse_dates=["TIMESTAMP"],
+                date_format="%Y-%m-%d %H:%M:%S",
+                usecols=details["cols"],
+                dtype=details.get("dtype", None),
+                index_col="TIMESTAMP",
+            )
+            df.index = pd.to_datetime(df.index)
+            df = df.loc[start_date:end_date]
+            if "rename" in details:
+                df.rename(columns=details["rename"], inplace=True)
+            all_dfs.append(df)
 
-    # Read the BB band file with date filtering, parsing, and indexing
-    bb_band_df = pd.read_csv(
-        bb_band_path,
-        parse_dates=["TIMESTAMP"],
-        date_format="%Y-%m-%d %H:%M:%S",
-        usecols=bb_band_cols,
-        index_col="TIMESTAMP",
-    )
-
-    # Rename BB band columns for consistency
-    bb_band_df.rename(
-        columns={bb_band_column: f"bb_{bb_band_column}"},
-        inplace=True,
-    )
-
-    # Define the columns to read from Trail BB band file based on bb_band_sd
-    trail_bb_band_cols = ["TIMESTAMP", trail_bb_band_column]
-
-    # Read the Trail BB band file with date filtering, parsing, and indexing
-    trail_bb_band_df = pd.read_csv(
-        trail_bb_band_path,
-        parse_dates=["TIMESTAMP"],
-        date_format="%Y-%m-%d %H:%M:%S",
-        usecols=trail_bb_band_cols,
-        index_col="TIMESTAMP",
-    )
-
-    trail_bb_band_df.rename(
-        columns={trail_bb_band_column: f"trail_{trail_bb_band_column}"},
-        inplace=True,
-    )
-
-    entry_fractal_df = entry_fractal_df[
-        (entry_fractal_df.index >= start_date) & (entry_fractal_df.index <= end_date)
-    ]
-    exit_fractal_df = exit_fractal_df[
-        (exit_fractal_df.index >= start_date) & (exit_fractal_df.index <= end_date)
-    ]
-    bb_band_df = bb_band_df[
-        (bb_band_df.index >= start_date) & (bb_band_df.index <= end_date)
-    ]
-    trail_bb_band_df = trail_bb_band_df[
-        (trail_bb_band_df.index >= start_date) & (trail_bb_band_df.index <= end_date)
-    ]
-
-
-    return (
-        all_strategies_df,
-        entry_fractal_df,
-        exit_fractal_df,
-        bb_band_df,
-        trail_bb_band_df,
-    )
-
-
-def merge_data(
-    strategy_df, entry_fractal_df, exit_fractal_df, bb_band_df, trail_bb_band_df
-):
-    merged_df = strategy_df.join(entry_fractal_df, how="left")
-    merged_df = strategy_df.join(exit_fractal_df, how="left")
-    merged_df = merged_df.join(bb_band_df, how="left")
-    merged_df = merged_df.join(trail_bb_band_df, how="left")
-    return merged_df
+    return all_dfs

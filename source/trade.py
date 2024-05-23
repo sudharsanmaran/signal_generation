@@ -11,9 +11,11 @@ class Trade:
     instrument: Optional[str] = None
     trade_start_time = None
     trade_end_time = None
-    check_fractal: bool = False
+    check_entry_fractal: bool = False
+    check_exit_fractal: bool = False
     check_bb_band: bool = False
     check_trail_bb_band: bool = False
+    check_entry_based: bool = False
     bb_band_column: Optional[str] = None
     trail_bb_band_column: Optional[str] = None
     type: Optional[str] = None
@@ -105,39 +107,42 @@ class Trade:
         ]
 
 
-def initialize(**kwargs):
-    Trade.portfolio_ids = kwargs.get("portfolio_ids")
-    Trade.strategy_ids = kwargs.get("strategy_ids")
-    Trade.instrument = kwargs.get("instrument")
-    Trade.trade_start_time = kwargs.get("trade_start_time")
-    Trade.trade_end_time = kwargs.get("trade_end_time")
-    Trade.check_fractal = kwargs.get("check_fractal")
-    Trade.check_bb_band = kwargs.get("check_bb_band")
-    Trade.check_trail_bb_band = kwargs.get("check_trail_bb_band")
-    Trade.type = kwargs.get("trade_type")
+def initialize(validated_input):
+    Trade.portfolio_ids = validated_input.get("portfolio_ids")
+    Trade.strategy_ids = validated_input.get("strategy_ids")
+    Trade.instrument = validated_input.get("instrument")
+    Trade.trade_start_time = validated_input.get("trade_start_time")
+    Trade.trade_end_time = validated_input.get("trade_end_time")
+    Trade.check_entry_fractal = validated_input.get("check_entry_fractal")
+    Trade.check_exit_fractal = validated_input.get("check_exit_fractal")
+    Trade.check_bb_band = validated_input.get("check_bb_band")
+    Trade.check_trail_bb_band = validated_input.get("check_trail_bb_band")
+    Trade.check_entry_based = validated_input.get("check_entry_based")
+    Trade.type = validated_input.get("trade_type")
     Trade.market_direction_conditions = {
         "entry": {
-            MarketDirection.LONG: kwargs.get("long_entry_signals"),
-            MarketDirection.SHORT: kwargs.get("short_entry_signals"),
+            MarketDirection.LONG: validated_input.get("long_entry_signals"),
+            MarketDirection.SHORT: validated_input.get("short_entry_signals"),
         },
         "exit": {
-            MarketDirection.LONG: kwargs.get("long_exit_signals"),
-            MarketDirection.SHORT: kwargs.get("short_exit_signals"),
+            MarketDirection.LONG: validated_input.get("long_exit_signals"),
+            MarketDirection.SHORT: validated_input.get("short_exit_signals"),
         },
     }
-    Trade.bb_band_column = (
-        f"P_1_{kwargs.get('bb_band_column').upper()}_BAND_{kwargs.get('bb_band_sd')}"
-    )
-    Trade.trail_bb_band_column = f"P_1_{kwargs.get('trail_bb_band_column').upper()}_BAND_{kwargs.get('trail_bb_band_sd')}"
-    Trade.allowed_direction = kwargs.get("allowed_direction")
-    Trade.signal_columns = [f"TAG_{id}" for id in kwargs.get("portfolio_ids")]
+    Trade.allowed_direction = validated_input.get("allowed_direction")
+    Trade.signal_columns = [f"TAG_{id}" for id in validated_input.get("portfolio_ids")]
 
-    fractal_exit_count = kwargs.get("fractal_exit_count")
+    fractal_exit_count = validated_input.get("fractal_exit_count")
     Trade.fractal_exit_count = (
         fractal_exit_count if isinstance(fractal_exit_count, int) else None
     )
 
-    if kwargs.get("trail_bb_band_direction") == "higher":
+    if Trade.check_bb_band:
+        Trade.bb_band_column = f"P_1_{validated_input.get('bb_band_column').upper()}_BAND_{validated_input.get('bb_band_sd')}"
+    if Trade.check_trail_bb_band:
+        Trade.trail_bb_band_column = f"P_1_{validated_input.get('trail_bb_band_column').upper()}_BAND_{validated_input.get('trail_bb_band_sd')}"
+
+    if validated_input.get("trail_bb_band_direction") == "higher":
         Trade.trail_compare_func = lambda a, b: a > b
         Trade.trail_opposite_compare_func = lambda a, b: a < b
     else:

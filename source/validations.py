@@ -1,47 +1,41 @@
 from datetime import datetime, time
 from itertools import chain
 from typing import List, Union
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ValidationError, field_validator
 
 from source.constants import MarketDirection, TradeType
 
 
 class StrategyInput(BaseModel):
-    instrument: str
+    portfolio_ids: tuple
     strategy_ids: List[tuple]
+    instrument: str
     start_date: Union[str, datetime]
     end_date: Union[str, datetime]
-    entry_fractal_file_number: str
-    exit_fractal_file_number: str
-    bb_file_number: str
-    trail_bb_file_number: str
-    bb_band_sd: float
-    trail_bb_band_sd: float
-    bb_band_column: str
-    trail_bb_band_column: str
-    trade_start_time: time
-    trade_end_time: time
-    check_fractal: bool
-    check_bb_band: bool
-    check_trail_bb_band: bool
-    trail_bb_band_direction: str
-    trade_type: TradeType
-    allowed_direction: MarketDirection
-    fractal_exit_count: Union[int, str]
     long_entry_signals: List[tuple]
     long_exit_signals: List[tuple]
     short_entry_signals: List[tuple]
     short_exit_signals: List[tuple]
-    portfolio_ids: tuple
-
-    # @field_validator("trade_start_time", "trade_end_time")
-    # def convert_to_time(cls, v):
-    #     if isinstance(v, str):
-    #         return datetime.strptime(v, "%H:%M:%S").time()
-    #     elif isinstance(v, datetime):
-    #         return v.time()
-    #     elif
-    #     raise ValueError('Invalid time format, should be "hh:mm:ss"')
+    trade_type: TradeType
+    allowed_direction: MarketDirection
+    trade_start_time: time
+    trade_end_time: time
+    entry_fractal_file_number: str = None
+    exit_fractal_file_number: str = None
+    bb_file_number: str = None
+    trail_bb_file_number: str = None
+    bb_band_sd: float = None
+    trail_bb_band_sd: float = None
+    bb_band_column: str = None
+    trail_bb_band_column: str = None
+    check_entry_fractal: bool = None
+    check_exit_fractal: bool = None
+    check_bb_band: bool = None
+    check_trail_bb_band: bool = None
+    trail_bb_band_direction: str = None
+    fractal_exit_count: Union[int, str] = None
+    number_of_entries: int = None
+    steps_to_skip: int = None
 
     @field_validator("start_date", "end_date")
     def convert_to_datetime(cls, v):
@@ -137,13 +131,12 @@ def check_exit_conditions(validated_data):
         raise ValueError("short entry signals should added in long exit signals")
 
 
-def validate_input(**kwargs):
+def validate_input(input_data):
     try:
-        input_data = {**kwargs}
         validated_data = StrategyInput(**input_data)
         validate_count(validated_data)
         check_exit_conditions(validated_data)
         return validated_data.model_dump()
-    except Exception as e:
+    except ValidationError as e:
         print(f"Input validation error: {e}")
-        return None
+        raise e
