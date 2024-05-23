@@ -5,8 +5,8 @@ from source.constants import (
     MarketDirection,
     TradeExitType,
     TradeType,
-    fractal_columns,
-    confirm_fractal_columns,
+    fractal_column_dict,
+    confirm_fractal_column_dict,
 )
 from source.data_reader import merge_all_df, read_data
 from source.trade import Trade
@@ -46,7 +46,7 @@ def reset_last_fractal(state, market_direction):
 def update_last_fractal(state, market_direction, row, key):
     """Update the last fractal for the current market direction if a new fractal is found"""
 
-    if market_direction and row[fractal_columns[key][market_direction]]:
+    if market_direction and row[fractal_column_dict[key][market_direction]]:
         state[market_direction] = (row.name, row["Close"])
 
 
@@ -55,7 +55,7 @@ def check_fractal_conditions(row, state, market_direction, key):
 
     if (
         state.get(market_direction)
-        and row[confirm_fractal_columns[key][market_direction]]
+        and row[confirm_fractal_column_dict[key][market_direction]]
     ):
         return True
 

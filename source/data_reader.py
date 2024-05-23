@@ -2,6 +2,8 @@ from functools import reduce
 import os
 import pandas as pd
 
+from source.constants import fractal_columns
+
 
 def merge_all_df(all_dfs):
     merged_df = reduce(lambda x, y: x.join(y, how="left"), all_dfs)
@@ -53,12 +55,6 @@ def read_data(
     all_strategies_df = pd.concat(strategy_dfs, axis=1)
     all_dfs = [all_strategies_df]
 
-    fractal_columns = [
-        "P_1_FRACTAL_LONG",
-        "P_1_FRACTAL_SHORT",
-        "P_1_FRACTAL_CONFIRMED_LONG",
-        "P_1_FRACTAL_CONFIRMED_SHORT",
-    ]
     index = "TIMESTAMP"
 
     file_details = {

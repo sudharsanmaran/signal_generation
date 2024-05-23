@@ -5,14 +5,13 @@ import streamlit as st
 from itertools import product
 from dotenv import load_dotenv
 
+from source.constants import POSSIBLE_STRATEGY_IDS
 from source.trade import initialize
 from source.trade_processor import process_trade
 from source.validations import validate_input
 
 
 load_dotenv()
-
-POSSIBLE_STRATEGY_IDS = list(range(1, 11))
 
 
 def select_all_options(key, combinations):

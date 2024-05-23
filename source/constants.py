@@ -20,7 +20,17 @@ class MarketDirection(Enum):
     ALL = "all"
 
 
-fractal_columns = {
+POSSIBLE_STRATEGY_IDS = list(range(1, 11))
+
+
+fractal_columns = [
+    "P_1_FRACTAL_LONG",
+    "P_1_FRACTAL_SHORT",
+    "P_1_FRACTAL_CONFIRMED_LONG",
+    "P_1_FRACTAL_CONFIRMED_SHORT",
+]
+
+fractal_column_dict = {
     "entry": {
         MarketDirection.LONG: "entry_P_1_FRACTAL_LONG",
         MarketDirection.SHORT: "entry_P_1_FRACTAL_SHORT",
@@ -31,7 +41,7 @@ fractal_columns = {
     },
 }
 
-confirm_fractal_columns = {
+confirm_fractal_column_dict = {
     "entry": {
         MarketDirection.LONG: "entry_P_1_FRACTAL_CONFIRMED_LONG",
         MarketDirection.SHORT: "entry_P_1_FRACTAL_CONFIRMED_SHORT",
