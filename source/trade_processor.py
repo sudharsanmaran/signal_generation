@@ -8,7 +8,7 @@ from source.constants import (
     fractal_columns,
     confirm_fractal_columns,
 )
-from source.data_reader import merge_data, read_data
+from source.data_reader import merge_all_df, read_data
 from source.trade import Trade
 
 
@@ -169,14 +169,10 @@ def identify_exit_signals(row, state):
 
     exit_type, is_trail_bb_band_exit, is_fractal_exit = None, False, False
     if Trade.check_trail_bb_band:
-        is_trail_bb_band_exit = check_bb_band_trail_exit(
-            row, state, market_direction
-        )
+        is_trail_bb_band_exit = check_bb_band_trail_exit(row, state, market_direction)
 
     if Trade.check_exit_fractal:
-        is_fractal_exit = check_fractal_conditions(
-            row, state, market_direction, "exit"
-        )
+        is_fractal_exit = check_fractal_conditions(row, state, market_direction, "exit")
 
     if is_trail_bb_band_exit and is_fractal_exit:
         exit_type = TradeExitType.FRACTAL
@@ -217,7 +213,7 @@ def process_trade(
         )
 
         # Merge data
-        merged_df = merge_data(all_df)
+        merged_df = merge_all_df(all_df)
 
         merged_df.to_csv(f"merged_df_{strategy_pair_str}.csv", index=True)
 

@@ -1,3 +1,4 @@
+import csv
 import time
 from pydantic import ValidationError
 import streamlit as st
@@ -280,6 +281,8 @@ def main():
             validated_input = validate(input_data)
 
             if validated_input:
+                write_user_inputs(validated_input)
+
                 start = time.time()
 
                 initialize(validated_input)
@@ -296,6 +299,20 @@ def main():
                 st.success(
                     f"Trade processing completed successfully! Total time taken: {stop-start} seconds"
                 )
+
+
+def write_user_inputs(validated_input):
+    try:
+        with open("user_inputs.csv", "a", newline="") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=validated_input.keys())
+            if csvfile.tell() == 0:
+                writer.writeheader()
+            writer.writerow(validated_input)
+
+        st.success("User inputs written to user_inputs.csv successfully!")
+
+    except Exception as e:
+        st.error(f"Error writing data to CSV: {e}")
 
 
 # Run the main function when the script is executed

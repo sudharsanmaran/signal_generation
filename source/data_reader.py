@@ -3,7 +3,7 @@ import os
 import pandas as pd
 
 
-def merge_data(all_dfs):
+def merge_all_df(all_dfs):
     merged_df = reduce(lambda x, y: x.join(y, how="left"), all_dfs)
     return merged_df
 

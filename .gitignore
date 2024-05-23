@@ -42,6 +42,10 @@ merged_df*.csv
 # Ignore all output files
 output*.csv
 
-# Ignore lock files for merged_df and output files
+# Ignore all user_inputs files
+user_inputs*.csv
+
+# Ignore lock files for user_inputs, merged_df and output files
 .~lock.merged_df*.csv#
 .~lock.output*.csv#
+.~lock.user_inputs*.csv#
