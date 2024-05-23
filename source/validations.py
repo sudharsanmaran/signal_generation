@@ -20,20 +20,26 @@ class StrategyInput(BaseModel):
     allowed_direction: MarketDirection
     trade_start_time: time
     trade_end_time: time
-    entry_fractal_file_number: str = None
-    exit_fractal_file_number: str = None
-    bb_file_number: str = None
-    trail_bb_file_number: str = None
-    bb_band_sd: float = None
-    trail_bb_band_sd: float = None
-    bb_band_column: str = None
-    trail_bb_band_column: str = None
+
     check_entry_fractal: bool = None
+    entry_fractal_file_number: str = None
+
     check_exit_fractal: bool = None
-    check_bb_band: bool = None
-    check_trail_bb_band: bool = None
-    trail_bb_band_direction: str = None
     fractal_exit_count: Union[int, str] = None
+    exit_fractal_file_number: str = None
+    
+    check_bb_band: bool = None
+    bb_file_number: str = None
+    bb_band_sd: float = None
+    bb_band_column: str = None
+
+    check_trail_bb_band: bool = None
+    trail_bb_file_number: str = None
+    trail_bb_band_sd: float = None
+    trail_bb_band_column: str = None
+    trail_bb_band_direction: str = None
+
+    check_entry_based: bool = None
     number_of_entries: int = None
     steps_to_skip: int = None
 

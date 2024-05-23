@@ -41,7 +41,8 @@ def get_portfolio_flags(portfolio_ids):
     possible_flags_per_portfolio = {}
     for portfolio_id in portfolio_ids:
         possible_flags_input = st.text_input(
-            f"Possible Flags for portfolio {portfolio_id} (comma-separated, e.g., r, g, y)"
+            f"Possible Flags for portfolio {portfolio_id} (comma-separated, e.g., r, g, y)",
+            value="RED,GREEN",
         )
         possible_flags_per_portfolio[portfolio_id] = set(
             flag.strip() for flag in possible_flags_input.split(",")
@@ -95,7 +96,7 @@ def main():
     st.title("Trading System Input")
 
     portfolio_ids_input = st.text_input(
-        "Portfolio IDs (comma-separated, e.g., 1, 2, 3)"
+        "Portfolio IDs (comma-separated, e.g., 1, 2, 3)", value="F13,F13_1"
     )
     if portfolio_ids_input:
         portfolio_ids = tuple(map(lambda a: a.strip(), portfolio_ids_input.split(",")))
@@ -228,13 +229,14 @@ def main():
             trail_bb_band_direction = st.selectbox(
                 "Trail BB Band Direction", options=["higher", "lower"], index=0
             )
+
         check_entry_based = st.checkbox("Check Entry Based", value=False)
         if check_entry_based:
             number_of_entries = st.number_input(
-                "Number of Entries", min_value=0, value=0, step=1
+                "Number of Entries", min_value=0, value=10, step=1
             )
             steps_to_skip = st.number_input(
-                "Steps to Skip", min_value=0, value=0, step=1
+                "Steps to Skip", min_value=0, value=3, step=1
             )
 
         notes = st.text_input("Notes")
@@ -256,6 +258,7 @@ def main():
                 "check_exit_fractal": check_exit_fractal,
                 "check_bb_band": check_bb_band,
                 "check_trail_bb_band": check_trail_bb_band,
+                "check_entry_based": check_entry_based,
                 "trade_type": trade_type,
                 "allowed_direction": allowed_direction,
             }

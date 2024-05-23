@@ -31,7 +31,7 @@ def get_market_direction(row, condition_key):
     return None
 
 
-def reset_last_fractal(state, market_direction):
+def reset_last_state(state, market_direction):
     """Reset the last fractal for the opposite direction when the market direction changes"""
     if not market_direction:
         return
@@ -43,10 +43,19 @@ def reset_last_fractal(state, market_direction):
     state[opposite_direction] = None
 
 
-def update_last_fractal(state, market_direction, row, key):
+def update_last_state(state, market_direction, row, key):
     """Update the last fractal for the current market direction if a new fractal is found"""
+    check_fractal = None
+    if key == "entry":
+        check_fractal = Trade.check_entry_fractal
+    elif key == "exit":
+        check_fractal = Trade.check_exit_fractal
 
-    if market_direction and row[fractal_column_dict[key][market_direction]]:
+    if (
+        check_fractal
+        and market_direction
+        and row[fractal_column_dict[key][market_direction]]
+    ):
         state[market_direction] = (row.name, row["Close"])
 
 
@@ -80,6 +89,26 @@ def check_bb_band_entry(row, state, market_direction):
     return compare(fractal_value, bb_band_value)
 
 
+def check_entry_based(state, market_direction):
+    entry_key = (market_direction, "entry_based")
+    entry_count = state.get(entry_key, 0)
+    if entry_count >= Trade.max_entry_based:
+        return False
+
+    if entry_count == 0:
+        state[entry_key] = 1
+        return True
+
+    state["skip_count"] = state.get("skip_count", Trade.steps_entry_based)
+    if state["skip_count"] == 1:
+        state["skip_count"] = Trade.steps_entry_based
+        state[entry_key] += 1
+        return True
+
+    state["skip_count"] -= 1
+    return False
+
+
 def check_entry_conditions(row, state):
     """Check the entry conditions for a trade based on the given row"""
 
@@ -88,8 +117,21 @@ def check_entry_conditions(row, state):
 
     market_direction = get_market_direction(row, "entry")
 
-    reset_last_fractal(state, market_direction)
-    update_last_fractal(state, market_direction, row, "entry")
+    if not market_direction:
+        return False, None
+
+    previous_direction = state.get(MarketDirection.PREVIOUS, None)
+    state[MarketDirection.PREVIOUS] = market_direction
+    if previous_direction and signal_change(previous_direction, market_direction):
+        state[(market_direction, "entry_based")] = 0
+        state["skip_count"] = Trade.steps_entry_based
+
+    reset_last_state(state, market_direction)
+    update_last_state(state, market_direction, row, "entry")
+
+    is_entry = False
+    if Trade.check_entry_based:
+        is_entry = check_entry_based(state, market_direction)
 
     if (
         not Trade.allowed_direction == MarketDirection.ALL
@@ -113,8 +155,10 @@ def check_entry_conditions(row, state):
         return is_fractal_entry, market_direction
     elif Trade.check_bb_band:
         return is_bb_band_entry, market_direction
+    elif Trade.check_entry_based:
+        return is_entry, market_direction
 
-    return False
+    return False, None
 
 
 def is_trade_end_time_reached(row):
@@ -142,7 +186,7 @@ def check_bb_band_trail_exit(row, state, market_direction):
     return False
 
 
-def signal_change_exit(previous_direction, market_direction):
+def signal_change(previous_direction, market_direction):
     if market_direction != previous_direction:
         return True
     return False
@@ -152,8 +196,8 @@ def identify_exit_signals(row, state):
 
     market_direction = get_market_direction(row, "exit")
 
-    reset_last_fractal(state, market_direction)
-    update_last_fractal(state, market_direction, row, "exit")
+    reset_last_state(state, market_direction)
+    update_last_state(state, market_direction, row, "exit")
 
     if is_trade_end_time_reached(row):
         return True, TradeExitType.END
@@ -163,7 +207,7 @@ def identify_exit_signals(row, state):
 
     previous_direction = state.get(MarketDirection.PREVIOUS, None)
     state[MarketDirection.PREVIOUS] = market_direction
-    if previous_direction and signal_change_exit(previous_direction, market_direction):
+    if previous_direction and signal_change(previous_direction, market_direction):
         state["signal_count"] += 1
         return True, TradeExitType.SIGNAL
 
@@ -230,6 +274,16 @@ def process_trade(
         }
         active_trades, completed_trades = [], []
         for index, row in merged_df.iterrows():
+            if (
+                row.name == pd.to_datetime("2019-01-04 11:17:00")
+                or row.name == pd.to_datetime("2019-01-04 11:35:00")
+                or row.name == pd.to_datetime("2019-01-03 09:42:00")
+                or row.name == pd.to_datetime("2019-01-03 09:15:00")
+                or row.name == pd.to_datetime("2019-01-04 15:29:00")
+                or row.name == pd.to_datetime("2019-01-07 09:37:00")
+                or row.name == pd.to_datetime("2019-01-07 15:29:00")
+            ):
+                a = 10
             is_entry, direction = check_entry_conditions(row, entry_state)
             is_exit, exit_type = identify_exit_signals(row, exit_state)
             if is_entry:

@@ -11,20 +11,25 @@ class Trade:
     instrument: Optional[str] = None
     trade_start_time = None
     trade_end_time = None
-    check_entry_fractal: bool = False
-    check_exit_fractal: bool = False
-    check_bb_band: bool = False
-    check_trail_bb_band: bool = False
-    check_entry_based: bool = False
-    bb_band_column: Optional[str] = None
-    trail_bb_band_column: Optional[str] = None
     type: Optional[str] = None
     market_direction_conditions: Dict = {}
     allowed_direction: Optional[str] = None
+    signal_columns: Optional[tuple] = None
+
+    check_entry_fractal: bool = False
+    check_bb_band: bool = False
+    bb_band_column: Optional[str] = None
+
+    check_exit_fractal: bool = False
+    check_trail_bb_band: bool = False
+    trail_bb_band_column: Optional[str] = None
     trail_bb_band_direction: Optional[str] = None
     trail_compare_func: Optional[callable] = None
     trail_opposite_compare_func: Optional[callable] = None
-    signal_columns: Optional[tuple] = None
+
+    check_entry_based: bool = False
+    max_entry_based: Optional[int] = None
+    steps_entry_based: Optional[int] = None
 
     def __init__(self, entry_signal, entry_datetime, entry_price, signal_count):
         Trade.entry_id_counter += 1
@@ -148,3 +153,7 @@ def initialize(validated_input):
     else:
         Trade.trail_compare_func = lambda a, b: a < b
         Trade.trail_opposite_compare_func = lambda a, b: a > b
+
+    if Trade.check_entry_based:
+        Trade.max_entry_based = validated_input.get("number_of_entries")
+        Trade.steps_entry_based = validated_input.get("steps_to_skip")
