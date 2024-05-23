@@ -1,4 +1,5 @@
 import csv
+from datetime import datetime
 import time
 from pydantic import ValidationError
 import streamlit as st
@@ -131,7 +132,9 @@ def main():
         )
         short_exit_signals = st.multiselect(
             "Short Exit Signals",
-            set(filtered_flag_combinations) - set(short_entry_signals),
+            set(filtered_flag_combinations)
+            - set(short_entry_signals)
+            - set(long_exit_signals),
             default=long_entry_signals,
         )
 
@@ -234,6 +237,7 @@ def main():
                 "Steps to Skip", min_value=0, value=0, step=1
             )
 
+        notes = st.text_input("Notes")
         if st.button("Submit"):
 
             input_data = {
@@ -280,7 +284,12 @@ def main():
             validated_input = validate(input_data)
 
             if validated_input:
-                write_user_inputs(validated_input)
+                temp = {
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "notes": notes,
+                }
+                temp.update(validated_input)
+                write_user_inputs(temp)
 
                 start = time.time()
 
@@ -314,6 +323,5 @@ def write_user_inputs(validated_input):
         st.error(f"Error writing data to CSV: {e}")
 
 
-# Run the main function when the script is executed
 if __name__ == "__main__":
     main()
