@@ -92,7 +92,7 @@ def check_bb_band_entry(row, state, market_direction):
 def check_entry_based(state, market_direction):
     entry_key = (market_direction, "entry_based")
     entry_count = state.get(entry_key, 0)
-    if entry_count >= Trade.max_entry_based:
+    if entry_count >= Trade.max_limit_entry_based:
         return False
 
     if entry_count == 0:
@@ -265,6 +265,7 @@ def process_trade(
         entry_state = {
             MarketDirection.LONG: None,
             MarketDirection.SHORT: None,
+            MarketDirection.PREVIOUS: None,
         }
         exit_state = {
             MarketDirection.LONG: None,
@@ -274,16 +275,6 @@ def process_trade(
         }
         active_trades, completed_trades = [], []
         for index, row in merged_df.iterrows():
-            if (
-                row.name == pd.to_datetime("2019-01-04 11:17:00")
-                or row.name == pd.to_datetime("2019-01-04 11:35:00")
-                or row.name == pd.to_datetime("2019-01-03 09:42:00")
-                or row.name == pd.to_datetime("2019-01-03 09:15:00")
-                or row.name == pd.to_datetime("2019-01-04 15:29:00")
-                or row.name == pd.to_datetime("2019-01-07 09:37:00")
-                or row.name == pd.to_datetime("2019-01-07 15:29:00")
-            ):
-                a = 10
             is_entry, direction = check_entry_conditions(row, entry_state)
             is_exit, exit_type = identify_exit_signals(row, exit_state)
             if is_entry:
