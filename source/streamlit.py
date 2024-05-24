@@ -1,3 +1,25 @@
+"""
+To document and comment the provided code in the `streamlit.py` file, I will add comments and docstrings to explain the purpose and functionality of each section. Here is the commented code:
+
+### Explanation:
+- **Imports**: Importing necessary libraries and modules at the beginning of the script.
+- **`load_dotenv`**: Loads environment variables from a `.env` file.
+- **Functions**:
+  - **`select_all_options`**: This function sets all options for a given key in the Streamlit session state.
+  - **`parse_strategy_ids`**: This function parses a string of strategy IDs into a list of integers.
+  - **`get_portfolio_flags`**: This function retrieves possible flags for each portfolio based on user input.
+  - **`get_flag_combinations`**: This function generates all possible combinations of flags for the given portfolios.
+  - **`get_strategy_id_combinations`**: This function generates all possible combinations of strategy IDs for the given portfolios.
+  - **`validate`**: This function validates the input data using Pydantic validators.
+  - **`main`**: This is the main function that runs the Streamlit app, collecting user input and triggering the trade processing logic.
+  - **`write_user_inputs`**: This function writes validated user inputs to a CSV file.
+- **Streamlit Application**:
+  - The Streamlit app collects various inputs related to trading systems from the user.
+  - The inputs include portfolio IDs, entry/exit signals, strategy IDs, trade timings, and other trading parameters.
+  - It validates the inputs, writes them to a CSV file, and initiates the trade processing functions.
+"""
+
+# Import necessary libraries
 import csv
 from datetime import datetime
 import time
@@ -6,16 +28,24 @@ import streamlit as st
 from itertools import product
 from dotenv import load_dotenv
 
+# Import project-specific modules
 from source.constants import POSSIBLE_STRATEGY_IDS
 from source.trade import initialize
 from source.trade_processor import process_trade
 from source.validations import validate_input
 
-
+# Load environment variables from a .env file
 load_dotenv()
 
 
 def select_all_options(key, combinations):
+    """
+    Select all options for a given key in Streamlit session state.
+
+    Args:
+        key (str): The key for the Streamlit session state.
+        combinations (list): List of combinations to be set.
+    """
     if "ALL" in st.session_state[key]:
         if key == "short_entry_signals":
             st.session_state["long_entry_signals"] = []
@@ -23,6 +53,15 @@ def select_all_options(key, combinations):
 
 
 def parse_strategy_ids(input_str):
+    """
+    Parse a string of strategy IDs into a list of integers.
+
+    Args:
+        input_str (str): The input string containing strategy IDs.
+
+    Returns:
+        list: List of parsed strategy IDs.
+    """
     ids = []
     parts = input_str.split(",")
     for part in parts:
@@ -38,6 +77,15 @@ def parse_strategy_ids(input_str):
 
 
 def get_portfolio_flags(portfolio_ids):
+    """
+    Get possible flags for each portfolio from user input.
+
+    Args:
+        portfolio_ids (list): List of portfolio IDs.
+
+    Returns:
+        dict: Dictionary of possible flags for each portfolio.
+    """
     possible_flags_per_portfolio = {}
     for portfolio_id in portfolio_ids:
         possible_flags_input = st.text_input(
@@ -51,6 +99,16 @@ def get_portfolio_flags(portfolio_ids):
 
 
 def get_flag_combinations(portfolio_ids, possible_flags_per_portfolio):
+    """
+    Generate all possible combinations of flags for the given portfolios.
+
+    Args:
+        portfolio_ids (list): List of portfolio IDs.
+        possible_flags_per_portfolio (dict): Dictionary of possible flags for each portfolio.
+
+    Returns:
+        list: List of valid flag combinations.
+    """
     all_flags = set(
         flag for flags in possible_flags_per_portfolio.values() for flag in flags
     )
@@ -66,6 +124,16 @@ def get_flag_combinations(portfolio_ids, possible_flags_per_portfolio):
 
 
 def get_strategy_id_combinations(portfolio_ids, strategy_ids_per_portfolio):
+    """
+    Generate all possible combinations of strategy IDs for the given portfolios.
+
+    Args:
+        portfolio_ids (list): List of portfolio IDs.
+        strategy_ids_per_portfolio (dict): Dictionary of strategy IDs for each portfolio.
+
+    Returns:
+        list: List of valid strategy ID combinations.
+    """
     all_strategy_ids = set(
         id for ids in strategy_ids_per_portfolio.values() for id in ids
     )
@@ -83,6 +151,15 @@ def get_strategy_id_combinations(portfolio_ids, strategy_ids_per_portfolio):
 
 
 def validate(input_data):
+    """
+    Validate the input data using Pydantic validators.
+
+    Args:
+        input_data (dict): The input data to be validated.
+
+    Returns:
+        dict: Validated input data or None if validation fails.
+    """
     validated_input = None
     try:
         validated_input = validate_input(input_data)
@@ -93,6 +170,9 @@ def validate(input_data):
 
 
 def main():
+    """
+    Main function to run the Streamlit app.
+    """
     st.title("Trading System Input")
 
     portfolio_ids_input = st.text_input(
@@ -241,7 +321,7 @@ def main():
 
         notes = st.text_input("Notes")
         if st.button("Submit"):
-
+            # Gather input data
             input_data = {
                 "instrument": instrument,
                 "portfolio_ids": portfolio_ids,
@@ -284,6 +364,7 @@ def main():
                 input_data["number_of_entries"] = number_of_entries
                 input_data["steps_to_skip"] = steps_to_skip
 
+            # Validate input data
             validated_input = validate(input_data)
 
             if validated_input:
@@ -294,6 +375,7 @@ def main():
                 temp.update(validated_input)
                 write_user_inputs(temp)
 
+                # Start trade processing
                 start = time.time()
 
                 initialize(validated_input)
@@ -313,6 +395,12 @@ def main():
 
 
 def write_user_inputs(validated_input):
+    """
+    Write validated user inputs to a CSV file.
+
+    Args:
+        validated_input (dict): Validated input data.
+    """
     try:
         with open("user_inputs.csv", "a", newline="") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=validated_input.keys())
