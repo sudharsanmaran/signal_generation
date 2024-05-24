@@ -1,9 +1,32 @@
+"""
+The `trade.py` module provided defines the `Trade` class for managing trades, including their initialization, execution, and recording. The module also includes the `initialize` function for setting up class-level attributes based on validated input data. Below, I will add comments and docstrings to explain the purpose and functionality of each section of the code.
+
+### Explanation:
+- **Imports**: Importing necessary libraries and project-specific constants.
+- **`Trade` Class**: Defines the structure and methods for managing trades.
+  - **Attributes**: Defines class-level attributes related to trade configuration and conditions.
+  - **`__init__` Method**: Initializes an instance of a trade with entry details.
+  - **`calculate_pnl` Method**: Calculates the profit and loss for the trade.
+  - **`add_exit` Method**: Adds an exit to the trade and updates the trade status.
+  - **`is_trade_closed` Method**: Checks if the trade is closed.
+  - **`formulate_output` Method**: Formulates the output details of the trade.
+- **`initialize` Function**: Sets up class-level attributes for the `Trade` class based on validated input data. This function configures various trade conditions and properties that will be used when creating and managing trades.
+
+This commented code should help clarify the purpose and functionality of each part of the module.
+"""
+
+# Import necessary libraries
 from typing import Dict, Optional
 
+# Import project-specific constants
 from source.constants import MarketDirection, TradeExitType
 
 
 class Trade:
+    """
+    Class for managing trades including their initialization, execution, and recording.
+    """
+
     portfolio_ids: tuple
     strategy_ids: Optional[tuple] = None
     entry_id_counter: int = 0
@@ -16,7 +39,6 @@ class Trade:
     signal_columns: Optional[tuple] = None
 
     check_entry_fractal: bool = False
-
     check_exit_fractal: bool = False
     fractal_exit_count: Optional[int] = None
 
@@ -34,6 +56,15 @@ class Trade:
     steps_entry_based: Optional[int] = None
 
     def __init__(self, entry_signal, entry_datetime, entry_price, signal_count):
+        """
+        Initialize a Trade instance with entry details.
+
+        Args:
+            entry_signal (MarketDirection): Direction of the trade entry.
+            entry_datetime (datetime): Timestamp of the trade entry.
+            entry_price (float): Price at which the trade was entered.
+            signal_count (int): Signal count associated with the entry.
+        """
         Trade.entry_id_counter += 1
         self.entry_id = Trade.entry_id_counter
 
@@ -46,6 +77,15 @@ class Trade:
         self.exit_id_counter = 0
 
     def calculate_pnl(self, exit_price):
+        """
+        Calculate the profit and loss (PnL) for the trade.
+
+        Args:
+            exit_price (float): The price at which the trade is exited.
+
+        Returns:
+            float: The calculated PnL.
+        """
         pnl = 0
         if self.entry_signal == MarketDirection.LONG:
             pnl = exit_price - self.entry_price
@@ -54,6 +94,14 @@ class Trade:
         return pnl
 
     def add_exit(self, exit_datetime, exit_price, exit_type):
+        """
+        Add an exit to the trade with the specified details.
+
+        Args:
+            exit_datetime (datetime): Timestamp of the trade exit.
+            exit_price (float): Price at which the trade was exited.
+            exit_type (TradeExitType): Type of the trade exit.
+        """
         if not self.trade_closed:
             self.exit_id_counter += 1
 
@@ -90,9 +138,25 @@ class Trade:
                 )
 
     def is_trade_closed(self):
+        """
+        Check if the trade is closed.
+
+        Returns:
+            bool: True if the trade is closed, False otherwise.
+        """
         return self.trade_closed
 
     def formulate_output(self, strategy_pair, portfolio_pair=None):
+        """
+        Formulate the trade output details.
+
+        Args:
+            strategy_pair (str): Pair of strategy IDs.
+            portfolio_pair (str, optional): Pair of portfolio IDs. Defaults to None.
+
+        Returns:
+            list: List of dictionaries with trade details.
+        """
         return [
             {
                 "Instrument": Trade.instrument,
@@ -115,6 +179,12 @@ class Trade:
 
 
 def initialize(validated_input):
+    """
+    Initialize Trade class-level attributes based on validated input data.
+
+    Args:
+        validated_input (dict): The validated input data.
+    """
     Trade.portfolio_ids = validated_input.get("portfolio_ids")
     Trade.strategy_ids = validated_input.get("strategy_ids")
     Trade.instrument = validated_input.get("instrument")
