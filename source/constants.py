@@ -35,10 +35,10 @@ class TradeExitType(Enum):
     Enumeration for different types of trade exits.
     """
 
-    FRACTAL = "Fractal Exit"
-    SIGNAL = "Signal Change"
-    TRAILING = "Trailing"
-    END = "Trade End Exit"
+    FRACTAL = "FE"
+    SIGNAL = "SC"
+    TRAILING = "TR"
+    END = "EOD"
 
 
 class TradeType(Enum):
@@ -46,8 +46,8 @@ class TradeType(Enum):
     Enumeration for different types of trades.
     """
 
-    INTRADAY = "intraday"
-    POSITIONAL = "positional"
+    INTRADAY = "I"
+    POSITIONAL = "P"
 
 
 class MarketDirection(Enum):
@@ -55,8 +55,8 @@ class MarketDirection(Enum):
     Enumeration for market direction conditions.
     """
 
-    LONG = "long"
-    SHORT = "short"
+    LONG = "L"
+    SHORT = "S"
     PREVIOUS = "previous"
     ALL = "all"
 

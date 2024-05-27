@@ -258,7 +258,7 @@ def main():
         )
 
         trade_type = st.selectbox(
-            "Trade Type", options=["positional", "intraday"], index=0
+            "Trade Type", options=["P", "I"], index=0
         )
         allowed_direction = st.selectbox(
             "Allowed Direction", options=["all", "long", "short"], index=0

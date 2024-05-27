@@ -115,6 +115,9 @@ class Trade:
             ):
                 self.trade_closed = True
 
+            if exit_type == TradeExitType.SIGNAL:
+                Trade.entry_id_counter = 0
+
             if Trade.fractal_exit_count:
                 if (
                     exit_type == TradeExitType.FRACTAL
@@ -205,6 +208,7 @@ def initialize(validated_input):
     Args:
         validated_input (dict): The validated input data.
     """
+    Trade.entry_id_counter = 0
     Trade.portfolio_ids = validated_input.get("portfolio_ids")
     Trade.strategy_ids = validated_input.get("strategy_ids")
     Trade.instrument = validated_input.get("instrument")
