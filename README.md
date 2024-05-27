@@ -1,4 +1,4 @@
-**# Signal Generation Project**
+### Signal Generation Project
 
 ## Overview
 
@@ -101,14 +101,6 @@ If you encounter module import issues, you might need to adjust your Python path
    ```
 
    This will launch the Streamlit app in your web browser, allowing you to input trade parameters and interact with the project.
-
-2. **Process Trades (Using the Script):**
-
-   ```bash
-   python source/trade_processor.py
-   ```
-
-   This will execute the trade processing script based on predefined settings or potentially command-line arguments (if supported).
 
 ## Contributing
 
