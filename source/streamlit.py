@@ -306,8 +306,11 @@ def main():
             trail_bb_band_column = st.selectbox(
                 "Trail BB Band Column", options=["mean", "upper", "lower"], index=0
             )
-            trail_bb_band_direction = st.selectbox(
-                "Trail BB Band Direction", options=["higher", "lower"], index=0
+            trail_bb_band_long_direction = st.selectbox(
+                "Trail BB Band Long Direction", options=["higher", "lower"], index=0
+            )
+            trail_bb_band_short_direction = st.selectbox(
+                "Trail BB Band Short Direction", options=["higher", "lower"], index=0
             )
 
         check_entry_based = st.checkbox("Check Entry Based", value=False)
@@ -358,7 +361,12 @@ def main():
                 input_data["trail_bb_file_number"] = trail_bb_file_number
                 input_data["trail_bb_band_sd"] = trail_bb_band_sd
                 input_data["trail_bb_band_column"] = trail_bb_band_column
-                input_data["trail_bb_band_direction"] = trail_bb_band_direction
+                input_data["trail_bb_band_long_direction"] = (
+                    trail_bb_band_long_direction
+                )
+                input_data["trail_bb_band_short_direction"] = (
+                    trail_bb_band_short_direction
+                )
 
             if check_entry_based:
                 input_data["number_of_entries"] = number_of_entries

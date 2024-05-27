@@ -48,8 +48,11 @@ class Trade:
     check_trail_bb_band: bool = False
     trail_bb_band_column: Optional[str] = None
     trail_bb_band_direction: Optional[str] = None
-    trail_compare_func: Optional[callable] = None
-    trail_opposite_compare_func: Optional[callable] = None
+    trail_compare_functions: Dict = {}
+    # trail_long_compare_func: Optional[callable] = None
+    # trail_long_opposite_compare_func: Optional[callable] = None
+    # trail_short_compare_func: Optional[callable] = None
+    # trail_short_opposite_compare_func: Optional[callable] = None
 
     check_entry_based: bool = False
     max_limit_entry_based: Optional[int] = None
@@ -179,6 +182,23 @@ class Trade:
 
 
 def initialize(validated_input):
+
+    def set_compare_functions(direction, condition):
+        if condition == "higher":
+            Trade.trail_compare_functions[direction]["compare_func"] = (
+                lambda a, b: a > b
+            )
+            Trade.trail_compare_functions[direction]["opposite_compare_func"] = (
+                lambda a, b: a < b
+            )
+        else:
+            Trade.trail_compare_functions[direction]["compare_func"] = (
+                lambda a, b: a < b
+            )
+            Trade.trail_compare_functions[direction]["opposite_compare_func"] = (
+                lambda a, b: a > b
+            )
+
     """
     Initialize Trade class-level attributes based on validated input data.
 
@@ -219,12 +239,23 @@ def initialize(validated_input):
     if Trade.check_trail_bb_band:
         Trade.trail_bb_band_column = f"P_1_{validated_input.get('trail_bb_band_column').upper()}_BAND_{validated_input.get('trail_bb_band_sd')}"
 
-    if validated_input.get("trail_bb_band_direction") == "higher":
-        Trade.trail_compare_func = lambda a, b: a > b
-        Trade.trail_opposite_compare_func = lambda a, b: a < b
-    else:
-        Trade.trail_compare_func = lambda a, b: a < b
-        Trade.trail_opposite_compare_func = lambda a, b: a > b
+    # Initialize trail compare functions with default values
+    Trade.trail_compare_functions = {
+        MarketDirection.LONG: {
+            "compare_func": None,
+            "opposite_compare_func": None,
+        },
+        MarketDirection.SHORT: {
+            "compare_func": None,
+            "opposite_compare_func": None,
+        },
+    }
+    set_compare_functions(
+        MarketDirection.LONG, validated_input.get("trail_bb_band_long_direction")
+    )
+    set_compare_functions(
+        MarketDirection.SHORT, validated_input.get("trail_bb_band_short_direction")
+    )
 
     if Trade.check_entry_based:
         Trade.max_limit_entry_based = validated_input.get("number_of_entries")

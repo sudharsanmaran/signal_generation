@@ -63,7 +63,8 @@ class StrategyInput(BaseModel):
     trail_bb_file_number: str = None
     trail_bb_band_sd: float = None
     trail_bb_band_column: str = None
-    trail_bb_band_direction: str = None
+    trail_bb_band_long_direction: str = None
+    trail_bb_band_short_direction: str = None
 
     check_entry_based: bool = None
     number_of_entries: int = None
@@ -104,7 +105,7 @@ class StrategyInput(BaseModel):
             )
         return v
 
-    @field_validator("trail_bb_band_direction")
+    @field_validator("trail_bb_band_long_direction", "trail_bb_band_short_direction")
     def validate_trail_bb_band_direction(cls, v):
         """
         Validate trail BB band direction.

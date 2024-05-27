@@ -318,11 +318,15 @@ def check_bb_band_trail_exit(row, state, market_direction):
     bb_band_value = row[f"trail_{Trade.trail_bb_band_column}"]
 
     if state.get("trail_first_found", False):
-        if Trade.trail_opposite_compare_func(fractal_value, bb_band_value):
+        if Trade.trail_compare_functions[market_direction]["opposite_compare_func"](
+            fractal_value, bb_band_value
+        ):
             state["trail_first_found"] = False
             return True
     else:
-        if Trade.trail_compare_func(fractal_value, bb_band_value):
+        if Trade.trail_compare_functions[market_direction]["compare_func"](
+            fractal_value, bb_band_value
+        ):
             state["trail_first_found"] = True
             state["first_trail_time"] = row.name
 
