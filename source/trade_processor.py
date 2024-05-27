@@ -106,12 +106,18 @@ def reset_last_state(state, market_direction):
     """
     if not market_direction:
         return
+    opposite_direction = get_opposite_direction(market_direction)
+    state[opposite_direction] = None
+
+
+def get_opposite_direction(market_direction):
     opposite_direction = (
         MarketDirection.SHORT
         if market_direction == MarketDirection.LONG
         else MarketDirection.LONG
     )
-    state[opposite_direction] = None
+
+    return opposite_direction
 
 
 def update_last_state(state, market_direction, row, key):
@@ -162,6 +168,13 @@ def check_fractal_conditions(row, state, market_direction, key):
         return True
 
     return False
+
+
+def check_exit_fractal_condition(row, market_direction, state):
+    if market_direction:
+        return row[confirm_fractal_column_dict["exit"][market_direction]]
+    elif state.get(MarketDirection.PREVIOUS, None):
+        return row[confirm_fractal_column_dict["exit"][state[MarketDirection.PREVIOUS]]]
 
 
 def check_bb_band_entry(row, state, market_direction):
@@ -371,21 +384,21 @@ def identify_exit_signals(row, state):
     if is_trade_end_time_reached(row):
         return True, TradeExitType.END
 
-    if not market_direction:
-        return False, None
-
-    previous_direction = state.get(MarketDirection.PREVIOUS, None)
-    state[MarketDirection.PREVIOUS] = market_direction
-    if previous_direction and signal_change(previous_direction, market_direction):
-        state["signal_count"] += 1
-        return True, TradeExitType.SIGNAL
-
     exit_type, is_trail_bb_band_exit, is_fractal_exit = None, False, False
+    if Trade.check_exit_fractal:
+        is_fractal_exit = check_exit_fractal_condition(row, market_direction, state)
+
+    # if not market_direction:
+    #     return False, None
+    if market_direction:
+        previous_direction = state.get(MarketDirection.PREVIOUS, None)
+        state[MarketDirection.PREVIOUS] = market_direction
+        if previous_direction and signal_change(previous_direction, market_direction):
+            state["signal_count"] += 1
+            return True, TradeExitType.SIGNAL
+
     if Trade.check_trail_bb_band:
         is_trail_bb_band_exit = check_bb_band_trail_exit(row, state, market_direction)
-
-    if Trade.check_exit_fractal:
-        is_fractal_exit = check_fractal_conditions(row, state, market_direction, "exit")
 
     if is_trail_bb_band_exit and is_fractal_exit:
         exit_type = TradeExitType.FRACTAL
