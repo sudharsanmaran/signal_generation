@@ -157,7 +157,7 @@ class Trade:
         """
         Reset the trade entry ID counter to 0.
         """
-        Trade.entry_id_counter = 0
+        cls.entry_id_counter = 0
 
     def formulate_output(self, strategy_pair, portfolio_pair=None):
         """
