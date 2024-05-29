@@ -152,6 +152,13 @@ class Trade:
         """
         return self.trade_closed
 
+    @classmethod
+    def reset_trade_entry_id_counter(cls):
+        """
+        Reset the trade entry ID counter to 0.
+        """
+        Trade.entry_id_counter = 0
+
     def formulate_output(self, strategy_pair, portfolio_pair=None):
         """
         Formulate the trade output details.

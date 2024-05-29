@@ -324,7 +324,8 @@ def check_bb_band_trail_exit(row, state, market_direction):
     Returns:
         bool: True if BB band trail exit condition is met, False otherwise
     """
-
+    if not market_direction:
+        return False
     trail_bb_band_value = row[f"trail_{Trade.trail_bb_band_column}"]
 
     if state.get("trail_first_found", False):
@@ -359,7 +360,7 @@ def signal_change(previous_direction, market_direction):
     return False
 
 
-def identify_exit_signals(row, state):
+def identify_exit_signals(row, exit_state, entry_state):
     """
       Identifies potential exit signals for a trade based on the given data row and state.
 
@@ -383,19 +384,22 @@ def identify_exit_signals(row, state):
 
     exit_type, is_trail_bb_band_exit, is_fractal_exit = None, False, False
     if Trade.check_exit_fractal:
-        is_fractal_exit = check_exit_fractal_condition(row, market_direction, state)
+        is_fractal_exit = check_exit_fractal_condition(
+            row, market_direction, exit_state
+        )
 
     if market_direction:
-        previous_direction = state.get(MarketDirection.PREVIOUS, None)
-        state[MarketDirection.PREVIOUS] = market_direction
+        previous_direction = exit_state.get(MarketDirection.PREVIOUS, None)
+        exit_state[MarketDirection.PREVIOUS] = market_direction
         if previous_direction and signal_change(previous_direction, market_direction):
-            state["signal_count"] += 1
+            exit_state["signal_count"] += 1
+            Trade.reset_trade_entry_id_counter()
             return True, TradeExitType.SIGNAL
 
-        if Trade.check_trail_bb_band:
-            is_trail_bb_band_exit = check_bb_band_trail_exit(
-                row, state, market_direction
-            )
+    if Trade.check_trail_bb_band:
+        is_trail_bb_band_exit = check_bb_band_trail_exit(
+            row, exit_state, entry_state.get(MarketDirection.PREVIOUS, None)
+        )
 
     if is_trail_bb_band_exit and is_fractal_exit:
         exit_type = TradeExitType.FRACTAL
@@ -472,7 +476,7 @@ def process_trade(
         active_trades, completed_trades = [], []
         for index, row in merged_df.iterrows():
             is_entry, direction = check_entry_conditions(row, entry_state)
-            is_exit, exit_type = identify_exit_signals(row, exit_state)
+            is_exit, exit_type = identify_exit_signals(row, exit_state, entry_state)
             if is_entry:
                 trade = Trade(
                     entry_signal=direction,
