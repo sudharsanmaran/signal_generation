@@ -360,6 +360,25 @@ def signal_change(previous_direction, market_direction):
     return False
 
 
+def reset_max_limit_entry_based(state):
+    """
+        Reset the maximum limit for entry based on the given state.
+
+    Args:
+        state (dict): Dictionary to store trade state information
+
+    Returns:
+        None
+    """
+    keys = [
+        (MarketDirection.LONG, "entry_based"),
+        (MarketDirection.SHORT, "entry_based"),
+    ]
+    for key in keys:
+        state[key] = 0
+    state["skip_count"] = Trade.steps_entry_based
+
+
 def identify_exit_signals(row, exit_state, entry_state):
     """
       Identifies potential exit signals for a trade based on the given data row and state.
@@ -380,6 +399,7 @@ def identify_exit_signals(row, exit_state, entry_state):
     # update_last_state(state, market_direction, row, "exit")
 
     if is_trade_end_time_reached(row):
+        reset_max_limit_entry_based(entry_state)
         return True, TradeExitType.END
 
     exit_type, is_trail_bb_band_exit, is_fractal_exit = None, False, False
