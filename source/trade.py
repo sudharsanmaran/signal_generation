@@ -115,9 +115,6 @@ class Trade:
             ):
                 self.trade_closed = True
 
-            if exit_type == TradeExitType.SIGNAL:
-                Trade.entry_id_counter = 0
-
             if Trade.fractal_exit_count:
                 if (
                     exit_type == TradeExitType.FRACTAL
