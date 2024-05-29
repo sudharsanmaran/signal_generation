@@ -25,7 +25,7 @@ import os
 import pandas as pd
 
 # Import project-specific constants
-from source.constants import fractal_columns
+from source.constants import entry_fractal_columns, exit_fractal_columns
 
 
 def merge_all_df(all_dfs):
@@ -133,17 +133,17 @@ def read_data(
             "read": read_entry_fractal,
             "path": "Fractal",
             "file_number": entry_fractal_file_number,
-            "cols": [index, *fractal_columns],
-            "dtype": {col: "boolean" for col in fractal_columns},
-            "rename": {col: f"entry_{col}" for col in fractal_columns},
+            "cols": [index, *entry_fractal_columns],
+            "dtype": {col: "boolean" for col in entry_fractal_columns},
+            "rename": {col: f"entry_{col}" for col in entry_fractal_columns},
         },
         "exit_fractal": {
             "read": read_exit_fractal,
             "path": "Fractal",
             "file_number": exit_fractal_file_number,
-            "cols": [index, *fractal_columns],
-            "dtype": {col: "boolean" for col in fractal_columns},
-            "rename": {col: f"exit_{col}" for col in fractal_columns},
+            "cols": [index, *exit_fractal_columns],
+            "dtype": {col: "boolean" for col in entry_fractal_columns},
+            "rename": {col: f"exit_{col}" for col in entry_fractal_columns},
         },
         "bb_band": {
             "read": read_bb_fractal,

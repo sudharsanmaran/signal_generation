@@ -65,11 +65,15 @@ class MarketDirection(Enum):
 POSSIBLE_STRATEGY_IDS = list(range(1, 11))
 
 # List of fractal column names
-fractal_columns = [
-    "P_1_FRACTAL_LONG",
-    "P_1_FRACTAL_SHORT",
+exit_fractal_columns = [
     "P_1_FRACTAL_CONFIRMED_LONG",
     "P_1_FRACTAL_CONFIRMED_SHORT",
+]
+
+entry_fractal_columns = [
+    "P_1_FRACTAL_LONG",
+    "P_1_FRACTAL_SHORT",
+    *exit_fractal_columns,
 ]
 
 # Dictionary mapping entry and exit fractal columns to market directions
