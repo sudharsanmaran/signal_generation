@@ -579,6 +579,7 @@ def main():
                     "notes": notes,
                 }
                 temp.update(validated_input)
+                temp.update(validated_tm_input)
                 write_user_inputs(temp)
 
             # Start trade processing
