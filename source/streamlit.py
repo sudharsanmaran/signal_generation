@@ -179,7 +179,7 @@ def main():
     """
     Main function to run the Streamlit app.
     """
-    st.title("Signal Generation Configuration")
+    st.header("Signal Generation")
 
     errors = []
     with st.expander("Configuration", expanded=False):
@@ -377,7 +377,7 @@ def main():
                     index=0,
                 )
 
-    st.title("Trade Management Configuration")
+    st.header("Trade Management")
 
     with st.expander("Configurations", expanded=False):
         tm_input_data = {}
@@ -391,7 +391,7 @@ def main():
             tm_input_data["opt_buying"] = opt_buying
             if opt_buying == "YES":
                 expiry = st.number_input("Expiry", min_value=1)
-                strike = st.number_input("Strike", min_value=1)
+                strike = st.number_input("Strike")
                 tm_input_data.update({"expiry": expiry, "strike": strike})
 
         if segment == "FUTURE":
