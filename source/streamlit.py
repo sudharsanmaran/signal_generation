@@ -30,6 +30,7 @@ from itertools import product
 from dotenv import load_dotenv
 
 # Import project-specific modules
+from source.validate_trade_management import validate_trade_management
 from source.constants import POSSIBLE_STRATEGY_IDS, MarketDirection, TradeType
 from source.trade import initialize
 from source.trade_processor import process_trade
@@ -155,7 +156,7 @@ def get_strategy_id_combinations(portfolio_ids, strategy_ids_per_portfolio):
     ]
 
 
-def validate(input_data):
+def validate(input_data, key: callable):
     """
     Validate the input data using Pydantic validators.
 
@@ -167,7 +168,7 @@ def validate(input_data):
     """
     validated_input = None
     try:
-        validated_input = validate_input(input_data)
+        validated_input = key(input_data)
     except ValidationError as e:
         error_messages = [f"{err['loc'][0]}: {err['msg']}" for err in e.errors()]
         st.error("\n,".join(error_messages))
@@ -379,26 +380,39 @@ def main():
     st.title("Trade Management Configuration")
 
     with st.expander("Configurations", expanded=False):
+        tm_input_data = {}
         # Segment
         segment = st.selectbox("Segment", ["CASH", "FUTURE", "OPTIONS"])
+        tm_input_data["segment"] = segment
 
         if segment == "OPTIONS":
             # OPTBUYING
             opt_buying = st.selectbox("OPTBUYING", ["YES", "NO"])
+            tm_input_data["opt_buying"] = opt_buying
             if opt_buying == "YES":
                 expiry = st.number_input("Expiry", min_value=1)
                 strike = st.number_input("Strike", min_value=1)
+                tm_input_data.update({"expiry": expiry, "strike": strike})
 
         if segment == "FUTURE":
             # Hedge
             hedge = st.checkbox("Hedge")
+            tm_input_data["hedge"] = hedge
             if hedge:
                 hedge_expiry = st.number_input("Hedge Expiry", min_value=1)
                 hedge_strike = st.number_input("Hedge Strike", min_value=1)
                 hedge_delayed_exit = st.checkbox("Hedge Delayed Exit")
+                tm_input_data.update(
+                    {
+                        "hedge_expiry": hedge_expiry,
+                        "hedge_strike": hedge_strike,
+                        "hedge_delayed_exit": hedge_delayed_exit,
+                    }
+                )
 
         # Appreciation/Depreciation based entry
         ade_based_entry = st.checkbox("Appreciation/Depreciation based entry")
+        tm_input_data["ade_based_entry"] = ade_based_entry
         if ade_based_entry:
             appreciation_depreciation = st.selectbox(
                 "Appreciation/Depreciation", ["APPRECIATION", "DEPRECIATION"]
@@ -406,25 +420,35 @@ def main():
             ade_percentage = st.number_input(
                 "Appreciation/Depreciation %", min_value=0.0, step=0.01
             )
+            tm_input_data.update(
+                {
+                    "appreciation_depreciation": appreciation_depreciation,
+                    "ade_percentage": ade_percentage,
+                }
+            )
 
         # TARGET
         target = st.checkbox("TARGET")
+        tm_input_data["target"] = target
         if target:
             target_profit_percentage = st.number_input(
                 "TARGET Profit %", min_value=0.0, step=0.01
             )
+            tm_input_data["target_profit_percentage"] = target_profit_percentage
 
         # SL Trading
         sl_trading = st.checkbox("SL Trading")
+        tm_input_data["sl_trading"] = sl_trading
         if sl_trading:
             sl_percentage = st.number_input("SL %", min_value=0.0, step=0.01)
+            tm_input_data["sl_percentage"] = sl_percentage
 
         # Re-deployment
         re_deployment = st.checkbox("Re-deployment")
+        tm_input_data["re_deployment"] = re_deployment
         if re_deployment:
-            re_ade_based_entry = st.checkbox(
-                "RE_Appreciation/Depreciation based entry"
-            )
+            re_ade_based_entry = st.checkbox("RE_Appreciation/Depreciation based entry")
+            tm_input_data["re_ade_based_entry"] = re_ade_based_entry
             if re_ade_based_entry:
                 re_appreciation_depreciation = st.selectbox(
                     "RE_Appreciation/Depreciation", ["APPRECIATION", "DEPRECIATION"]
@@ -432,25 +456,40 @@ def main():
                 re_ade_percentage = st.number_input(
                     "RE_Appreciation/Depreciation %", min_value=0.0, step=0.01
                 )
+                tm_input_data.update(
+                    {
+                        "re_appreciation_depreciation": re_appreciation_depreciation,
+                        "re_ade_percentage": re_ade_percentage,
+                    }
+                )
 
         # DTE - Based testing
         dte_based_testing = st.checkbox("DTE - Based testing")
+        tm_input_data["dte_based_testing"] = dte_based_testing
         if dte_based_testing:
             dte_from = st.number_input("From which DTE", min_value=1)
+            tm_input_data["dte_from"] = dte_from
 
         # Next Expiry trading
         next_expiry_trading = st.checkbox("Next Expiry trading")
+        tm_input_data["next_expiry_trading"] = next_expiry_trading
         if next_expiry_trading:
-            next_dte_from = st.number_input("From which DTE", min_value=1)
-            next_expiry = st.number_input("Expiry", min_value=1)
+            next_dte_from = st.number_input("From DTE", min_value=1)
+            next_expiry = st.number_input("Expiry No", min_value=1)
+            tm_input_data.update(
+                {"next_dte_from": next_dte_from, "next_expiry": next_expiry}
+            )
 
         # Premium Feature
         premium_feature = st.checkbox("Premium Feature")
+        tm_input_data["premium_feature"] = premium_feature
 
         # Volume feature
         volume_feature = st.checkbox("Volume feature")
+        tm_input_data["volume_feature"] = volume_feature
         if volume_feature:
             volume_minutes = st.number_input("Number of minutes", min_value=1)
+            tm_input_data["volume_minutes"] = volume_minutes
 
         # Capital, Risk, Leverage
         capital = st.number_input("Capital", min_value=0, value=100000000)
@@ -458,6 +497,7 @@ def main():
             "Risk", min_value=0.0, max_value=1.0, value=0.04, step=0.01
         )
         leverage = st.number_input("Leverage", min_value=1, value=2)
+        tm_input_data.update({"capital": capital, "risk": risk, "leverage": leverage})
 
     if (
         allowed_direction == MarketDirection.LONG.value
@@ -521,19 +561,16 @@ def main():
             input_data["trail_bb_file_number"] = trail_bb_file_number
             input_data["trail_bb_band_sd"] = trail_bb_band_sd
             input_data["trail_bb_band_column"] = trail_bb_band_column
-            input_data["trail_bb_band_long_direction"] = (
-                trail_bb_band_long_direction
-            )
-            input_data["trail_bb_band_short_direction"] = (
-                trail_bb_band_short_direction
-            )
+            input_data["trail_bb_band_long_direction"] = trail_bb_band_long_direction
+            input_data["trail_bb_band_short_direction"] = trail_bb_band_short_direction
 
         if check_entry_based:
             input_data["number_of_entries"] = number_of_entries
             input_data["steps_to_skip"] = steps_to_skip
 
         # Validate input data
-        validated_input = validate(input_data)
+        validated_input = validate(input_data, key=validate_input)
+        validated_tm_input = validate(tm_input_data, key=validate_trade_management)
 
         if validated_input:
             if save:
