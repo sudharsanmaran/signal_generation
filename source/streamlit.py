@@ -22,6 +22,7 @@ To document and comment the provided code in the `streamlit.py` file, I will add
 # Import necessary libraries
 import csv
 from datetime import datetime
+import os
 import time
 from pydantic import ValidationError
 import streamlit as st
@@ -29,13 +30,17 @@ from itertools import product
 from dotenv import load_dotenv
 
 # Import project-specific modules
-from source.constants import POSSIBLE_STRATEGY_IDS
+from source.constants import POSSIBLE_STRATEGY_IDS, MarketDirection, TradeType
 from source.trade import initialize
 from source.trade_processor import process_trade
 from source.validations import validate_input
 
 # Load environment variables from a .env file
 load_dotenv()
+
+INSTRUMENTS = os.getenv("INSTRUMENTS").split(",")
+STOCKS_FNO = os.getenv("STOCKS_FNO").split(",")
+STOCKS_NON_FNO = os.getenv("STOCKS_NON_FNO").split(",")
 
 
 def select_all_options(key, combinations):
@@ -174,11 +179,37 @@ def main():
     Main function to run the Streamlit app.
     """
     st.title("Trading System Input")
+    errors = []
 
     portfolio_ids_input = st.text_input(
         "Portfolio IDs (comma-separated, e.g., 1, 2, 3)", value="F13,F13_1"
     )
-    if portfolio_ids_input:
+
+    allowed_direction = st.selectbox(
+        "Allowed Direction",
+        options=[
+            direction.value
+            for direction in MarketDirection
+            if direction != MarketDirection.PREVIOUS
+        ],
+        index=0,
+    )
+
+    trade_type = st.selectbox("Trade Type", options=["P", "I"], index=0)
+    trade_start_time, trade_end_time = None, None
+    if trade_type == TradeType.INTRADAY.value:
+        trade_start_time = st.text_input(
+            "Trade Start Time (format: hh:mm:ss)", value="09:15:00"
+        )
+        trade_end_time = st.text_input(
+            "Trade End Time (format: hh:mm:ss)", value="15:20:00"
+        )
+
+    instrument = st.selectbox("INDICES", options=INSTRUMENTS, index=0)
+    stocks_fno = st.selectbox("Stocks-FNO", options=STOCKS_FNO)
+    stocks_non_fno = st.selectbox("Stocks-NONFNO", options=STOCKS_NON_FNO)
+
+    if portfolio_ids_input and allowed_direction:
         portfolio_ids = tuple(map(lambda a: a.strip(), portfolio_ids_input.split(",")))
         possible_flags_per_portfolio = get_portfolio_flags(portfolio_ids)
         filtered_flag_combinations = get_flag_combinations(
@@ -186,38 +217,57 @@ def main():
         )
         all_flag_combinations = ["ALL"] + filtered_flag_combinations
 
-        long_entry_signals = st.multiselect(
-            "Long Entry Signals",
-            all_flag_combinations,
-            key="long_entry_signals",
-            on_change=select_all_options,
-            args=("long_entry_signals", filtered_flag_combinations),
-        )
+        if allowed_direction in (MarketDirection.LONG.value, MarketDirection.ALL.value):
+            long_entry_signals = st.multiselect(
+                "Long Entry Signals",
+                all_flag_combinations,
+                key="long_entry_signals",
+                on_change=select_all_options,
+                args=("long_entry_signals", filtered_flag_combinations),
+            )
+        else:
+            long_entry_signals = []
 
-        short_entry_signals = st.multiselect(
-            "Short Entry Signals",
-            [
-                combination
-                for combination in all_flag_combinations
-                if combination not in long_entry_signals
-            ],
-            key="short_entry_signals",
-            on_change=select_all_options,
-            args=("short_entry_signals", filtered_flag_combinations),
-        )
+        if allowed_direction in (
+            MarketDirection.SHORT.value,
+            MarketDirection.ALL.value,
+        ):
+            short_entry_signals = st.multiselect(
+                "Short Entry Signals",
+                [
+                    combination
+                    for combination in all_flag_combinations
+                    if combination not in long_entry_signals
+                ],
+                key="short_entry_signals",
+                on_change=select_all_options,
+                args=("short_entry_signals", filtered_flag_combinations),
+            )
+        else:
+            short_entry_signals = []
 
-        long_exit_signals = st.multiselect(
-            "Long Exit Signals",
-            set(filtered_flag_combinations) - set(long_entry_signals),
-            default=short_entry_signals,
-        )
-        short_exit_signals = st.multiselect(
-            "Short Exit Signals",
-            set(filtered_flag_combinations)
-            - set(short_entry_signals)
-            - set(long_exit_signals),
-            default=long_entry_signals,
-        )
+        if allowed_direction in (MarketDirection.LONG.value, MarketDirection.ALL.value):
+            long_exit_signals = st.multiselect(
+                "Long Exit Signals",
+                set(filtered_flag_combinations) - set(long_entry_signals),
+                default=short_entry_signals,
+            )
+        else:
+            long_exit_signals = []
+
+        if allowed_direction in (
+            MarketDirection.SHORT.value,
+            MarketDirection.ALL.value,
+        ):
+            short_exit_signals = st.multiselect(
+                "Short Exit Signals",
+                set(filtered_flag_combinations)
+                - set(short_entry_signals)
+                - set(long_exit_signals),
+                default=long_entry_signals,
+            )
+        else:
+            short_exit_signals = []
 
         strategy_ids_per_portfolio = {
             portfolio_id: parse_strategy_ids(
@@ -242,35 +292,50 @@ def main():
             args=("Strategy Pairs", filtered_strategy_id_combinations),
         )
 
-        instrument = st.text_input("Instrument", value="BANKNIFTY")
-
         start_date = st.text_input(
             "Start Date (format: dd/mm/yyyy hh:mm:ss)", value="3/01/2019 09:00:00"
         )
         end_date = st.text_input(
             "End Date (format: dd/mm/yyyy hh:mm:ss)", value="3/04/2019 16:00:00"
         )
-        trade_start_time = st.text_input(
-            "Trade Start Time (format: hh:mm:ss)", value="09:15:00"
-        )
-        trade_end_time = st.text_input(
-            "Trade End Time (format: hh:mm:ss)", value="15:20:00"
-        )
-
-        trade_type = st.selectbox(
-            "Trade Type", options=["P", "I"], index=0
-        )
-        allowed_direction = st.selectbox(
-            "Allowed Direction", options=["all", "long", "short"], index=0
-        )
-
+        st.text("Entry conditions: ")
+        check_entry_based = st.checkbox("Check Entry Based", value=False)
+        if check_entry_based:
+            number_of_entries = st.number_input(
+                "Number of Entries", min_value=0, value=10, step=1
+            )
+            steps_to_skip = st.number_input(
+                "Steps to Skip", min_value=0, value=3, step=1
+            )
         # Entry Fractal Inputs (conditionally displayed)
         check_entry_fractal = st.checkbox("Check Entry Fractal", value=False)
+        check_bb_band = False
         if check_entry_fractal:
             entry_fractal_file_number = st.text_input(
                 "Entry Fractal File Number", value="1"
             )
 
+            # Bollinger Band Inputs (conditionally displayed)
+            check_bb_band = st.checkbox("Check BB Band", value=False)
+            if check_bb_band:
+                bb_file_number = st.text_input("BB File Number", value="1")
+                bb_band_sd = st.selectbox(
+                    "BB Band Standard Deviations",
+                    options=[2.0, 2.25, 2.5, 2.75, 3.0],
+                    index=0,
+                )
+                bb_band_column = st.selectbox(
+                    "BB Band Column", options=["mean", "upper", "lower"], index=0
+                )
+        if check_entry_based and check_entry_fractal:
+            check_entry_based = False
+            check_entry_fractal = False
+
+            error_mssg = "Please select either 'Check Entry Based' or 'Check Entry Fractal', not both."
+            st.error(error_mssg)
+            errors.append(error_mssg)
+
+        st.text("Exits conditions: ")
         # Exit Fractal Inputs (conditionally displayed)
         check_exit_fractal = st.checkbox("Check Exit Fractal", value=False)
         if check_exit_fractal:
@@ -279,19 +344,6 @@ def main():
             )
             fractal_exit_count = st.text_input(
                 "Fractal Exit Count (e.g., 6, ALL)", value="ALL"
-            )
-
-        # Bollinger Band Inputs (conditionally displayed)
-        check_bb_band = st.checkbox("Check BB Band", value=False)
-        if check_bb_band:
-            bb_file_number = st.text_input("BB File Number", value="1")
-            bb_band_sd = st.selectbox(
-                "BB Band Standard Deviations",
-                options=[2.0, 2.25, 2.5, 2.75, 3.0],
-                index=0,
-            )
-            bb_band_column = st.selectbox(
-                "BB Band Column", options=["mean", "upper", "lower"], index=0
             )
 
         # Trail BB Band Inputs (conditionally displayed)
@@ -312,18 +364,31 @@ def main():
             trail_bb_band_short_direction = st.selectbox(
                 "Trail BB Band Short Direction", options=["higher", "lower"], index=0
             )
-
-        check_entry_based = st.checkbox("Check Entry Based", value=False)
-        if check_entry_based:
-            number_of_entries = st.number_input(
-                "Number of Entries", min_value=0, value=10, step=1
-            )
-            steps_to_skip = st.number_input(
-                "Steps to Skip", min_value=0, value=3, step=1
-            )
-
         notes = st.text_input("Notes")
-        if st.button("Submit"):
+        save = st.checkbox("Save Inputs", value=True)
+
+        if (
+            allowed_direction == MarketDirection.LONG.value
+            or allowed_direction == MarketDirection.ALL.value
+        ):
+            if not long_entry_signals or not long_exit_signals:
+                error_mssg = "Please select Long Entry and Exit Signals."
+                st.error(error_mssg)
+                errors.append(error_mssg)
+        if (
+            allowed_direction == MarketDirection.SHORT.value
+            or allowed_direction == MarketDirection.ALL.value
+        ):
+            if not short_entry_signals or not short_exit_signals:
+                error_mssg = "Please select Short Entry and Exit Signals."
+                st.error(error_mssg)
+                errors.append(error_mssg)
+        if not strategy_pairs:
+            error_mssg = "Please select Strategy Pairs."
+            st.error(error_mssg)
+            errors.append(error_mssg)
+
+        if not errors and st.button("Submit"):
             # Gather input data
             input_data = {
                 "instrument": instrument,
@@ -376,12 +441,13 @@ def main():
             validated_input = validate(input_data)
 
             if validated_input:
-                temp = {
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "notes": notes,
-                }
-                temp.update(validated_input)
-                write_user_inputs(temp)
+                if save:
+                    temp = {
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "notes": notes,
+                    }
+                    temp.update(validated_input)
+                    write_user_inputs(temp)
 
                 # Start trade processing
                 start = time.time()

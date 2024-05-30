@@ -21,7 +21,7 @@ The `validation.py` module provided defines a Pydantic model `StrategyInput` for
 # Import necessary libraries
 from datetime import datetime, time
 from itertools import chain
-from typing import List, Union
+from typing import List, Optional, Union
 from pydantic import BaseModel, ValidationError, field_validator
 
 # Import project-specific constants
@@ -44,8 +44,8 @@ class StrategyInput(BaseModel):
     short_exit_signals: List[tuple]
     trade_type: TradeType
     allowed_direction: MarketDirection
-    trade_start_time: time
-    trade_end_time: time
+    trade_start_time: Optional[time]
+    trade_end_time: Optional[time]
 
     check_entry_fractal: bool = None
     entry_fractal_file_number: str = None
@@ -187,20 +187,24 @@ def check_exit_conditions(validated_data):
     Raises:
         ValueError: If the conditions are not met.
     """
+    long_entry_set = set(validated_data.long_entry_signals)
+    short_entry_set = set(validated_data.short_entry_signals)
     short_exit_set = set(validated_data.short_exit_signals)
     long_exit_set = set(validated_data.long_exit_signals)
 
-    if not any(
-        signal_pair in short_exit_set
-        for signal_pair in validated_data.long_entry_signals
-    ):
-        raise ValueError("Long entry signals should be added in short exit signals")
+    if validated_data.allowed_direction == MarketDirection.ALL:
+        if not long_entry_set.issubset(short_exit_set):
+            raise ValueError("Long entry signals should be added in short exit signals")
 
-    if not any(
-        signal_pair in long_exit_set
-        for signal_pair in validated_data.short_entry_signals
-    ):
-        raise ValueError("Short entry signals should be added in long exit signals")
+        if not short_entry_set.issubset(long_exit_set):
+            raise ValueError("Short entry signals should be added in long exit signals")
+
+    if long_entry_set & long_exit_set:
+        raise ValueError("Long entry signals and long exit signals cannot be the same")
+    if short_entry_set & short_exit_set:
+        raise ValueError(
+            "Short entry signals and short exit signals cannot be the same"
+        )
 
 
 def validate_input(input_data):

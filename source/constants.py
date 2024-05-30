@@ -48,6 +48,7 @@ class TradeType(Enum):
 
     INTRADAY = "I"
     POSITIONAL = "P"
+    ALL = "all"
 
 
 class MarketDirection(Enum):
@@ -55,10 +56,10 @@ class MarketDirection(Enum):
     Enumeration for market direction conditions.
     """
 
+    ALL = "all"
     LONG = "L"
     SHORT = "S"
     PREVIOUS = "previous"
-    ALL = "all"
 
 
 # List of possible strategy IDs

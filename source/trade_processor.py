@@ -71,9 +71,9 @@ def is_trade_start_time_crossed(row):
     Returns:
         bool: True if the trade start time is crossed, False otherwise"""
 
-    if row.name.time() >= Trade.trade_start_time:
-        return True
-    return False
+    if Trade.type == TradeType.INTRADAY and row.name.time() < Trade.trade_start_time:
+        return False
+    return True
 
 
 def get_market_direction(row, condition_key):
