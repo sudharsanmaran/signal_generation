@@ -408,7 +408,7 @@ def main():
         segment = st.selectbox("Segment", ["CASH", "FUTURE", "OPTIONS"])
         tm_input_data["segment"] = segment
 
-        if segment == "OPTIONS":
+        if segment == "OPTIONS" or segment == "FUTURE":
             # OPTBUYING
             opt_buying = st.selectbox("OPTBUYING", ["YES", "NO"])
             tm_input_data["opt_buying"] = opt_buying
