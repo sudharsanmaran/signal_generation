@@ -19,6 +19,7 @@ The `validation.py` module provided defines a Pydantic model `StrategyInput` for
 """
 
 # Import necessary libraries
+import ast
 from datetime import datetime, time
 from itertools import chain
 from typing import List, Optional, Union
@@ -26,6 +27,7 @@ from pydantic import BaseModel, ValidationError, field_validator
 
 # Import project-specific constants
 from source.constants import MarketDirection, TradeType
+from source.validate_trade_management import TradingConfiguration
 
 
 class StrategyInput(BaseModel):
@@ -117,27 +119,27 @@ class StrategyInput(BaseModel):
             )
         return v
 
-    @field_validator("trade_type")
-    def validate_trade_type(cls, v):
-        """
-        Validate trade type.
-        """
-        if v not in {TradeType.INTRADAY, TradeType.POSITIONAL}:
-            raise ValueError(
-                'Trade type must be one of the following: "Intraday", "Positional"'
-            )
-        return v
+    # @field_validator("trade_type")
+    # def validate_trade_type(cls, v):
+    #     """
+    #     Validate trade type.
+    #     """
+    #     if v not in {TradeType.INTRADAY, TradeType.POSITIONAL}:
+    #         raise ValueError(
+    #             'Trade type must be one of the following: "Intraday", "Positional"'
+    #         )
+    #     return v
 
-    @field_validator("allowed_direction")
-    def validate_allowed_direction(cls, v):
-        """
-        Validate allowed direction.
-        """
-        if v not in {MarketDirection.LONG, MarketDirection.SHORT, MarketDirection.ALL}:
-            raise ValueError(
-                'Allowed direction must be one of the following: "long", "short", "all"'
-            )
-        return v
+    # @field_validator("allowed_direction")
+    # def validate_allowed_direction(cls, v):
+    #     """
+    #     Validate allowed direction.
+    #     """
+    #     if v not in {MarketDirection.LONG, MarketDirection.SHORT, MarketDirection.ALL}:
+    #         raise ValueError(
+    #             'Allowed direction must be one of the following: "long", "short", "all"'
+    #         )
+    #     return v
 
     @field_validator("fractal_exit_count")
     def validate_fractal_exit_count(cls, v):
@@ -149,6 +151,26 @@ class StrategyInput(BaseModel):
         elif isinstance(v, str) and v.lower() == MarketDirection.ALL.value:
             return v
         raise ValueError('Fractal exit count must be an integer or "ALL"')
+
+
+class StrategyInputAndTradingConfig(StrategyInput, TradingConfiguration):
+    pass
+
+
+def parse_enum(enum_class, value):
+    """
+    Parse a string value to an enumeration class.
+
+    Args:
+        enum_class (Enum): The enumeration class.
+    """
+
+    # Extract the class name and member name from the string
+    class_name, member_name = value.split(".")
+
+    # Use globals() to get the enum class by name
+    enum_class = globals()[class_name]
+    return enum_class.__members__[member_name]
 
 
 def validate_count(validated_data: StrategyInput):
@@ -221,7 +243,7 @@ def validate_input(input_data):
         ValidationError: If the validation fails.
     """
     try:
-        validated_data = StrategyInput(**input_data)
+        validated_data = StrategyInputAndTradingConfig(**input_data)
         validate_count(validated_data)
         check_exit_conditions(validated_data)
         return validated_data.model_dump()

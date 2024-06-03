@@ -49,6 +49,7 @@ This Python module defines functions for processing trades based on a specific s
 
 from collections import deque
 from itertools import chain
+import os
 import pandas as pd
 
 from source.constants import (
@@ -457,7 +458,7 @@ def process_trade(
     """
     portfolio_pair_str = " - ".join(Trade.portfolio_ids)
     for strategy_pair in Trade.strategy_ids:
-        strategy_pair_str = " - ".join(map(lambda a: str(a), strategy_pair))
+        strategy_pair_str = "_".join(map(lambda a: str(a), strategy_pair))
         all_df = read_data(
             Trade.instrument,
             Trade.portfolio_ids,
@@ -479,7 +480,13 @@ def process_trade(
         # Merge data
         merged_df = merge_all_df(all_df)
 
-        merged_df.to_csv(f"merged_df_{strategy_pair_str}.csv", index=True)
+        merged_df_dir = "merged_dfs"
+        merged_df_file = f"merged_df_{Trade.instrument}_{strategy_pair_str}.csv"
+        path = os.path.join(merged_df_dir, merged_df_file)
+
+        os.makedirs(merged_df_dir, exist_ok=True)
+
+        merged_df.to_csv(path, index=False)
 
         # Dictionaries to track last fractals for both entry and exit
         entry_state = {
@@ -521,4 +528,13 @@ def process_trade(
 
         output_df = pd.DataFrame(trade_outputs)
 
-        output_df.to_csv(f"output_{strategy_pair_str}.csv", index=False)
+        # Define the output directory and file path
+        output_dir = "signal_gen_outputs"
+        output_file = f"output_{Trade.instrument}_{strategy_pair_str}.csv"
+        output_path = os.path.join(output_dir, output_file)
+
+        os.makedirs(output_dir, exist_ok=True)
+
+        output_df.to_csv(output_path, index=False)
+
+        return output_df

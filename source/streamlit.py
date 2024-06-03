@@ -24,13 +24,13 @@ import csv
 from datetime import datetime
 import os
 import time
+import pandas as pd
 from pydantic import ValidationError
 import streamlit as st
 from itertools import product
 from dotenv import load_dotenv
 
 # Import project-specific modules
-from source.validate_trade_management import validate_trade_management
 from source.constants import POSSIBLE_STRATEGY_IDS, MarketDirection, TradeType
 from source.trade import initialize
 from source.trade_processor import process_trade
@@ -56,6 +56,29 @@ def select_all_options(key, combinations):
         if key == "short_entry_signals":
             st.session_state["long_entry_signals"] = []
         st.session_state[key] = combinations
+
+
+def read_user_inputs():
+    try:
+        data = pd.read_csv(
+            "user_inputs.csv",
+            parse_dates=[
+                "trade_start_time",
+                "trade_end_time",
+                "start_date",
+                "end_date",
+            ],
+            dtype={
+                "entry_fractal_file_number": str,
+                "exit_fractal_file_number": str,
+                "bb_file_number": str,
+                "trail_bb_file_number": str,
+            },
+        )
+        # data = data.where(pd.notnull(data), None)
+        return data
+    except FileNotFoundError:
+        return pd.DataFrame()
 
 
 def parse_strategy_ids(input_str):
@@ -522,83 +545,133 @@ def main():
 
     notes = st.text_input("Notes")
     save = st.checkbox("Save Inputs", value=True)
+    trigger_trade_management_module = st.checkbox(
+        "Trigger Trade Management Module", value=False
+    )
 
-    if not errors and st.button("Submit"):
-        # Gather input data
-        input_data = {
-            "instrument": instrument,
-            "portfolio_ids": portfolio_ids,
-            "strategy_ids": strategy_pairs,
-            "long_entry_signals": long_entry_signals,
-            "long_exit_signals": long_exit_signals,
-            "short_entry_signals": short_entry_signals,
-            "short_exit_signals": short_exit_signals,
-            "start_date": start_date,
-            "end_date": end_date,
-            "trade_start_time": trade_start_time,
-            "trade_end_time": trade_end_time,
-            "check_entry_fractal": check_entry_fractal,
-            "check_exit_fractal": check_exit_fractal,
-            "check_bb_band": check_bb_band,
-            "check_trail_bb_band": check_trail_bb_band,
-            "check_entry_based": check_entry_based,
-            "trade_type": trade_type,
-            "allowed_direction": allowed_direction,
-        }
-        if check_entry_fractal:
-            input_data["entry_fractal_file_number"] = entry_fractal_file_number
+    use_saved_input = st.checkbox("Use Saved Inputs", value=False)
+    # Read the CSV file and display saved notes in a dropdown with search functionality
+    if use_saved_input:
+        user_inputs_df = read_user_inputs()
+        if not user_inputs_df.empty:
+            search_term = st.text_input("Search Notes")
+            filtered_notes = user_inputs_df["notes"][
+                user_inputs_df["notes"].str.contains(search_term, case=False, na=False)
+            ].unique()
 
-        if check_exit_fractal:
-            input_data["exit_fractal_file_number"] = exit_fractal_file_number
-            input_data["fractal_exit_count"] = fractal_exit_count
-
-        if check_bb_band:
-            input_data["bb_file_number"] = bb_file_number
-            input_data["bb_band_sd"] = bb_band_sd
-            input_data["bb_band_column"] = bb_band_column
-
-        if check_trail_bb_band:
-            input_data["trail_bb_file_number"] = trail_bb_file_number
-            input_data["trail_bb_band_sd"] = trail_bb_band_sd
-            input_data["trail_bb_band_column"] = trail_bb_band_column
-            input_data["trail_bb_band_long_direction"] = trail_bb_band_long_direction
-            input_data["trail_bb_band_short_direction"] = trail_bb_band_short_direction
-
-        if check_entry_based:
-            input_data["number_of_entries"] = number_of_entries
-            input_data["steps_to_skip"] = steps_to_skip
-
-        # Validate input data
-        validated_input = validate(input_data, key=validate_input)
-        validated_tm_input = validate(tm_input_data, key=validate_trade_management)
-
-        if validated_input:
-            if save:
-                temp = {
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "notes": notes,
-                }
-                temp.update(validated_input)
-                temp.update(validated_tm_input)
-                write_user_inputs(temp)
-
-            # Start trade processing
-            start = time.time()
-
-            initialize(validated_input)
-
-            process_trade(
-                validated_input.get("start_date"),
-                validated_input.get("end_date"),
-                validated_input.get("entry_fractal_file_number"),
-                validated_input.get("exit_fractal_file_number"),
-                validated_input.get("bb_file_number"),
-                validated_input.get("trail_bb_file_number"),
+            selected_note = st.selectbox(
+                "Select a note to view details", filtered_notes
             )
-            stop = time.time()
-            st.success(
-                f"Trade processing completed successfully! Total time taken: {stop-start} seconds"
+
+            if selected_note:
+                # selected_data = user_inputs_df[
+                #     user_inputs_df["notes"] == selected_note
+                # ].iloc[0]
+                selected_data = user_inputs_df.dropna(axis=1)[
+                    user_inputs_df["notes"] == selected_note
+                ].iloc[0]
+
+                # Display the selected data
+                st.write("Details for the selected note:")
+                for key, value in selected_data.items():
+                    st.write(f"{key}: {value}")
+
+        else:
+            st.info("No saved inputs found.")
+
+    if use_saved_input:
+        st.info("Using data from selected note to start module.")
+        if st.button("Submit"):
+            validated_data = validate(selected_data.to_dict(), key=validate_input)
+            execute(validated_data)
+    else:
+        if not errors and st.button("Submit"):
+            # Gather input data
+            input_data = {
+                "instrument": instrument,
+                "portfolio_ids": portfolio_ids,
+                "strategy_ids": strategy_pairs,
+                "long_entry_signals": long_entry_signals,
+                "long_exit_signals": long_exit_signals,
+                "short_entry_signals": short_entry_signals,
+                "short_exit_signals": short_exit_signals,
+                "start_date": start_date,
+                "end_date": end_date,
+                "trade_start_time": trade_start_time,
+                "trade_end_time": trade_end_time,
+                "check_entry_fractal": check_entry_fractal,
+                "check_exit_fractal": check_exit_fractal,
+                "check_bb_band": check_bb_band,
+                "check_trail_bb_band": check_trail_bb_band,
+                "check_entry_based": check_entry_based,
+                "trade_type": trade_type,
+                "allowed_direction": allowed_direction,
+            }
+            if check_entry_fractal:
+                input_data["entry_fractal_file_number"] = entry_fractal_file_number
+
+            if check_exit_fractal:
+                input_data["exit_fractal_file_number"] = exit_fractal_file_number
+                input_data["fractal_exit_count"] = fractal_exit_count
+
+            if check_bb_band:
+                input_data["bb_file_number"] = bb_file_number
+                input_data["bb_band_sd"] = bb_band_sd
+                input_data["bb_band_column"] = bb_band_column
+
+            if check_trail_bb_band:
+                input_data["trail_bb_file_number"] = trail_bb_file_number
+                input_data["trail_bb_band_sd"] = trail_bb_band_sd
+                input_data["trail_bb_band_column"] = trail_bb_band_column
+                input_data["trail_bb_band_long_direction"] = (
+                    trail_bb_band_long_direction
+                )
+                input_data["trail_bb_band_short_direction"] = (
+                    trail_bb_band_short_direction
+                )
+
+            if check_entry_based:
+                input_data["number_of_entries"] = number_of_entries
+                input_data["steps_to_skip"] = steps_to_skip
+
+            # Validate input data
+            validated_input = validate(
+                {**input_data, **tm_input_data}, key=validate_input
             )
+
+            if validated_input:
+                if save:
+                    temp = {
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "notes": notes,
+                    }
+                    temp.update(validated_input)
+                    write_user_inputs(temp)
+
+                # Start trade processing
+                execute(validated_input, trigger_trade_management_module)
+
+
+def execute(validated_input, trigger_trade_management_module=False):
+    start = time.time()
+
+    initialize(validated_input)
+
+    output_df = process_trade(
+        validated_input.get("start_date"),
+        validated_input.get("end_date"),
+        validated_input.get("entry_fractal_file_number"),
+        validated_input.get("exit_fractal_file_number"),
+        validated_input.get("bb_file_number"),
+        validated_input.get("trail_bb_file_number"),
+    )
+    if trigger_trade_management_module:
+        # Call the trade management module
+        pass
+    stop = time.time()
+    st.success(
+        f"Trade processing completed successfully! Total time taken: {stop-start} seconds"
+    )
 
 
 def write_user_inputs(validated_input):
