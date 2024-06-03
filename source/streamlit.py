@@ -408,11 +408,12 @@ def main():
         segment = st.selectbox("Segment", ["CASH", "FUTURE", "OPTIONS"])
         tm_input_data["segment"] = segment
 
-        if segment == "OPTIONS" or segment == "FUTURE":
+        if segment == "OPTIONS":
             # OPTBUYING
             opt_buying = st.selectbox("OPTBUYING", ["YES", "NO"])
             tm_input_data["opt_buying"] = opt_buying
             # if opt_buying == "YES":
+            expiry = st.number_input("Expiry", min_value=1)
             strike = st.number_input("Strike")
             tm_input_data.update({"expiry": expiry, "strike": strike})
 
