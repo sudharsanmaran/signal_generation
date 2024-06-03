@@ -412,13 +412,13 @@ def main():
             # OPTBUYING
             opt_buying = st.selectbox("OPTBUYING", ["YES", "NO"])
             tm_input_data["opt_buying"] = opt_buying
-            if opt_buying == "YES":
-                expiry = st.number_input("Expiry", min_value=1)
-                strike = st.number_input("Strike")
-                tm_input_data.update({"expiry": expiry, "strike": strike})
+            # if opt_buying == "YES":
+            strike = st.number_input("Strike")
+            tm_input_data.update({"expiry": expiry, "strike": strike})
 
         if segment == "FUTURE":
             # Hedge
+            expiry = st.number_input("Expiry", min_value=1)
             hedge = st.checkbox("Hedge")
             tm_input_data["hedge"] = hedge
             if hedge:
@@ -430,6 +430,7 @@ def main():
                         "hedge_expiry": hedge_expiry,
                         "hedge_strike": hedge_strike,
                         "hedge_delayed_exit": hedge_delayed_exit,
+                        "expiry": expiry,
                     }
                 )
 
