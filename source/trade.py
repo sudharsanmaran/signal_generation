@@ -49,14 +49,13 @@ class Trade:
     trail_bb_band_column: Optional[str] = None
     trail_bb_band_direction: Optional[str] = None
     trail_compare_functions: Dict = {}
-    # trail_long_compare_func: Optional[callable] = None
-    # trail_long_opposite_compare_func: Optional[callable] = None
-    # trail_short_compare_func: Optional[callable] = None
-    # trail_short_opposite_compare_func: Optional[callable] = None
 
     check_entry_based: bool = False
     max_limit_entry_based: Optional[int] = None
     steps_entry_based: Optional[int] = None
+
+    skip_rows: bool = False
+    no_of_rows_to_skip: Optional[int] = None
 
     def __init__(self, entry_signal, entry_datetime, entry_price, signal_count):
         """
@@ -268,3 +267,7 @@ def initialize(validated_input):
     if Trade.check_entry_based:
         Trade.max_limit_entry_based = validated_input.get("number_of_entries")
         Trade.steps_entry_based = validated_input.get("steps_to_skip")
+
+    if validated_input.get("skip_rows"):
+        Trade.skip_rows = True
+        Trade.no_of_rows_to_skip = validated_input.get("no_of_rows_to_skip")

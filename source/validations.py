@@ -72,6 +72,9 @@ class StrategyInput(BaseModel):
     number_of_entries: int = None
     steps_to_skip: int = None
 
+    skip_rows: bool = False
+    no_of_rows_to_skip: Optional[int] = None
+
     @field_validator("start_date", "end_date")
     def convert_to_datetime(cls, v):
         """

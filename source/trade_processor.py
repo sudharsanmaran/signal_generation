@@ -252,6 +252,10 @@ def check_entry_conditions(row, state):
     if not is_trade_start_time_crossed(row):
         return False, None
 
+    if Trade.no_of_rows_to_skip:
+        Trade.no_of_rows_to_skip -= 1
+        return False, None
+
     market_direction = get_market_direction(row, "entry")
 
     if not market_direction:

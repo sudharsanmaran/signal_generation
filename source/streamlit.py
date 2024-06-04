@@ -535,6 +535,18 @@ def main():
                             "bb_band_column": bb_band_column,
                         }
                     )
+            skip_rows = st.checkbox(
+                "Skip Rows", value=saved_inputs.get("skip_rows", False)
+            )
+            streamlit_inputs["skip_rows"] = skip_rows
+            if skip_rows:
+                no_of_rows_to_skip = st.number_input(
+                    "No Of Rows To Skip",
+                    min_value=0,
+                    value=saved_inputs.get("no_of_rows_to_skip", 0),
+                    step=1,
+                )
+                streamlit_inputs["no_of_rows_to_skip"] = no_of_rows_to_skip
 
             if check_entry_based and check_entry_fractal:
                 check_entry_based = False
