@@ -457,7 +457,7 @@ def process_trade(
         None
     """
     portfolio_pair_str = " - ".join(Trade.portfolio_ids)
-    for strategy_pair in Trade.strategy_ids:
+    for strategy_pair in Trade.strategy_pairs:
         strategy_pair_str = "_".join(map(lambda a: str(a), strategy_pair))
         all_df = read_data(
             Trade.instrument,
@@ -495,8 +495,6 @@ def process_trade(
             MarketDirection.PREVIOUS: None,
         }
         exit_state = {
-            # MarketDirection.LONG: deque(),
-            # MarketDirection.SHORT: deque(),
             MarketDirection.PREVIOUS: None,
             "signal_count": 1,
         }

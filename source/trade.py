@@ -28,7 +28,7 @@ class Trade:
     """
 
     portfolio_ids: tuple
-    strategy_ids: Optional[tuple] = None
+    strategy_pairs: Optional[tuple] = None
     entry_id_counter: int = 0
     instrument: Optional[str] = None
     trade_start_time = None
@@ -214,7 +214,7 @@ def initialize(validated_input):
     """
     Trade.entry_id_counter = 0
     Trade.portfolio_ids = validated_input.get("portfolio_ids")
-    Trade.strategy_ids = validated_input.get("strategy_ids")
+    Trade.strategy_pairs = validated_input.get("strategy_pairs")
     Trade.instrument = validated_input.get("instrument")
     Trade.trade_start_time = validated_input.get("trade_start_time")
     Trade.trade_end_time = validated_input.get("trade_end_time")

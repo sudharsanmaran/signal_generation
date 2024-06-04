@@ -36,7 +36,7 @@ class StrategyInput(BaseModel):
     """
 
     portfolio_ids: tuple
-    strategy_ids: List[tuple]
+    strategy_pairs: List[tuple]
     instrument: str
     start_date: Union[str, datetime]
     end_date: Union[str, datetime]
@@ -46,8 +46,8 @@ class StrategyInput(BaseModel):
     short_exit_signals: List[tuple]
     trade_type: TradeType
     allowed_direction: MarketDirection
-    trade_start_time: Optional[time]
-    trade_end_time: Optional[time]
+    trade_start_time: Optional[time] = None
+    trade_end_time: Optional[time] = None
 
     check_entry_fractal: bool = None
     entry_fractal_file_number: str = None
@@ -183,7 +183,7 @@ def validate_count(validated_data: StrategyInput):
     Raises:
         AssertionError: If the counts do not match.
     """
-    for strategy_pair in validated_data.strategy_ids:
+    for strategy_pair in validated_data.strategy_pairs:
         assert len(strategy_pair) == len(
             validated_data.portfolio_ids
         ), "The number of strategies does not match the number of portfolio IDs"

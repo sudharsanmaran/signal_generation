@@ -48,7 +48,7 @@ class TradeType(Enum):
 
     INTRADAY = "I"
     POSITIONAL = "P"
-    ALL = "all"
+    # ALL = "all"
 
 
 class MarketDirection(Enum):
