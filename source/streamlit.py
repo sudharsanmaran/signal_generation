@@ -114,6 +114,14 @@ def get_portfolio_flags(portfolio_ids, streamlit_inputs, saved_inputs):
         # Ensure 'possible_flags_input' key exists in streamlit_inputs
         if "possible_flags_input" not in streamlit_inputs:
             streamlit_inputs["possible_flags_input"] = {}
+        if (
+            saved_inputs.get("possible_flags_input", {}).get(portfolio_id)
+            != possible_flags_input
+        ):
+            saved_inputs["long_entry_signals"] = []
+            saved_inputs["long_exit_signals"] = []
+            saved_inputs["short_entry_signals"] = []
+            saved_inputs["short_exit_signals"] = []
 
         # Update the 'possible_flags_input' dictionary with the current input for the portfolio ID
         streamlit_inputs["possible_flags_input"][portfolio_id] = possible_flags_input
@@ -144,6 +152,12 @@ def get_portfolio_strategies(portfolio_ids, streamlit_inputs, saved_inputs):
         )
         if "possible_strategies_input" not in streamlit_inputs:
             streamlit_inputs["possible_strategies_input"] = {}
+
+        if (
+            saved_inputs.get("possible_strategies_input", {}).get(portfolio_id)
+            != possible_strategies_input
+        ):
+            saved_inputs["strategy_pairs"] = []
 
         streamlit_inputs["possible_strategies_input"][
             portfolio_id
@@ -391,7 +405,12 @@ def main():
                 long_exit_signals = st.multiselect(
                     "Long Exit Signals",
                     set(filtered_flag_combinations) - set(long_entry_signals),
-                    default=saved_inputs.get("long_exit_signals", short_entry_signals),
+                    default=set(
+                        [
+                            *saved_inputs.get("long_exit_signals", []),
+                            *short_entry_signals,
+                        ]
+                    ),
                 )
             else:
                 long_exit_signals = []
@@ -405,7 +424,12 @@ def main():
                     set(filtered_flag_combinations)
                     - set(short_entry_signals)
                     - set(long_exit_signals),
-                    default=saved_inputs.get("short_exit_signals", long_entry_signals),
+                    default=set(
+                        [
+                            *saved_inputs.get("short_exit_signals", []),
+                            *long_entry_signals,
+                        ]
+                    ),
                 )
             else:
                 short_exit_signals = []
