@@ -38,9 +38,11 @@ from source.validations import validate_input
 # Load environment variables from a .env file
 load_dotenv()
 
-INSTRUMENTS = list(map(lambda x: x.strip(), os.getenv("INSTRUMENTS").split(",")))
-STOCKS_FNO = list(map(lambda x: x.strip(), os.getenv("STOCKS_FNO").split(",")))
-STOCKS_NON_FNO = list(map(lambda x: x.strip(), os.getenv("STOCKS_NON_FNO").split(",")))
+INSTRUMENTS = list(map(lambda x: x.strip(), os.getenv("INSTRUMENTS", "").split(",")))
+STOCKS_FNO = list(map(lambda x: x.strip(), os.getenv("STOCKS_FNO", "").split(",")))
+STOCKS_NON_FNO = list(
+    map(lambda x: x.strip(), os.getenv("STOCKS_NON_FNO", "").split(","))
+)
 
 
 def select_all_options(key, combinations):
@@ -242,12 +244,7 @@ def main():
     Main function to run the Streamlit app.
     """
 
-    errors, streamlit_inputs, saved_inputs = (
-        [],
-        {},
-        {},
-    )
-
+    errors, streamlit_inputs, saved_inputs = [], {}, {}
     use_saved_input = st.checkbox("Use Saved Inputs", value=False)
     if use_saved_input:
         all_user_inputs = load_input_from_json()
@@ -920,10 +917,10 @@ def write_user_inputs(user_input):
             # Load existing data
             existing_data = load_input_from_json(filename)
         else:
-            # Initialize an empty list if the file doesn't exist or is empty
+            # Initialize an empty dict if the file doesn't exist or is empty
             existing_data = {}
 
-        # Append the new entry to the existing data
+        # add the new entry to the existing data
         existing_data[user_input["notes"]] = user_input
 
         # Set the "save" key to False to avoid saving the data again
