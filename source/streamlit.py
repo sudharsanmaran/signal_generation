@@ -34,6 +34,7 @@ from source.constants import POSSIBLE_STRATEGY_IDS, MarketDirection, TradeType
 from source.trade import initialize
 from source.trade_processor import process_trade
 from source.validations import validate_input
+from tradesheet.index import generate_tradesheet
 
 # Load environment variables from a .env file
 load_dotenv()
@@ -666,6 +667,7 @@ def main():
             )
             hedge = st.checkbox("Hedge", value=saved_inputs.get("hedge", False))
             streamlit_inputs["hedge"] = hedge
+            streamlit_inputs["expiry"] = expiry
             if hedge:
                 hedge_expiry = st.number_input(
                     "Hedge Expiry",
@@ -686,7 +688,6 @@ def main():
                         "hedge_expiry": hedge_expiry,
                         "hedge_strike": hedge_strike,
                         "hedge_delayed_exit": hedge_delayed_exit,
-                        "expiry": expiry,
                     }
                 )
 
@@ -900,6 +901,7 @@ def execute(validated_input, trigger_trade_management_module=False):
     )
     if trigger_trade_management_module:
         # Call the trade management module
+        generate_tradesheet(validated_input, output_df)
         pass
     stop = time.time()
     st.success(
