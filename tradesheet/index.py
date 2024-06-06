@@ -14,8 +14,10 @@ SEGMENT_CLASS = {
 }
 
 
-def generate_tradesheet(input_data, signal_generation_df):
-    breakpoint()
+def generate_tradesheet(
+    input_data, signal_generation_df, strategy_pair=None, instrument=None
+):
+    # breakpoint()
     st = time.time()
     print(input_data[InputFileCols.SEGMENT])
     segment_class = SEGMENT_CLASS.get(input_data["segment"].lower(), None)
@@ -27,10 +29,15 @@ def generate_tradesheet(input_data, signal_generation_df):
     print(time.time() - st)
 
 
-if __name__ == '__main__':
-    input_data = pd.read_csv(INPUT_FILE, parse_dates=["Start Date", "End Date"], keep_default_na=False, dayfirst=True).to_dict(orient="records")[0]
-    ee_df = pd.read_csv(ENTRY_EXIT_FILE, parse_dates=[InputCols.ENTRY_DT, InputCols.EXIT_DT])
+if __name__ == "__main__":
+    input_data = pd.read_csv(
+        INPUT_FILE,
+        parse_dates=["Start Date", "End Date"],
+        keep_default_na=False,
+        dayfirst=True,
+    ).to_dict(orient="records")[0]
+    ee_df = pd.read_csv(
+        ENTRY_EXIT_FILE, parse_dates=[InputCols.ENTRY_DT, InputCols.EXIT_DT]
+    )
     ee_df.drop(columns=["Unnamed: 0"], inplace=True)
     generate_tradesheet(input_data, ee_df)
-
-    

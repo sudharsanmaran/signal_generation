@@ -37,7 +37,7 @@ class StrategyInput(BaseModel):
 
     portfolio_ids: tuple
     strategy_pairs: List[tuple]
-    instrument: str
+    instruments: List[str]
     start_date: Union[str, datetime]
     end_date: Union[str, datetime]
     long_entry_signals: List[tuple]
@@ -48,6 +48,7 @@ class StrategyInput(BaseModel):
     allowed_direction: MarketDirection
     trade_start_time: Optional[time] = None
     trade_end_time: Optional[time] = None
+    trigger_trade_management: bool = False
 
     check_entry_fractal: bool = None
     entry_fractal_file_number: str = None

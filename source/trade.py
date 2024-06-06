@@ -16,10 +16,10 @@ This commented code should help clarify the purpose and functionality of each pa
 """
 
 # Import necessary libraries
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 # Import project-specific constants
-from source.constants import MarketDirection, TradeExitType
+from source.constants import MarketDirection, OutputColumn, TradeExitType
 
 
 class Trade:
@@ -30,13 +30,14 @@ class Trade:
     portfolio_ids: tuple
     strategy_pairs: Optional[tuple] = None
     entry_id_counter: int = 0
-    instrument: Optional[str] = None
+    instruments: List[str]
     trade_start_time = None
     trade_end_time = None
     type: Optional[str] = None
     market_direction_conditions: Dict = {}
     allowed_direction: Optional[str] = None
     signal_columns: Optional[tuple] = None
+    trigger_trade_management: bool = False
 
     check_entry_fractal: bool = False
     check_exit_fractal: bool = False
@@ -155,7 +156,7 @@ class Trade:
         """
         cls.entry_id_counter = 0
 
-    def formulate_output(self, strategy_pair, portfolio_pair=None):
+    def formulate_output(self, instrument, strategy_pair, portfolio_pair=None):
         """
         Formulate the trade output details.
 
@@ -168,20 +169,20 @@ class Trade:
         """
         return [
             {
-                "Instrument": Trade.instrument,
-                "Portfolios": portfolio_pair,
-                "Strategy IDs": strategy_pair,
-                "Signal": self.entry_signal.value,
-                "Signal Number": self.signal_count,
-                "Entry Datetime": self.entry_datetime,
-                "Entry ID": self.entry_id,
-                "Exit ID": exit["exit_id"],
-                "Exit Datetime": exit["exit_datetime"],
-                "Exit Type": exit["exit_type"].value,
-                "Intraday/ Positional": Trade.type.value,
-                "Entry Price": self.entry_price,
-                "Exit Price": exit["exit_price"],
-                "Net points": exit["pnl"],
+                OutputColumn.INSTRUMENT.value: instrument,
+                OutputColumn.PORTFOLIOS.value: portfolio_pair,
+                OutputColumn.STRATEGY_IDS.value: strategy_pair,
+                OutputColumn.SIGNAL.value: self.entry_signal.value,
+                OutputColumn.SIGNAL_NUMBER.value: self.signal_count,
+                OutputColumn.ENTRY_DATETIME.value: self.entry_datetime,
+                OutputColumn.ENTRY_ID.value: self.entry_id,
+                OutputColumn.EXIT_ID.value: exit["exit_id"],
+                OutputColumn.EXIT_DATETIME.value: exit["exit_datetime"],
+                OutputColumn.EXIT_TYPE.value: exit["exit_type"].value,
+                OutputColumn.INTRADAY_POSITIONAL.value: Trade.type.value,
+                OutputColumn.ENTRY_PRICE: self.entry_price,
+                OutputColumn.EXIT_PRICE.value: exit["exit_price"],
+                OutputColumn.NET_POINTS.value: exit["pnl"],
             }
             for exit in self.exits
         ]
@@ -214,7 +215,7 @@ def initialize(validated_input):
     Trade.entry_id_counter = 0
     Trade.portfolio_ids = validated_input.get("portfolio_ids")
     Trade.strategy_pairs = validated_input.get("strategy_pairs")
-    Trade.instrument = validated_input.get("instrument")
+    Trade.instruments = validated_input.get("instruments")
     Trade.trade_start_time = validated_input.get("trade_start_time")
     Trade.trade_end_time = validated_input.get("trade_end_time")
     Trade.check_entry_fractal = validated_input.get("check_entry_fractal")
@@ -223,6 +224,7 @@ def initialize(validated_input):
     Trade.check_trail_bb_band = validated_input.get("check_trail_bb_band")
     Trade.check_entry_based = validated_input.get("check_entry_based")
     Trade.type = validated_input.get("trade_type")
+    Trade.trigger_trade_management = validated_input.get("trigger_trade_management")
     Trade.market_direction_conditions = {
         "entry": {
             MarketDirection.LONG: validated_input.get("long_entry_signals"),

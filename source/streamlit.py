@@ -31,13 +31,11 @@ from dotenv import load_dotenv
 
 # Import project-specific modules
 from source.constants import POSSIBLE_STRATEGY_IDS, MarketDirection, TradeType
-from source.trade import initialize
 from source.trade_processor import process_trade
 from source.validations import validate_input
-from tradesheet.index import generate_tradesheet
 
 # Load environment variables from a .env file
-load_dotenv()
+load_dotenv(override=True)
 
 INSTRUMENTS = list(map(lambda x: x.strip(), os.getenv("INSTRUMENTS", "").split(",")))
 STOCKS_FNO = list(map(lambda x: x.strip(), os.getenv("STOCKS_FNO", "").split(",")))
@@ -325,24 +323,24 @@ def main():
                 {"trade_start_time": trade_start_time, "trade_end_time": trade_end_time}
             )
 
-        instrument = st.selectbox(
+        instruments = st.multiselect(
             "INDICES",
             options=INSTRUMENTS,
-            index=INSTRUMENTS.index(saved_inputs.get("instrument", "BANKNIFTY")),
+            default=saved_inputs.get("instruments", ["BANKNIFTY"]),
         )
-        streamlit_inputs["instrument"] = instrument
+        streamlit_inputs["instruments"] = instruments
 
-        stocks_fno = st.selectbox(
+        stocks_fno = st.multiselect(
             "Stocks-FNO",
             options=STOCKS_FNO,
-            index=STOCKS_FNO.index(saved_inputs.get("stocks_fno", "HDFCBANK")),
+            default=saved_inputs.get("stocks_fno", ["HDFCBANK"]),
         )
         streamlit_inputs["stocks_fno"] = stocks_fno
 
-        stocks_non_fno = st.selectbox(
+        stocks_non_fno = st.multiselect(
             "Stocks-NONFNO",
             options=STOCKS_NON_FNO,
-            index=STOCKS_NON_FNO.index(saved_inputs.get("stocks_non_fno", "YESBANK")),
+            default=saved_inputs.get("stocks_non_fno", ["YESBANK"]),
         )
         streamlit_inputs["stocks_non_fno"] = stocks_non_fno
 
@@ -865,9 +863,10 @@ def main():
 
     notes = st.text_input("Notes", value=saved_inputs.get("notes", ""))
     save = st.checkbox("Save Inputs", value=saved_inputs.get("save", True))
-    trigger_trade_management_module = st.checkbox(
+    trigger_trade_management = st.checkbox(
         "Trigger Trade Management Module", value=False
     )
+    streamlit_inputs["trigger_trade_management"] = trigger_trade_management
 
     if not errors and st.button("Submit"):
 
@@ -883,27 +882,14 @@ def main():
                 write_user_inputs(temp)
 
             # Start trade processing
-            execute(validated_input, trigger_trade_management_module)
+            execute(validated_input)
 
 
-def execute(validated_input, trigger_trade_management_module=False):
+def execute(validated_input):
     start = time.time()
-
-    initialize(validated_input)
-
-    output_df = process_trade(
-        validated_input.get("start_date"),
-        validated_input.get("end_date"),
-        validated_input.get("entry_fractal_file_number"),
-        validated_input.get("exit_fractal_file_number"),
-        validated_input.get("bb_file_number"),
-        validated_input.get("trail_bb_file_number"),
-    )
-    if trigger_trade_management_module:
-        # Call the trade management module
-        generate_tradesheet(validated_input, output_df)
-        pass
+    process_trade(validated_input)
     stop = time.time()
+
     st.success(
         f"Trade processing completed successfully! Total time taken: {stop-start} seconds"
     )

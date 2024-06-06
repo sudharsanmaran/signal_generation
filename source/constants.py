@@ -100,3 +100,28 @@ confirm_fractal_column_dict = {
         MarketDirection.SHORT: "exit_P_1_FRACTAL_CONFIRMED_SHORT",
     },
 }
+
+
+MERGED_DF_FOLDER = "merged_df"
+SG_OUTPUT_FOLDER = "signal_generation_output"
+
+
+class OutputColumn(Enum):
+    """
+    Enumeration for output column names.
+    """
+
+    INSTRUMENT = "SG_Instrument"
+    PORTFOLIOS = "SG_Portfolios"
+    STRATEGY_IDS = "SG_Strategy IDs"
+    SIGNAL = "SG_Signal"
+    SIGNAL_NUMBER = "SG_Signal Number"
+    ENTRY_DATETIME = "SG_Entry Datetime"
+    ENTRY_ID = "SG_Entry ID"
+    EXIT_ID = "SG_Exit ID"
+    EXIT_DATETIME = "SG_Exit Datetime"
+    EXIT_TYPE = "SG_Exit Type"
+    INTRADAY_POSITIONAL = "SG_Intraday/ Positional"
+    ENTRY_PRICE = "SG_Entry Price"
+    EXIT_PRICE = "SG_Exit Price"
+    NET_POINTS = "SG_Net points"

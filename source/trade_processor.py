@@ -49,10 +49,14 @@ This Python module defines functions for processing trades based on a specific s
 
 from collections import deque
 from itertools import chain
+import multiprocessing
 import os
+from dotenv import load_dotenv
 import pandas as pd
 
 from source.constants import (
+    MERGED_DF_FOLDER,
+    SG_OUTPUT_FOLDER,
     MarketDirection,
     TradeExitType,
     TradeType,
@@ -60,7 +64,11 @@ from source.constants import (
     confirm_fractal_column_dict,
 )
 from source.data_reader import merge_all_df, read_data
-from source.trade import Trade
+from source.trade import Trade, initialize
+from tradesheet.index import generate_tradesheet
+
+
+DEBUG = os.getenv("DEBUG", False) == "True"
 
 
 def is_trade_start_time_crossed(row):
@@ -435,14 +443,7 @@ def identify_exit_signals(row, exit_state, entry_state):
     return is_trail_bb_band_exit or is_fractal_exit, exit_type
 
 
-def process_trade(
-    start_date,
-    end_date,
-    entry_fractal_file_number,
-    exit_fractal_file_number,
-    bb_file_number,
-    trail_bb_file_number,
-):
+def process_trade(validated_input):
     """
         Processes trades based on a defined strategy and outputs results.
 
@@ -460,83 +461,119 @@ def process_trade(
     Returns:
         None
     """
-    portfolio_pair_str = " - ".join(Trade.portfolio_ids)
-    for strategy_pair in Trade.strategy_pairs:
-        strategy_pair_str = "_".join(map(lambda a: str(a), strategy_pair))
-        all_df = read_data(
-            Trade.instrument,
-            Trade.portfolio_ids,
-            strategy_pair,
-            start_date,
-            end_date,
-            entry_fractal_file_number,
-            exit_fractal_file_number,
-            bb_file_number,
-            Trade.bb_band_column,
-            trail_bb_file_number,
-            Trade.trail_bb_band_column,
-            read_entry_fractal=Trade.check_entry_fractal,
-            read_exit_fractal=Trade.check_exit_fractal,
-            read_bb_fractal=Trade.check_bb_band,
-            read_trail_bb_fractal=Trade.check_trail_bb_band,
+
+    strategy_pairs = validated_input.get("strategy_pairs", [])
+    instruments = validated_input.get("instruments", [])
+
+    # Dynamic worker count
+    num_workers = min(
+        len(strategy_pairs) * len(instruments),
+        multiprocessing.cpu_count(),
+    )
+    # pool = multiprocessing.Pool(processes=num_workers)
+
+    with multiprocessing.Pool(processes=num_workers) as pool:
+        for instrument in instruments:
+            for strategy_pair in strategy_pairs:
+                try:
+                    pool.apply_async(
+                        process_strategy,
+                        args=(
+                            validated_input,
+                            strategy_pair,
+                            instrument,
+                        ),
+                    )
+                    # Process results as they become available (if desired)
+                except Exception as e:
+                    print(f"Error encountered during multiprocessing: {e}")
+
+        pool.close()
+        pool.join()
+
+    return
+
+
+def process_strategy(validated_input, strategy_pair, instrument):
+    load_dotenv()
+    initialize(validated_input)
+    portfolio_ids_str = " - ".join(Trade.portfolio_ids)
+    strategy_pair_str = "_".join(map(lambda a: str(a), strategy_pair))
+    file_name = f"merged_df_{instrument}_{strategy_pair_str}.csv"
+
+    all_df = read_data(
+        instrument,
+        Trade.portfolio_ids,
+        strategy_pair,
+        validated_input.get("start_date"),
+        validated_input.get("end_date"),
+        validated_input.get("entry_fractal_file_number"),
+        validated_input.get("exit_fractal_file_number"),
+        validated_input.get("bb_file_number"),
+        Trade.bb_band_column,
+        validated_input.get("trail_bb_file_number"),
+        Trade.trail_bb_band_column,
+        read_entry_fractal=Trade.check_entry_fractal,
+        read_exit_fractal=Trade.check_exit_fractal,
+        read_bb_fractal=Trade.check_bb_band,
+        read_trail_bb_fractal=Trade.check_trail_bb_band,
+    )
+
+    # Merge data
+    merged_df = merge_all_df(all_df)
+
+    if DEBUG:
+        write_dataframe_to_csv(
+            merged_df,
+            folder_name=MERGED_DF_FOLDER,
+            file_name=file_name,
         )
 
-        # Merge data
-        merged_df = merge_all_df(all_df)
-
-        merged_df_dir = "merged_dfs"
-        merged_df_file = f"merged_df_{Trade.instrument}_{strategy_pair_str}.csv"
-        path = os.path.join(merged_df_dir, merged_df_file)
-
-        os.makedirs(merged_df_dir, exist_ok=True)
-
-        merged_df.to_csv(path, index=False)
-
-        # Dictionaries to track last fractals for both entry and exit
-        entry_state = {
-            MarketDirection.LONG: deque(),
-            MarketDirection.SHORT: deque(),
-            MarketDirection.PREVIOUS: None,
-        }
-        exit_state = {
-            MarketDirection.PREVIOUS: None,
-            "signal_count": 1,
-        }
-        active_trades, completed_trades = [], []
-        for index, row in merged_df.iterrows():
-            is_entry, direction = check_entry_conditions(row, entry_state)
-            is_exit, exit_type = identify_exit_signals(row, exit_state, entry_state)
-            if is_entry:
-                trade = Trade(
-                    entry_signal=direction,
-                    entry_datetime=index,
-                    entry_price=row["Close"],
-                    signal_count=exit_state["signal_count"],
-                )
-                active_trades.append(trade)
-
-            if is_exit:
-                for trade in active_trades[:]:
-                    trade.add_exit(row.name, row["Close"], exit_type)
-                    if trade.is_trade_closed():
-                        completed_trades.append(trade)
-                        active_trades.remove(trade)
-
-        trade_outputs = []
-        for trade in chain(completed_trades, active_trades):
-            trade_outputs.extend(
-                trade.formulate_output(strategy_pair_str, portfolio_pair_str)
+    # Dictionaries to track last fractals for both entry and exit
+    entry_state = {
+        MarketDirection.LONG: deque(),
+        MarketDirection.SHORT: deque(),
+        MarketDirection.PREVIOUS: None,
+    }
+    exit_state = {
+        MarketDirection.PREVIOUS: None,
+        "signal_count": 1,
+    }
+    active_trades, completed_trades = [], []
+    for index, row in merged_df.iterrows():
+        is_entry, direction = check_entry_conditions(row, entry_state)
+        is_exit, exit_type = identify_exit_signals(row, exit_state, entry_state)
+        if is_entry:
+            trade = Trade(
+                entry_signal=direction,
+                entry_datetime=index,
+                entry_price=row["Close"],
+                signal_count=exit_state["signal_count"],
             )
+            active_trades.append(trade)
 
-        output_df = pd.DataFrame(trade_outputs)
+        if is_exit:
+            for trade in active_trades[:]:
+                trade.add_exit(row.name, row["Close"], exit_type)
+                if trade.is_trade_closed():
+                    completed_trades.append(trade)
+                    active_trades.remove(trade)
 
-        # Define the output directory and file path
-        output_dir = "signal_gen_outputs"
-        output_file = f"output_{Trade.instrument}_{strategy_pair_str}.csv"
-        output_path = os.path.join(output_dir, output_file)
+    trade_outputs = []
+    for trade in chain(completed_trades, active_trades):
+        trade_outputs.extend(
+            trade.formulate_output(instrument, strategy_pair_str, portfolio_ids_str)
+        )
 
-        os.makedirs(output_dir, exist_ok=True)
+    output_df = pd.DataFrame(trade_outputs)
+    if DEBUG:
+        write_dataframe_to_csv(output_df, SG_OUTPUT_FOLDER, file_name)
 
-        output_df.to_csv(output_path, index=False)
+    if Trade.trigger_trade_management:
+        generate_tradesheet(validated_input, output_df, strategy_pair_str, instrument)
 
-        return output_df
+
+def write_dataframe_to_csv(dataframe, folder_name, file_name):
+    path = os.path.join(folder_name, file_name)
+    os.makedirs(folder_name, exist_ok=True)
+    dataframe.to_csv(path, index=False)

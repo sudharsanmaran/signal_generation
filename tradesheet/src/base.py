@@ -63,7 +63,7 @@ class TradeSheetGenerator:
             OutputCols.CAPITAL: self.capital,
             OutputCols.VOLUME_MIN: self.no_of_mins,
         })
-        breakpoint()
+        # breakpoint()
         self.ee_df = ee_df[(ee_df[InputCols.ENTRY_DT] >= self.start_date) & (ee_df[InputCols.ENTRY_DT] <= self.end_date)]
 
         if self.ad_based_entry and self.ad not in [InputValues.APPRECIATION, InputValues.DEPRECIATION] and not self.ad_percent:

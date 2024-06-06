@@ -107,14 +107,17 @@ def read_data(
             columns.insert(1, "Close")
             is_close_read = True
 
-        # Read the strategy CSV file into a DataFrame
-        strategy_df = pd.read_csv(
-            strategy_path,
-            parse_dates=["TIMESTAMP"],
-            date_format="%Y-%m-%d %H:%M:%S",
-            usecols=columns,
-            index_col="TIMESTAMP",
-        )
+        try:
+            # Read the strategy CSV file into a DataFrame
+            strategy_df = pd.read_csv(
+                strategy_path,
+                parse_dates=["TIMESTAMP"],
+                date_format="%Y-%m-%d %H:%M:%S",
+                usecols=columns,
+                index_col="TIMESTAMP",
+            )
+        except Exception as e:
+            print(f"Error reading {strategy_path}: {e}")
         strategy_df.index = pd.to_datetime(strategy_df.index)
         # Filter the DataFrame for the specified date range
         strategy_df = strategy_df.loc[start_date:end_date]
