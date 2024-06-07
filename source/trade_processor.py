@@ -542,6 +542,12 @@ def process_strategy(validated_input, strategy_pair, instrument):
     for index, row in merged_df.iterrows():
         is_entry, direction = check_entry_conditions(row, entry_state)
         is_exit, exit_type = identify_exit_signals(row, exit_state, entry_state)
+        if is_exit:
+            for trade in active_trades[:]:
+                trade.add_exit(row.name, row["Close"], exit_type)
+                if trade.is_trade_closed():
+                    completed_trades.append(trade)
+                    active_trades.remove(trade)
         if is_entry:
             trade = Trade(
                 entry_signal=direction,
@@ -550,13 +556,6 @@ def process_strategy(validated_input, strategy_pair, instrument):
                 signal_count=exit_state["signal_count"],
             )
             active_trades.append(trade)
-
-        if is_exit:
-            for trade in active_trades[:]:
-                trade.add_exit(row.name, row["Close"], exit_type)
-                if trade.is_trade_closed():
-                    completed_trades.append(trade)
-                    active_trades.remove(trade)
 
     trade_outputs = []
     for trade in chain(completed_trades, active_trades):
@@ -575,4 +574,4 @@ def process_strategy(validated_input, strategy_pair, instrument):
 def write_dataframe_to_csv(dataframe, folder_name, file_name):
     path = os.path.join(folder_name, file_name)
     os.makedirs(folder_name, exist_ok=True)
-    dataframe.to_csv(path, index=False)
+    dataframe.to_csv(path, index=True)
