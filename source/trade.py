@@ -180,7 +180,7 @@ class Trade:
                 OutputColumn.EXIT_DATETIME.value: exit["exit_datetime"],
                 OutputColumn.EXIT_TYPE.value: exit["exit_type"].value,
                 OutputColumn.INTRADAY_POSITIONAL.value: Trade.type.value,
-                OutputColumn.ENTRY_PRICE: self.entry_price,
+                OutputColumn.ENTRY_PRICE.value: self.entry_price,
                 OutputColumn.EXIT_PRICE.value: exit["exit_price"],
                 OutputColumn.NET_POINTS.value: exit["pnl"],
             }

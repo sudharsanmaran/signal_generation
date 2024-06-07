@@ -658,10 +658,16 @@ def main():
                 {"expiry": expiry, "strike": strike, "opt_buying": opt_buying}
             )
 
+            # Premium Feature
+            premium_feature = st.checkbox(
+                "Premium Feature", value=saved_inputs.get("premium_feature", False)
+            )
+            streamlit_inputs["premium_feature"] = premium_feature
+
         if segment == "FUTURE":
             # Hedge
             expiry = st.number_input(
-                "Expiry", min_value=1, value=saved_inputs.get("expiry", 1)
+                "Expiry", min_value=1, value=saved_inputs.get("expiry", 1), max_value=3
             )
             hedge = st.checkbox("Hedge", value=saved_inputs.get("hedge", False))
             streamlit_inputs["hedge"] = hedge
@@ -802,12 +808,6 @@ def main():
             streamlit_inputs.update(
                 {"next_dte_from": next_dte_from, "next_expiry": next_expiry}
             )
-
-        # Premium Feature
-        premium_feature = st.checkbox(
-            "Premium Feature", value=saved_inputs.get("premium_feature", False)
-        )
-        streamlit_inputs["premium_feature"] = premium_feature
 
         # Volume feature
         volume_feature = st.checkbox(

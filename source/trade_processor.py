@@ -51,7 +51,6 @@ from collections import deque
 from itertools import chain
 import multiprocessing
 import os
-from dotenv import load_dotenv
 import pandas as pd
 
 from source.constants import (
@@ -495,11 +494,10 @@ def process_trade(validated_input):
 
 
 def process_strategy(validated_input, strategy_pair, instrument):
-    load_dotenv()
     initialize(validated_input)
     portfolio_ids_str = " - ".join(Trade.portfolio_ids)
     strategy_pair_str = "_".join(map(lambda a: str(a), strategy_pair))
-    file_name = f"merged_df_{instrument}_{strategy_pair_str}.csv"
+    file_name = f"df_{instrument}_{strategy_pair_str}.csv"
 
     all_df = read_data(
         instrument,

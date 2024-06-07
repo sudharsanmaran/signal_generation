@@ -38,6 +38,7 @@ alembic/versions/*
 
 # Ignore all merged_df files
 merged_df*.csv
+df*.csv
 
 # Ignore all output files
 output*.csv
