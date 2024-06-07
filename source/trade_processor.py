@@ -61,6 +61,7 @@ from source.constants import (
     TradeType,
     fractal_column_dict,
     confirm_fractal_column_dict,
+    cpu_percent_to_use,
 )
 from source.data_reader import merge_all_df, read_data
 from source.trade import Trade, initialize
@@ -466,8 +467,8 @@ def process_trade(validated_input):
 
     # Dynamic worker count
     num_workers = min(
+        int(multiprocessing.cpu_count() * cpu_percent_to_use),
         len(strategy_pairs) * len(instruments),
-        multiprocessing.cpu_count(),
     )
     # pool = multiprocessing.Pool(processes=num_workers)
 

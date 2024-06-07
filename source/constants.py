@@ -105,6 +105,9 @@ confirm_fractal_column_dict = {
 MERGED_DF_FOLDER = "merged_df"
 SG_OUTPUT_FOLDER = "signal_generation_output"
 
+# Define the percentage of available CPU to be used
+cpu_percent_to_use = 0.5  # You can adjust this percentage as needed
+
 
 class OutputColumn(Enum):
     """
