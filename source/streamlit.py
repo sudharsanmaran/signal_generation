@@ -37,8 +37,12 @@ from source.validations import validate_input
 # Load environment variables from a .env file
 load_dotenv(override=True)
 
-INSTRUMENTS = list(map(lambda x: x.strip(), os.getenv("INSTRUMENTS", "").split(",")))
-STOCKS_FNO = list(map(lambda x: x.strip(), os.getenv("STOCKS_FNO", "").split(",")))
+INSTRUMENTS = list(
+    map(lambda x: x.strip(), os.getenv("INSTRUMENTS", "").split(","))
+)
+STOCKS_FNO = list(
+    map(lambda x: x.strip(), os.getenv("STOCKS_FNO", "").split(","))
+)
 STOCKS_NON_FNO = list(
     map(lambda x: x.strip(), os.getenv("STOCKS_NON_FNO", "").split(","))
 )
@@ -125,7 +129,9 @@ def get_portfolio_flags(portfolio_ids, streamlit_inputs, saved_inputs):
             saved_inputs["short_exit_signals"] = []
 
         # Update the 'possible_flags_input' dictionary with the current input for the portfolio ID
-        streamlit_inputs["possible_flags_input"][portfolio_id] = possible_flags_input
+        streamlit_inputs["possible_flags_input"][
+            portfolio_id
+        ] = possible_flags_input
 
     return possible_flags_per_portfolio
 
@@ -179,7 +185,9 @@ def get_flag_combinations(portfolio_ids, possible_flags_per_portfolio):
         list: List of valid flag combinations.
     """
     all_flags = set(
-        flag for flags in possible_flags_per_portfolio.values() for flag in flags
+        flag
+        for flags in possible_flags_per_portfolio.values()
+        for flag in flags
     )
     flag_combinations = list(product(all_flags, repeat=len(portfolio_ids)))
     return [
@@ -233,7 +241,9 @@ def validate(input_data, key: callable):
     try:
         validated_input = key(input_data)
     except ValidationError as e:
-        error_messages = [f"{err['loc'][0]}: {err['msg']}" for err in e.errors()]
+        error_messages = [
+            f"{err['loc'][0]}: {err['msg']}" for err in e.errors()
+        ]
         st.error("\n,".join(error_messages))
     return validated_input
 
@@ -295,7 +305,9 @@ def main():
             for direction in MarketDirection
             if direction != MarketDirection.PREVIOUS
         ]
-        default_index = options.index(saved_inputs.get("allowed_direction", "all"))
+        default_index = options.index(
+            saved_inputs.get("allowed_direction", "all")
+        )
         allowed_direction = st.selectbox(
             "Allowed Direction",
             options=options,
@@ -320,7 +332,10 @@ def main():
                 value=saved_inputs.get("trade_end_time", "15:30:00"),
             )
             streamlit_inputs.update(
-                {"trade_start_time": trade_start_time, "trade_end_time": trade_end_time}
+                {
+                    "trade_start_time": trade_start_time,
+                    "trade_end_time": trade_end_time,
+                }
             )
 
         instruments = st.multiselect(
@@ -465,11 +480,14 @@ def main():
                 "End Date (format: dd/mm/yyyy hh:mm:ss)",
                 value=saved_inputs.get("end_date", "3/04/2019 16:00:00"),
             )
-            streamlit_inputs.update({"start_date": start_date, "end_date": end_date})
+            streamlit_inputs.update(
+                {"start_date": start_date, "end_date": end_date}
+            )
 
             st.text("Entry conditions: ")
             check_entry_based = st.checkbox(
-                "Check Entry Based", value=saved_inputs.get("check_entry_based", False)
+                "Check Entry Based",
+                value=saved_inputs.get("check_entry_based", False),
             )
             streamlit_inputs["check_entry_based"] = check_entry_based
             if check_entry_based:
@@ -505,26 +523,32 @@ def main():
 
                 # Bollinger Band Inputs (conditionally displayed)
                 check_bb_band = st.checkbox(
-                    "Check BB Band", value=saved_inputs.get("check_bb_band", False)
+                    "Check BB Band",
+                    value=saved_inputs.get("check_bb_band", False),
                 )
                 streamlit_inputs["check_bb_band"] = check_bb_band
                 if check_bb_band:
                     bb_file_number = st.text_input(
-                        "BB File Number", value=saved_inputs.get("bb_file_number", "1")
+                        "BB File Number",
+                        value=saved_inputs.get("bb_file_number", "1"),
                     )
 
                     options = [2.0, 2.25, 2.5, 2.75, 3.0]
                     bb_band_sd = st.selectbox(
                         "BB Band Standard Deviations",
                         options=options,
-                        index=options.index(saved_inputs.get("bb_band_sd", 2.0)),
+                        index=options.index(
+                            saved_inputs.get("bb_band_sd", 2.0)
+                        ),
                     )
 
                     options = ["mean", "upper", "lower"]
                     bb_band_column = st.selectbox(
                         "BB Band Column",
                         options=options,
-                        index=options.index(saved_inputs.get("bb_band_column", "mean")),
+                        index=options.index(
+                            saved_inputs.get("bb_band_column", "mean")
+                        ),
                     )
 
                     streamlit_inputs.update(
@@ -594,7 +618,9 @@ def main():
                 trail_bb_band_sd = st.selectbox(
                     "Trail BB Band Standard Deviations",
                     options=options,
-                    index=options.index(saved_inputs.get("trail_bb_band_sd", 2.0)),
+                    index=options.index(
+                        saved_inputs.get("trail_bb_band_sd", 2.0)
+                    ),
                 )
 
                 options = ["mean", "upper", "lower"]
@@ -611,7 +637,9 @@ def main():
                     "Trail BB Band Long Direction",
                     options=options,
                     index=options.index(
-                        saved_inputs.get("trail_bb_band_long_direction", "higher")
+                        saved_inputs.get(
+                            "trail_bb_band_long_direction", "higher"
+                        )
                     ),
                 )
 
@@ -619,7 +647,9 @@ def main():
                     "Trail BB Band Short Direction",
                     options=options,
                     index=options.index(
-                        saved_inputs.get("trail_bb_band_short_direction", "higher")
+                        saved_inputs.get(
+                            "trail_bb_band_short_direction", "higher"
+                        )
                     ),
                 )
                 streamlit_inputs.update(
@@ -638,7 +668,9 @@ def main():
         # Segment
         options = ["CASH", "FUTURE", "OPTIONS"]
         segment = st.selectbox(
-            "Segment", options, index=options.index(saved_inputs.get("segment", "CASH"))
+            "Segment",
+            options,
+            index=options.index(saved_inputs.get("segment", "CASH")),
         )
         streamlit_inputs["segment"] = segment
 
@@ -653,23 +685,31 @@ def main():
             expiry = st.number_input(
                 "Expiry", min_value=1, value=saved_inputs.get("expiry", 1)
             )
-            strike = st.number_input("Strike", value=saved_inputs.get("strike", 1))
+            strike = st.number_input(
+                "Strike", value=saved_inputs.get("strike", 1)
+            )
             streamlit_inputs.update(
                 {"expiry": expiry, "strike": strike, "opt_buying": opt_buying}
             )
 
             # Premium Feature
             premium_feature = st.checkbox(
-                "Premium Feature", value=saved_inputs.get("premium_feature", False)
+                "Premium Feature",
+                value=saved_inputs.get("premium_feature", False),
             )
             streamlit_inputs["premium_feature"] = premium_feature
 
         if segment == "FUTURE":
             # Hedge
             expiry = st.number_input(
-                "Expiry", min_value=1, value=saved_inputs.get("expiry", 1), max_value=3
+                "Expiry",
+                min_value=1,
+                value=saved_inputs.get("expiry", 1),
+                max_value=3,
             )
-            hedge = st.checkbox("Hedge", value=saved_inputs.get("hedge", False))
+            hedge = st.checkbox(
+                "Hedge", value=saved_inputs.get("hedge", False)
+            )
             streamlit_inputs["hedge"] = hedge
             streamlit_inputs["expiry"] = expiry
             if hedge:
@@ -707,7 +747,9 @@ def main():
                 "Appreciation/Depreciation",
                 options,
                 index=options.index(
-                    saved_inputs.get("appreciation_depreciation", "APPRECIATION")
+                    saved_inputs.get(
+                        "appreciation_depreciation", "APPRECIATION"
+                    )
                 ),
             )
             ade_percentage = st.number_input(
@@ -733,7 +775,9 @@ def main():
                 step=0.01,
                 value=saved_inputs.get("target_profit_percentage", 0.0),
             )
-            streamlit_inputs["target_profit_percentage"] = target_profit_percentage
+            streamlit_inputs["target_profit_percentage"] = (
+                target_profit_percentage
+            )
 
         # SL Trading
         sl_trading = st.checkbox(
@@ -766,7 +810,9 @@ def main():
                     "RE_Appreciation/Depreciation",
                     options=options,
                     index=options.index(
-                        saved_inputs.get("re_appreciation_depreciation", "APPRECIATION")
+                        saved_inputs.get(
+                            "re_appreciation_depreciation", "APPRECIATION"
+                        )
                     ),
                 )
                 re_ade_percentage = st.number_input(
@@ -784,26 +830,34 @@ def main():
 
         # DTE - Based testing
         dte_based_testing = st.checkbox(
-            "DTE - Based testing", value=saved_inputs.get("dte_based_testing", False)
+            "DTE - Based testing",
+            value=saved_inputs.get("dte_based_testing", False),
         )
         streamlit_inputs["dte_based_testing"] = dte_based_testing
         if dte_based_testing:
             dte_from = st.number_input(
-                "From which DTE", min_value=1, value=saved_inputs.get("dte_from", 1)
+                "From which DTE",
+                min_value=1,
+                value=saved_inputs.get("dte_from", 1),
             )
             streamlit_inputs["dte_from"] = dte_from
 
         # Next Expiry trading
         next_expiry_trading = st.checkbox(
-            "Next Expiry trading", value=saved_inputs.get("next_expiry_trading", False)
+            "Next Expiry trading",
+            value=saved_inputs.get("next_expiry_trading", False),
         )
         streamlit_inputs["next_expiry_trading"] = next_expiry_trading
         if next_expiry_trading:
             next_dte_from = st.number_input(
-                "From DTE", min_value=1, value=saved_inputs.get("next_dte_from", 1)
+                "From DTE",
+                min_value=1,
+                value=saved_inputs.get("next_dte_from", 1),
             )
             next_expiry = st.number_input(
-                "Expiry No", min_value=1, value=saved_inputs.get("next_expiry", 1)
+                "Expiry No",
+                min_value=1,
+                value=saved_inputs.get("next_expiry", 1),
             )
             streamlit_inputs.update(
                 {"next_dte_from": next_dte_from, "next_expiry": next_expiry}
@@ -824,7 +878,9 @@ def main():
 
         # Capital, Risk, Leverage
         capital = st.number_input(
-            "Capital", min_value=0, value=saved_inputs.get("capital", 100000000)
+            "Capital",
+            min_value=0,
+            value=saved_inputs.get("capital", 100000000),
         )
         risk = st.number_input(
             "Risk",

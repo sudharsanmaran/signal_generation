@@ -85,7 +85,9 @@ class StrategyInput(BaseModel):
             return datetime.strptime(v, "%d/%m/%Y %H:%M:%S")
         elif isinstance(v, datetime):
             return v
-        raise ValueError('Invalid datetime format, should be "dd/mm/yyyy hh:mm:ss"')
+        raise ValueError(
+            'Invalid datetime format, should be "dd/mm/yyyy hh:mm:ss"'
+        )
 
     @field_validator("bb_band_sd", "trail_bb_band_sd")
     def validate_bb_band_sd(cls, v):
@@ -111,7 +113,9 @@ class StrategyInput(BaseModel):
             )
         return v
 
-    @field_validator("trail_bb_band_long_direction", "trail_bb_band_short_direction")
+    @field_validator(
+        "trail_bb_band_long_direction", "trail_bb_band_short_direction"
+    )
     def validate_trail_bb_band_direction(cls, v):
         """
         Validate trail BB band direction.
@@ -220,13 +224,19 @@ def check_exit_conditions(validated_data):
 
     if validated_data.allowed_direction == MarketDirection.ALL:
         if not long_entry_set.issubset(short_exit_set):
-            raise ValueError("Long entry signals should be added in short exit signals")
+            raise ValueError(
+                "Long entry signals should be added in short exit signals"
+            )
 
         if not short_entry_set.issubset(long_exit_set):
-            raise ValueError("Short entry signals should be added in long exit signals")
+            raise ValueError(
+                "Short entry signals should be added in long exit signals"
+            )
 
     if long_entry_set & long_exit_set:
-        raise ValueError("Long entry signals and long exit signals cannot be the same")
+        raise ValueError(
+            "Long entry signals and long exit signals cannot be the same"
+        )
     if short_entry_set & short_exit_set:
         raise ValueError(
             "Short entry signals and short exit signals cannot be the same"
