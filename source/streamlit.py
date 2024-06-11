@@ -30,22 +30,19 @@ from itertools import product
 from dotenv import load_dotenv
 
 # Import project-specific modules
-from source.constants import POSSIBLE_STRATEGY_IDS, MarketDirection, TradeType
-from source.trade_processor import process_trade
+from source.constants import (
+    INSTRUMENTS,
+    POSSIBLE_STRATEGY_IDS,
+    STOCKS_FNO,
+    STOCKS_NON_FNO,
+    MarketDirection,
+    TradeType,
+)
+from source.trade_processor import multiple_process, process_strategy
 from source.validations import validate_input
 
 # Load environment variables from a .env file
 load_dotenv(override=True)
-
-INSTRUMENTS = list(
-    map(lambda x: x.strip(), os.getenv("INSTRUMENTS", "").split(","))
-)
-STOCKS_FNO = list(
-    map(lambda x: x.strip(), os.getenv("STOCKS_FNO", "").split(","))
-)
-STOCKS_NON_FNO = list(
-    map(lambda x: x.strip(), os.getenv("STOCKS_NON_FNO", "").split(","))
-)
 
 
 def select_all_options(key, combinations):
@@ -943,7 +940,7 @@ def main():
 
 def execute(validated_input):
     start = time.time()
-    process_trade(validated_input)
+    multiple_process(validated_input, process_strategy)
     stop = time.time()
 
     st.success(

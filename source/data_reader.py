@@ -89,43 +89,15 @@ def read_data(
     # Get the base path from environment variables
     base_path = os.getenv("DB_PATH")
 
-    # List to store individual strategy DataFrames
-    strategy_dfs = []
-
-    # Flag to check if 'Close' column has been read
-    is_close_read = False
-
     # Loop through each portfolio and strategy ID pair
-    for portfolio_id, strategy_id in zip(portfolio_ids, strategy_ids):
-        # Construct the path to the strategy CSV file
-        strategy_path = os.path.join(
-            base_path, portfolio_id, instrument, f"{strategy_id}_result.csv"
-        )
-        # Define the columns to be read from the CSV file
-        columns = ["TIMESTAMP", f"TAG_{portfolio_id}"]
-        if not is_close_read:
-            columns.insert(1, "Close")
-            is_close_read = True
-
-        try:
-            # Read the strategy CSV file into a DataFrame
-            strategy_df = pd.read_csv(
-                strategy_path,
-                parse_dates=["TIMESTAMP"],
-                date_format="%Y-%m-%d %H:%M:%S",
-                usecols=columns,
-                index_col="TIMESTAMP",
-            )
-        except Exception as e:
-            print(f"Error reading {strategy_path}: {e}")
-        strategy_df.index = pd.to_datetime(strategy_df.index)
-        # Filter the DataFrame for the specified date range
-        strategy_df = strategy_df.loc[start_date:end_date]
-        strategy_dfs.append(strategy_df)
-
-    # Concatenate all strategy DataFrames along the columns
-    all_strategies_df = pd.concat(strategy_dfs, axis=1)
-    all_dfs = [all_strategies_df]
+    all_dfs = load_strategy_data(
+        instrument,
+        portfolio_ids,
+        strategy_ids,
+        start_date,
+        end_date,
+        base_path,
+    )
 
     # Index column name
     index = "TIMESTAMP"
@@ -191,4 +163,50 @@ def read_data(
                 df.rename(columns=details["rename"], inplace=True)
             all_dfs.append(df)
 
+    return all_dfs
+
+
+def load_strategy_data(
+    instrument,
+    portfolio_ids,
+    strategy_ids,
+    start_date,
+    end_date,
+    base_path,
+):
+    """
+    Load strategy data from CSV files for the specified instrument, portfolio, and strategy IDs.
+    """
+
+    is_close_read, strategy_dfs = False, []
+    for portfolio_id, strategy_id in zip(portfolio_ids, strategy_ids):
+        # Construct the path to the strategy CSV file
+        strategy_path = os.path.join(
+            base_path, portfolio_id, instrument, f"{strategy_id}_result.csv"
+        )
+        # Define the columns to be read from the CSV file
+        columns = ["TIMESTAMP", f"TAG_{portfolio_id}"]
+        if not is_close_read:
+            columns.insert(1, "Close")
+            is_close_read = True
+
+        try:
+            # Read the strategy CSV file into a DataFrame
+            strategy_df = pd.read_csv(
+                strategy_path,
+                parse_dates=["TIMESTAMP"],
+                date_format="%Y-%m-%d %H:%M:%S",
+                usecols=columns,
+                index_col="TIMESTAMP",
+            )
+        except Exception as e:
+            print(f"Error reading {strategy_path}: {e}")
+        strategy_df.index = pd.to_datetime(strategy_df.index)
+        # Filter the DataFrame for the specified date range
+        strategy_df = strategy_df.loc[start_date:end_date]
+        strategy_dfs.append(strategy_df)
+
+    # Concatenate all strategy DataFrames along the columns
+    all_strategies_df = pd.concat(strategy_dfs, axis=1)
+    all_dfs = [all_strategies_df]
     return all_dfs

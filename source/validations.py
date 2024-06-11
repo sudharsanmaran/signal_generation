@@ -49,6 +49,7 @@ class StrategyInput(BaseModel):
     trade_start_time: Optional[time] = None
     trade_end_time: Optional[time] = None
     trigger_trade_management: bool = False
+    pa_analysis: bool = False
 
     check_entry_fractal: bool = None
     entry_fractal_file_number: str = None
