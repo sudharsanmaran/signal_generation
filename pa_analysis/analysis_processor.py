@@ -71,7 +71,7 @@ def generate_analytics(base_df) -> dict:
         OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value: {},
     }
 
-    for direction in ["LONG", "SHORT"]:
+    for direction in [MarketDirection.LONG, MarketDirection.SHORT]:
         mask, plus_mask, minus_mask = get_masks(base_df, direction)
 
         update_signals(
@@ -110,6 +110,11 @@ def generate_analytics(base_df) -> dict:
             minus_mask,
         )
 
+        update_weighted_avg_signal_duration(
+            result,
+            direction,
+        )
+
     # Calculate totals
     update_totals(result)
 
@@ -121,7 +126,7 @@ def generate_analytics(base_df) -> dict:
 
 
 def get_masks(base_df, direction):
-    mask = base_df["market_direction"].shift() == MarketDirection[direction]
+    mask = base_df["market_direction"].shift() == direction
     plus_mask = (base_df["points"] > 0) & mask
     minus_mask = (base_df["points"] < 0) & mask
     return mask, plus_mask, minus_mask
@@ -155,6 +160,30 @@ def update_totals(result):
         + result[OutputHeader.SIGNAL_DURATION.value][
             SignalColumns.SHORT_NET.value
         ]
+    )
+    result[OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value]["Total"] = (
+        result[OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value][
+            SignalColumns.LONG_NET.value
+        ]
+        + result[OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value][
+            SignalColumns.SHORT_NET.value
+        ]
+    )
+
+
+def update_weighted_avg_signal_duration(result, direction):
+    plus, minus, net = get_col_name(direction)
+    result[OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value][plus] = (
+        result[OutputHeader.POINTS.value][plus]
+        * result[OutputHeader.SIGNAL_DURATION.value][plus]
+    )
+    result[OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value][minus] = (
+        result[OutputHeader.POINTS.value][minus]
+        * result[OutputHeader.SIGNAL_DURATION.value][minus]
+    )
+    result[OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value][net] = (
+        result[OutputHeader.POINTS.value][net]
+        * result[OutputHeader.SIGNAL_DURATION.value][net]
     )
 
 
@@ -192,7 +221,7 @@ def update_net_points_per_signal(result, direction):
 
 
 def update_probability(result, base_df, direction, mask):
-    if direction == "LONG":
+    if direction == MarketDirection.LONG:
         col_name = SignalColumns.LONG.value
     else:
         col_name = SignalColumns.SHORT.value
@@ -207,7 +236,7 @@ def update_points(base_df, result, direction, mask, plus_mask, minus_mask):
 
 
 def get_col_name(direction):
-    if direction == "LONG":
+    if direction == MarketDirection.LONG:
         plus, minus, net = (
             SignalColumns.LONG_PLUS.value,
             SignalColumns.LONG_MINUS.value,
