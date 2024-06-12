@@ -13,7 +13,6 @@ from source.streamlit import (
 )
 from source.constants import INSTRUMENTS
 from pa_analysis.validation import validate
-from source.trade_processor import multiple_process
 
 
 load_dotenv(override=True)
@@ -23,7 +22,6 @@ def main():
     """
     Main function to run the Streamlit app.
     """
-
     streamlit_inputs, saved_inputs = {}, {}
     use_saved_input = st.checkbox("Use Saved Inputs", value=False)
     if use_saved_input:
@@ -161,9 +159,30 @@ def main():
         if st.button("Submit"):
             start = time.time()
             validated_data = validate(streamlit_inputs)
-            multiple_process(validated_data, process)
+            st.session_state.result_dfs = process(validated_data)
             et = time.time()
             st.write(f"Time taken: {et - start} seconds")
+
+        # Check if there are any results to display
+        if (
+            "result_dfs" in st.session_state
+            and st.session_state.result_dfs is not None
+        ):
+            st.header("Trading Strategy Analytics")
+
+            # Create a selectbox with the keys from the result_dfs dictionary
+            selected_value = st.selectbox(
+                "Select a strategy", list(st.session_state.result_dfs.keys())
+            )
+
+            # Display the DataFrame associated with the selected strategy
+            if selected_value:
+                for key, result in st.session_state.result_dfs[
+                    selected_value
+                ].items():
+                    st.subheader(key)
+                    st.table(result)
+
     else:
         st.write("Please fill in all the required fields.")
 
