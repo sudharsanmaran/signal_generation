@@ -89,7 +89,7 @@ def process(validated_data):
 
     # Define CSV file name
     output_dir = "pa_analysis_output"
-    csv_filename = "final_result.csv"  # Replace with your desired filename
+    csv_filename = "final_result.csv"
     csv_file_path = os.path.join(output_dir, csv_filename)
 
     # Write to CSV
@@ -207,10 +207,6 @@ def generate_analytics(base_df) -> dict:
     # Calculate totals
     update_totals(result, base_df)
 
-    # Create the result DataFrame
-    # results_dfs = {
-    #     key: pd.DataFrame([metric]) for key, metric in result.items()
-    # }
     return result
 
 
