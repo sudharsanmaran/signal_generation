@@ -1,4 +1,5 @@
 import time
+import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -180,8 +181,11 @@ def main():
                 for key, result in st.session_state.result_dfs[
                     selected_value
                 ].items():
-                    st.subheader(key)
-                    st.table(result)
+                    if isinstance(result, dict) or isinstance(
+                        result, pd.DataFrame
+                    ):
+                        st.subheader(key)
+                        st.table(result)
 
     else:
         st.write("Please fill in all the required fields.")

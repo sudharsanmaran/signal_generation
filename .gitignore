@@ -51,3 +51,7 @@ user_inputs*.csv
 .~lock.output*.csv#
 .~lock.user_inputs*.csv#
 user_inputs.json
+
+
+filtered_df*.csv
+final_result.csv

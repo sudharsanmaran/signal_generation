@@ -201,6 +201,7 @@ def load_strategy_data(
             )
         except Exception as e:
             print(f"Error reading {strategy_path}: {e}")
+            raise e
         strategy_df.index = pd.to_datetime(strategy_df.index)
         # Filter the DataFrame for the specified date range
         strategy_df = strategy_df.loc[start_date:end_date]
