@@ -157,26 +157,29 @@ def generate_analytics(base_df) -> dict:
     }
 
     for direction in [MarketDirection.LONG, MarketDirection.SHORT]:
-        mask, plus_mask, minus_mask = get_masks(base_df, direction)
+        mask_df, plus_mask_df, minus_mask_df = get_masked_df(
+            base_df, direction
+        )
 
         update_signals(
-            result[OutputHeader.SIGNAL.value], direction, plus_mask, minus_mask
+            result[OutputHeader.SIGNAL.value],
+            direction,
+            plus_mask_df,
+            minus_mask_df,
         )
 
         update_points(
-            base_df,
             result[OutputHeader.POINTS.value],
             direction,
-            mask,
-            plus_mask,
-            minus_mask,
+            mask_df,
+            plus_mask_df,
+            minus_mask_df,
         )
 
         update_probability(
             result[OutputHeader.PROBABILITY.value],
-            base_df,
             direction,
-            mask,
+            mask_df,
         )
 
         update_net_points_per_signal(
@@ -189,19 +192,17 @@ def generate_analytics(base_df) -> dict:
         update_signal_duration(
             result[OutputHeader.SIGNAL_DURATION.value],
             direction,
-            base_df,
-            mask,
-            plus_mask,
-            minus_mask,
+            mask_df,
+            plus_mask_df,
+            minus_mask_df,
         )
 
         update_weighted_avg_signal_duration(
             result,
             direction,
-            base_df,
-            mask,
-            plus_mask,
-            minus_mask,
+            mask_df,
+            plus_mask_df,
+            minus_mask_df,
         )
 
     # Calculate totals
@@ -210,11 +211,11 @@ def generate_analytics(base_df) -> dict:
     return result
 
 
-def get_masks(base_df, direction):
+def get_masked_df(base_df, direction):
     mask = base_df["market_direction"] == direction
     plus_mask = (base_df["points"] > 0) & mask
     minus_mask = (base_df["points"] < 0) & mask
-    return mask, plus_mask, minus_mask
+    return base_df[mask], base_df[plus_mask], base_df[minus_mask]
 
 
 def update_totals(result, base_df):
@@ -262,42 +263,37 @@ def make_round(value):
 
 
 def update_weighted_avg_signal_duration(
-    result, direction, base_df, mask, plus_mask, minus_mask
+    result, direction, mask_df, plus_mask_df, minus_mask_df
 ):
     plus, minus, net = get_col_name(direction)
     result[OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value][plus] = (
         make_round(
             make_positive_int(
-                base_df.loc[plus_mask, "temp"].sum()
-                / base_df.loc[plus_mask, "points"].sum()
+                plus_mask_df["temp"].sum() / plus_mask_df["points"].sum()
             )
         )
     )
     result[OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value][minus] = (
         make_round(
             make_positive_int(
-                base_df.loc[minus_mask, "temp"].sum()
-                / base_df.loc[minus_mask, "points"].sum()
+                minus_mask_df["temp"].sum() / minus_mask_df["points"].sum()
             )
         )
     )
     result[OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value][net] = (
         make_round(
-            make_positive_int(
-                base_df.loc[mask, "temp"].sum()
-                / base_df.loc[mask, "points"].sum()
-            )
+            make_positive_int(mask_df["temp"].sum() / mask_df["points"].sum())
         )
     )
 
 
 def update_signal_duration(
-    result, direction, base_df, mask, plus_mask, minus_mask
+    result, direction, mask_df, plus_mask_df, minus_mask_df
 ):
     plus, minus, net = get_col_name(direction)
-    result[plus] = make_round(base_df.loc[plus_mask, "time"].mean())
-    result[minus] = make_round(base_df.loc[minus_mask, "time"].mean())
-    result[net] = make_round(base_df.loc[mask, "time"].mean())
+    result[plus] = make_round(plus_mask_df["time"].mean())
+    result[minus] = make_round(minus_mask_df["time"].mean())
+    result[net] = make_round(mask_df["time"].mean())
 
 
 def update_risk_reward(result, direction):
@@ -325,21 +321,19 @@ def update_net_points_per_signal(result, direction):
     )
 
 
-def update_probability(result, base_df, direction, mask):
+def update_probability(result, direction, mask_df):
     if direction == MarketDirection.LONG:
         col_name = SignalColumns.LONG.value
     else:
         col_name = SignalColumns.SHORT.value
-    result[col_name] = make_round(
-        base_df.loc[mask, "profit_loss"].mean() * 100
-    )
+    result[col_name] = make_round(mask_df["profit_loss"].mean() * 100)
 
 
-def update_points(base_df, result, direction, mask, plus_mask, minus_mask):
+def update_points(result, direction, mask_df, plus_mask_df, minus_mask_df):
     plus, minus, net = get_col_name(direction)
-    result[plus] = make_round(base_df.loc[plus_mask, "points"].sum())
-    result[minus] = make_round(base_df.loc[minus_mask, "points"].sum())
-    result[net] = make_round(base_df.loc[mask, "points"].sum())
+    result[plus] = make_round(plus_mask_df["points"].sum())
+    result[minus] = make_round(minus_mask_df["points"].sum())
+    result[net] = make_round(mask_df["points"].sum())
 
 
 def get_col_name(direction):
@@ -359,11 +353,12 @@ def get_col_name(direction):
     return plus, minus, net
 
 
-def update_signals(result, direction, plus_mask, minus_mask):
+def update_signals(result, direction, plus_mask_df, minus_mask_df):
     plus, minus, net = get_col_name(direction)
-    result[plus] = make_round(plus_mask.sum())
-    result[minus] = make_round(minus_mask.sum())
-    result[net] = make_round(plus_mask.sum() + minus_mask.sum())
+    # get total count of signals
+    result[plus] = len(plus_mask_df)
+    result[minus] = len(minus_mask_df)
+    result[net] = result[plus] + result[minus]
 
 
 def get_base_df(validated_data, strategy_df, strategy_pair_str, instrument):
