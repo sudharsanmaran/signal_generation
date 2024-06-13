@@ -60,7 +60,7 @@ def main():
     st.header("PA Analysis")
     portfolio_ids_input = st.text_input(
         "Portfolio IDs (comma-separated, e.g., 1, 2, 3)",
-        value=saved_inputs.get("portfolio_ids_input", "F13,F13_1"),
+        value=saved_inputs.get("portfolio_ids_input", "F13"),
     )
     streamlit_inputs["portfolio_ids_input"] = portfolio_ids_input
 
@@ -87,7 +87,7 @@ def main():
         long_entry_signals = st.multiselect(
             "Long Signals",
             all_flag_combinations,
-            default=saved_inputs.get("long_entry_signals", None),
+            default=saved_inputs.get("long_entry_signals", "GREEN"),
             key="long_entry_signals",
             on_change=select_all_options,
             args=("long_entry_signals", filtered_flag_combinations),
@@ -100,7 +100,7 @@ def main():
                 for combination in all_flag_combinations
                 if combination not in long_entry_signals
             ],
-            default=saved_inputs.get("short_entry_signals", None),
+            default=saved_inputs.get("short_entry_signals", "RED"),
             key="short_entry_signals",
             on_change=select_all_options,
             args=(

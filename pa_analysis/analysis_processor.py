@@ -2,7 +2,7 @@ import csv
 import os
 
 import pandas as pd
-from pa_analysis.constants import OutputHeader, SignalColumns
+from pa_analysis.constants import OutputHeader, RankingColumns, SignalColumns
 from source.constants import MarketDirection
 from source.data_reader import load_strategy_data
 from source.trade_processor import (
@@ -42,8 +42,31 @@ def process(validated_data):
             result[(instrument, strategy_pair)] = processed_result
             temp.update(processed_result)
             data.append(temp)
+    update_rankings(data)
+    flattened_data, sub_header, collapsed_main_header = format(data)
+    write_dict_to_csv(flattened_data, sub_header, collapsed_main_header)
+    return result
 
-    # Flatten data
+
+def write_dict_to_csv(flattened_data, sub_header, collapsed_main_header):
+    output_dir = "pa_analysis_output"
+    csv_filename = "final_result.csv"
+    csv_file_path = os.path.join(output_dir, csv_filename)
+
+    # Write to CSV
+    with open(csv_file_path, mode="w", newline="") as file:
+        writer = csv.writer(file)
+
+        # Write main and sub headers
+        writer.writerow(collapsed_main_header)
+        writer.writerow(sub_header)
+
+        # Write the data rows
+        for row in flattened_data:
+            writer.writerow(row.values())
+
+
+def format(data):
     flattened_data = []
     for item in data:
         flat_data = flatten_dict(item)
@@ -86,24 +109,7 @@ def process(validated_data):
             previous = header
         else:
             collapsed_main_header.append("")
-
-    # Define CSV file name
-    output_dir = "pa_analysis_output"
-    csv_filename = "final_result.csv"
-    csv_file_path = os.path.join(output_dir, csv_filename)
-
-    # Write to CSV
-    with open(csv_file_path, mode="w", newline="") as file:
-        writer = csv.writer(file)
-
-        # Write main and sub headers
-        writer.writerow(collapsed_main_header)
-        writer.writerow(sub_header)
-
-        # Write the data rows
-        for row in flattened_data:
-            writer.writerow(row.values())
-    return result
+    return flattened_data, sub_header, collapsed_main_header
 
 
 def process_strategy(validated_data, strategy_pair, instrument):
@@ -154,6 +160,7 @@ def generate_analytics(base_df) -> dict:
         OutputHeader.RISK_REWARD.value: {},
         OutputHeader.SIGNAL_DURATION.value: {},
         OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value: {},
+        OutputHeader.RANKING.value: {},
     }
 
     for direction in [MarketDirection.LONG, MarketDirection.SHORT]:
@@ -250,6 +257,165 @@ def update_totals(result, base_df):
     result[OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value]["Total"] = (
         make_round(make_positive_int(total_weight))
     )
+
+
+def rank_nested_dict(data_dict, key, column_name, output_key="rank"):
+    """
+    Ranks elements in a nested dictionary and adds a new key with the rank based on a specified inner key.
+
+    Args:
+        data_dict: The nested dictionary to be ranked.
+        key: The key in the inner dictionary to use for sorting and ranking.
+
+    Returns:
+        The modified dictionary with a new key named 'rank' added to each inner dictionary.
+    """
+
+    rank = 1
+    sorted_data = sorted(
+        data_dict, key=lambda item: item[key][column_name]
+    )
+    for row in reversed(sorted_data):
+        row[OutputHeader.RANKING.value][output_key] = rank
+        rank += 1
+
+
+def update_rankings(data):
+
+    key_to_rank = {
+        OutputHeader.PROBABILITY.value: [
+            SignalColumns.LONG.value,
+            SignalColumns.SHORT.value,
+            "Total",
+        ],
+        OutputHeader.POINTS_PER_SIGNAL.value: [
+            SignalColumns.LONG_PLUS.value,
+            SignalColumns.SHORT_PLUS.value,
+            SignalColumns.LONG_MINUS.value,
+            SignalColumns.SHORT_MINUS.value,
+        ],
+        OutputHeader.RISK_REWARD.value: [
+            SignalColumns.LONG_NET.value,
+            SignalColumns.SHORT_NET.value,
+        ],
+        OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value: [
+            SignalColumns.LONG_PLUS.value,
+            SignalColumns.LONG_MINUS.value,
+            SignalColumns.SHORT_PLUS.value,
+            SignalColumns.SHORT_MINUS.value,
+        ],
+    }
+
+    column_output_key = {
+        (
+            OutputHeader.PROBABILITY.value,
+            SignalColumns.LONG.value,
+        ): RankingColumns.PROBABILITY_LONG.value,
+        (
+            OutputHeader.PROBABILITY.value,
+            SignalColumns.SHORT.value,
+        ): RankingColumns.PROBABILITY_SHORT.value,
+        (
+            OutputHeader.PROBABILITY.value,
+            "Total",
+        ): RankingColumns.PROBABILITY_TOTAL.value,
+        (
+            OutputHeader.POINTS_PER_SIGNAL.value,
+            SignalColumns.LONG_PLUS.value,
+        ): RankingColumns.NET_POINTS_PER_SIGNAL_LONG_PLUS.value,
+        (
+            OutputHeader.POINTS_PER_SIGNAL.value,
+            SignalColumns.SHORT_PLUS.value,
+        ): RankingColumns.NET_POINTS_PER_SIGNAL_SHORT_PLUS.value,
+        (
+            OutputHeader.POINTS_PER_SIGNAL.value,
+            SignalColumns.LONG_MINUS.value,
+        ): RankingColumns.NET_POINTS_PER_SIGNAL_LONG_MINUS.value,
+        (
+            OutputHeader.POINTS_PER_SIGNAL.value,
+            SignalColumns.SHORT_MINUS.value,
+        ): RankingColumns.NET_POINTS_PER_SIGNAL_SHORT_MINUS.value,
+        (
+            OutputHeader.RISK_REWARD.value,
+            SignalColumns.LONG_NET.value,
+        ): RankingColumns.RISK_REWARD_LONG.value,
+        (
+            OutputHeader.RISK_REWARD.value,
+            SignalColumns.SHORT_NET.value,
+        ): RankingColumns.RISK_REWARD_SHORT.value,
+        (
+            OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value,
+            SignalColumns.LONG_PLUS.value,
+        ): RankingColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION_LONG_PLUS.value,
+        (
+            OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value,
+            SignalColumns.SHORT_PLUS.value,
+        ): RankingColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION_SHORT_PLUS.value,
+        (
+            OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value,
+            SignalColumns.LONG_MINUS.value,
+        ): RankingColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION_LONG_MINUS.value,
+        (
+            OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value,
+            SignalColumns.SHORT_MINUS.value,
+        ): RankingColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION_SHORT_MINUS.value,
+    }
+
+    for key, columns in key_to_rank.items():
+        for col in columns:
+            rank_nested_dict(
+                data,
+                key,
+                column_name=col,
+                output_key=column_output_key[(key, col)],
+            )
+
+    update_ranking_total(data)
+
+
+def update_ranking_total(data):
+    for val in data:
+        val[OutputHeader.RANKING.value]["Total"] = (
+            val[OutputHeader.RANKING.value][
+                RankingColumns.PROBABILITY_LONG.value
+            ]
+            + val[OutputHeader.RANKING.value][
+                RankingColumns.PROBABILITY_SHORT.value
+            ]
+            + val[OutputHeader.RANKING.value][
+                RankingColumns.PROBABILITY_TOTAL.value
+            ]
+            + val[OutputHeader.RANKING.value][
+                RankingColumns.NET_POINTS_PER_SIGNAL_LONG_PLUS.value
+            ]
+            + val[OutputHeader.RANKING.value][
+                RankingColumns.NET_POINTS_PER_SIGNAL_LONG_MINUS.value
+            ]
+            + val[OutputHeader.RANKING.value][
+                RankingColumns.NET_POINTS_PER_SIGNAL_SHORT_PLUS.value
+            ]
+            + val[OutputHeader.RANKING.value][
+                RankingColumns.NET_POINTS_PER_SIGNAL_SHORT_MINUS.value
+            ]
+            + val[OutputHeader.RANKING.value][
+                RankingColumns.RISK_REWARD_LONG.value
+            ]
+            + val[OutputHeader.RANKING.value][
+                RankingColumns.RISK_REWARD_SHORT.value
+            ]
+            + val[OutputHeader.RANKING.value][
+                RankingColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION_LONG_PLUS.value
+            ]
+            + val[OutputHeader.RANKING.value][
+                RankingColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION_LONG_MINUS.value
+            ]
+            + val[OutputHeader.RANKING.value][
+                RankingColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION_SHORT_PLUS.value
+            ]
+            + val[OutputHeader.RANKING.value][
+                RankingColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION_SHORT_MINUS.value
+            ]
+        )
 
 
 def make_positive_int(value):
