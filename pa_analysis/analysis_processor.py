@@ -252,14 +252,14 @@ def update_totals(result, base_df):
     result[OutputHeader.PROBABILITY.value]["Total"] = make_round(
         base_df["profit_loss"].mean() * 100
     )
-    result[OutputHeader.POINTS_PER_SIGNAL.value]["Total"] = make_round(
-        result[OutputHeader.POINTS_PER_SIGNAL.value][
-            SignalColumns.LONG_NET.value
-        ]
-        + result[OutputHeader.POINTS_PER_SIGNAL.value][
-            SignalColumns.SHORT_NET.value
-        ]
-    )
+    # result[OutputHeader.POINTS_PER_SIGNAL.value]["Total"] = make_round(
+    #     result[OutputHeader.POINTS_PER_SIGNAL.value][
+    #         SignalColumns.LONG_NET.value
+    #     ]
+    #     + result[OutputHeader.POINTS_PER_SIGNAL.value][
+    #         SignalColumns.SHORT_NET.value
+    #     ]
+    # )
     result[OutputHeader.SIGNAL_DURATION.value]["Total"] = make_round(
         result[OutputHeader.SIGNAL_DURATION.value][
             SignalColumns.LONG_NET.value
@@ -268,10 +268,10 @@ def update_totals(result, base_df):
             SignalColumns.SHORT_NET.value
         ]
     )
-    total_weight = base_df["temp"].sum() / base_df["points"].sum()
-    result[OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value]["Total"] = (
-        make_round(make_positive_int(total_weight))
-    )
+    # total_weight = base_df["temp"].sum() / base_df["points"].sum()
+    # result[OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value]["Total"] = (
+    #     make_round(make_positive_int(total_weight))
+    # )
 
     result[OutputHeader.POINTS_PERCENT.value]["Total"] = make_round(
         result[OutputHeader.POINTS_PERCENT.value][SignalColumns.LONG_NET.value]
@@ -500,11 +500,11 @@ def update_weighted_avg_signal_duration(
             )
         )
     )
-    result[OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value][net] = (
-        make_round(
-            make_positive_int(mask_df["temp"].sum() / mask_df["points"].sum())
-        )
-    )
+    # result[OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value][net] = (
+    #     make_round(
+    #         make_positive_int(mask_df["temp"].sum() / mask_df["points"].sum())
+    #     )
+    # )
 
 
 def update_signal_duration(
@@ -535,10 +535,10 @@ def update_net_points_per_signal(result, direction):
         result[OutputHeader.POINTS.value][minus]
         / result[OutputHeader.SIGNAL.value][minus]
     )
-    result[OutputHeader.POINTS_PER_SIGNAL.value][net] = make_round(
-        result[OutputHeader.POINTS.value][net]
-        / result[OutputHeader.SIGNAL.value][net]
-    )
+    # result[OutputHeader.POINTS_PER_SIGNAL.value][net] = make_round(
+    #     result[OutputHeader.POINTS.value][net]
+    #     / result[OutputHeader.SIGNAL.value][net]
+    # )
 
 
 def update_probability(result, direction, mask_df):
