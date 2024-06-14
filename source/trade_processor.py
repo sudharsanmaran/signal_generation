@@ -88,7 +88,12 @@ def is_trade_start_time_crossed(row):
     return True
 
 
-def get_market_direction(row, condition_key):
+def get_market_direction(
+    row,
+    condition_key,
+    signal_columns=Trade.signal_columns,
+    market_direction_conditions=Trade.market_direction_conditions,
+):
     """Get the market direction based on the entry or exit conditions for a trade.
 
     Args:
@@ -98,8 +103,8 @@ def get_market_direction(row, condition_key):
     Returns:
         str: Market direction (LONG or SHORT) or None if no match found"""
 
-    row_directions = row.get(Trade.signal_columns)
-    for direction, signals in Trade.market_direction_conditions[
+    row_directions = row.get(signal_columns)
+    for direction, signals in market_direction_conditions[
         condition_key
     ].items():
         for signal in signals:
@@ -464,7 +469,7 @@ def identify_exit_signals(row, exit_state, entry_state):
     return is_trail_bb_band_exit or is_fractal_exit, exit_type
 
 
-def process_trade(validated_input):
+def multiple_process(validated_input, process: callable):
     """
         Processes trades based on a defined strategy and outputs results.
 
@@ -498,7 +503,7 @@ def process_trade(validated_input):
             for strategy_pair in strategy_pairs:
                 try:
                     pool.apply_async(
-                        process_strategy,
+                        process,
                         args=(
                             validated_input,
                             strategy_pair,
