@@ -51,3 +51,8 @@ user_inputs*.csv
 .~lock.output*.csv#
 .~lock.user_inputs*.csv#
 user_inputs.json
+
+
+filter*.csv
+final_result.csv
+pa_analysis_output.zip
