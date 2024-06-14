@@ -345,8 +345,8 @@ def update_rankings(data):
         OutputHeader.POINTS_PER_SIGNAL.value: [
             SignalColumns.LONG_PLUS.value,
             SignalColumns.SHORT_PLUS.value,
-            SignalColumns.LONG_MINUS.value,
-            SignalColumns.SHORT_MINUS.value,
+            # SignalColumns.LONG_MINUS.value,
+            # SignalColumns.SHORT_MINUS.value,
         ],
         OutputHeader.RISK_REWARD.value: [
             SignalColumns.LONG_NET.value,
@@ -354,9 +354,9 @@ def update_rankings(data):
         ],
         OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value: [
             SignalColumns.LONG_PLUS.value,
-            SignalColumns.LONG_MINUS.value,
             SignalColumns.SHORT_PLUS.value,
-            SignalColumns.SHORT_MINUS.value,
+            # SignalColumns.LONG_MINUS.value,
+            # SignalColumns.SHORT_MINUS.value,
         ],
     }
 
@@ -442,15 +442,15 @@ def update_ranking_total(data):
             + val[OutputHeader.RANKING.value][
                 RankingColumns.NET_POINTS_PER_SIGNAL_LONG_PLUS.value
             ]
-            + val[OutputHeader.RANKING.value][
-                RankingColumns.NET_POINTS_PER_SIGNAL_LONG_MINUS.value
-            ]
+            # + val[OutputHeader.RANKING.value][
+            #     RankingColumns.NET_POINTS_PER_SIGNAL_LONG_MINUS.value
+            # ]
             + val[OutputHeader.RANKING.value][
                 RankingColumns.NET_POINTS_PER_SIGNAL_SHORT_PLUS.value
             ]
-            + val[OutputHeader.RANKING.value][
-                RankingColumns.NET_POINTS_PER_SIGNAL_SHORT_MINUS.value
-            ]
+            # + val[OutputHeader.RANKING.value][
+            #     RankingColumns.NET_POINTS_PER_SIGNAL_SHORT_MINUS.value
+            # ]
             + val[OutputHeader.RANKING.value][
                 RankingColumns.RISK_REWARD_LONG.value
             ]
@@ -460,15 +460,15 @@ def update_ranking_total(data):
             + val[OutputHeader.RANKING.value][
                 RankingColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION_LONG_PLUS.value
             ]
-            + val[OutputHeader.RANKING.value][
-                RankingColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION_LONG_MINUS.value
-            ]
+            # + val[OutputHeader.RANKING.value][
+            #     RankingColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION_LONG_MINUS.value
+            # ]
             + val[OutputHeader.RANKING.value][
                 RankingColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION_SHORT_PLUS.value
             ]
-            + val[OutputHeader.RANKING.value][
-                RankingColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION_SHORT_MINUS.value
-            ]
+            # + val[OutputHeader.RANKING.value][
+            #     RankingColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION_SHORT_MINUS.value
+            # ]
         )
 
 
