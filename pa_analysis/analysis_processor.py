@@ -155,8 +155,10 @@ def generate_analytics(base_df) -> dict:
     result = {
         OutputHeader.SIGNAL.value: {},
         OutputHeader.POINTS.value: {},
+        OutputHeader.POINTS_PERCENT.value: {},
         OutputHeader.PROBABILITY.value: {},
         OutputHeader.POINTS_PER_SIGNAL.value: {},
+        OutputHeader.POINTS_PER_SIGNAL_PERCENT.value: {},
         OutputHeader.RISK_REWARD.value: {},
         OutputHeader.SIGNAL_DURATION.value: {},
         OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value: {},
@@ -183,6 +185,14 @@ def generate_analytics(base_df) -> dict:
             minus_mask_df,
         )
 
+        updated_points_percent(
+            result[OutputHeader.POINTS_PERCENT.value],
+            direction,
+            mask_df,
+            plus_mask_df,
+            minus_mask_df,
+        )
+
         update_probability(
             result[OutputHeader.PROBABILITY.value],
             direction,
@@ -190,6 +200,11 @@ def generate_analytics(base_df) -> dict:
         )
 
         update_net_points_per_signal(
+            result,
+            direction,
+        )
+
+        update_net_points_per_signal_percent(
             result,
             direction,
         )
@@ -258,6 +273,47 @@ def update_totals(result, base_df):
         make_round(make_positive_int(total_weight))
     )
 
+    result[OutputHeader.POINTS_PERCENT.value]["Total"] = make_round(
+        result[OutputHeader.POINTS_PERCENT.value][SignalColumns.LONG_NET.value]
+        + result[OutputHeader.POINTS_PERCENT.value][
+            SignalColumns.SHORT_NET.value
+        ]
+    )
+
+    result[OutputHeader.POINTS_PER_SIGNAL_PERCENT.value]["Total"] = make_round(
+        result[OutputHeader.POINTS_PER_SIGNAL_PERCENT.value][
+            SignalColumns.LONG_NET.value
+        ]
+        + result[OutputHeader.POINTS_PER_SIGNAL_PERCENT.value][
+            SignalColumns.SHORT_NET.value
+        ]
+    )
+
+
+def update_net_points_per_signal_percent(
+    result,
+    direction,
+):
+    plus, minus, net = get_col_name(direction)
+    result[OutputHeader.POINTS_PER_SIGNAL_PERCENT.value][plus] = make_round(
+        result[OutputHeader.POINTS_PERCENT.value][plus].mean()
+    )
+    result[OutputHeader.POINTS_PER_SIGNAL_PERCENT.value][minus] = make_round(
+        result[OutputHeader.POINTS_PERCENT.value][minus].mean()
+    )
+    result[OutputHeader.POINTS_PER_SIGNAL_PERCENT.value][net] = make_round(
+        result[OutputHeader.POINTS_PERCENT.value][net].mean()
+    )
+
+
+def updated_points_percent(
+    result, direction, mask_df, plus_mask_df, minus_mask_df
+):
+    plus, minus, net = get_col_name(direction)
+    result[plus] = make_round(plus_mask_df["points_percent"].sum())
+    result[minus] = make_round(minus_mask_df["points_percent"].sum())
+    result[net] = make_round(mask_df["points_percent"].sum())
+
 
 def rank_nested_dict(data_dict, key, column_name, output_key="rank"):
     """
@@ -272,9 +328,7 @@ def rank_nested_dict(data_dict, key, column_name, output_key="rank"):
     """
 
     rank = 1
-    sorted_data = sorted(
-        data_dict, key=lambda item: item[key][column_name]
-    )
+    sorted_data = sorted(data_dict, key=lambda item: item[key][column_name])
     for row in reversed(sorted_data):
         row[OutputHeader.RANKING.value][output_key] = rank
         rank += 1
@@ -600,6 +654,10 @@ def get_base_df(validated_data, strategy_df, strategy_pair_str, instrument):
 
     # Determine profit or loss
     filtered_df["profit_loss"] = (filtered_df["points"] > 0).astype(int)
+
+    filtered_df["points_percent"] = make_round(
+        filtered_df["points"] / filtered_df["Close"] * 100
+    )
 
     filtered_df["temp"] = filtered_df["points"] * filtered_df["time"]
 

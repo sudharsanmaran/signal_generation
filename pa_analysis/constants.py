@@ -4,8 +4,10 @@ from enum import Enum
 class OutputHeader(Enum):
     SIGNAL = "No. of signals"
     POINTS = "Net Points"
+    POINTS_PERCENT = "Net Points Percentage"
     PROBABILITY = "Probability"
-    POINTS_PER_SIGNAL = "Net Points per Signal"
+    POINTS_PER_SIGNAL = "Net Points Per Signal"
+    POINTS_PER_SIGNAL_PERCENT = "Net Points Per Signal Percent"
     RISK_REWARD = "Risk Reward Ratio"
     SIGNAL_DURATION = "Signal Duration (in days)"
     WEIGHTED_AVERAGE_SIGNAL_DURATION = (
