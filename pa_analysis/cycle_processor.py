@@ -4,6 +4,7 @@ import pandas as pd
 
 from source.constants import MarketDirection
 from source.data_reader import read_files
+from source.trade_processor import write_dataframe_to_csv
 
 
 def process_cycles(**kwargs):
@@ -19,8 +20,16 @@ def process_cycles(**kwargs):
     )
     all_df = get_base_df(base_df, time_frames, periods, sds, instrument)
     # process the data
+    for df in all_df:
+        process_df(df, base_df)
     # return the result
     pass
+
+def process_df(df, base_df):
+    # seperate by cycles and do the calculations
+    # group by signal change condition, then do operations for unique cycle count
+
+    
 
 
 def get_base_df(base_df, time_frames, periods, sds, instrument):
@@ -77,7 +86,12 @@ def update_base_df(df, bb_cols, base_df):
     )
 
     # update signal start price
-    merged_df["signal_start_price"] = merged_df["Close"][0]
+    condition = merged_df["market_direction"] != merged_df[
+        "market_direction"
+    ].shift(1)
+    merged_df["signal_start_price"] = pd.NA
+    merged_df.loc[condition, "signal_start_price"] = merged_df["Close"]
+    merged_df["signal_start_price"] = merged_df["signal_start_price"].ffill()
 
     for col in bb_cols:
 
@@ -95,11 +109,43 @@ def update_base_df(df, bb_cols, base_df):
         )
 
         # update cycle number
-        cycle_codition = (merged_df[f"close_to_{col}"] == "YES") & (
-            merged_df[f"close_to_{col}"].shift(1) == "NO"
-        )
+        update_cycle_count(merged_df, col)
 
-        counter = 2 if merged_df[f"close_to_{col}"][0] == "YES" else 1
-        merged_df[f"cycle_no_{col}"] = cycle_codition.cumsum() + counter
-
+    write_dataframe_to_csv(
+        merged_df, "pa_analysis_output/cycle_outpts", "cycle_base_df.csv"
+    )
     return merged_df
+
+
+def update_cycle_count(merged_df, col):
+    # Create the cycle condition column
+    cycle_condition = (merged_df[f"close_to_{col}"] == "YES") & (
+        merged_df[f"close_to_{col}"].shift(1) == "NO"
+    )
+
+    # Create a reset condition for the counter
+    reset_condition = merged_df["market_direction"] != merged_df[
+        "market_direction"
+    ].shift(1)
+
+    # Create a group identifier that increments whenever reset_condition is True
+    group_id = reset_condition.cumsum()
+
+    # Initialize thef cycle_no_{col} with zeros
+    merged_df[f"cycle_no_{col}"] = 0
+
+    # Define a function to calculate the cycle number within each group
+    def calculate_cycle_no(group):
+        cycle_no = group.cumsum() + 1
+        return cycle_no
+
+    # Apply the function to each group
+    merged_df[f"cycle_no_{col}"] = (
+        cycle_condition.groupby(group_id)
+        .apply(calculate_cycle_no)
+        .reset_index(level=0, drop=True)
+    )
+
+    # Adjust the initial counter
+    initial_counter = 1 if merged_df[f"close_to_{col}"].iloc[0] == "YES" else 0
+    merged_df[f"cycle_no_{col}"] += initial_counter
