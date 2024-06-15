@@ -1,4 +1,5 @@
 from enum import Enum
+import os
 
 
 class OutputHeader(Enum):
@@ -56,3 +57,14 @@ class RankingColumns(Enum):
         "Weighted Average Signal Duration Short -"
     )
     TOTAL = "Total"
+
+
+TIMEFRAME_OPTIONS = list(
+    map(lambda x: x.strip(), os.getenv("TIMEFRAME_OPTIONS", "").split(","))
+)
+PERIOD_OPTIONS = list(
+    map(lambda x: x.strip(), os.getenv("PERIOD_OPTIONS", "").split(","))
+)
+SD_OPTIONS = list(
+    map(lambda x: x.strip(), os.getenv("SD_OPTIONS", "").split(","))
+)

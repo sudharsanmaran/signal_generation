@@ -3,6 +3,7 @@ import os
 
 import pandas as pd
 from pa_analysis.constants import OutputHeader, RankingColumns, SignalColumns
+from pa_analysis.cycle_processor import process_cycles
 from source.constants import MarketDirection
 from source.data_reader import load_strategy_data
 from source.trade_processor import (
@@ -137,7 +138,14 @@ def process_strategy(validated_data, strategy_pair, instrument):
 
     # based on base df need to generate output analytic df
     result_base_df = generate_analytics(base_df)
-
+    if validated_data["calculate_cycles"]:
+        process_cycles(
+            time_frames=validated_data["time_frames"],
+            periods=validated_data["periods"],
+            sds=validated_data["sds"],
+            base_df=base_df,
+            instrument=instrument,
+        )
     return result_base_df
 
 

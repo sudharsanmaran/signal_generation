@@ -106,24 +106,39 @@ def read_data(
     file_details = {
         "entry_fractal": {
             "read": read_entry_fractal,
-            "path": "Fractal",
-            "file_number": entry_fractal_file_number,
+            "file_path": os.path.join(
+                base_path,
+                "Fractal",
+                instrument,
+                f"{entry_fractal_file_number}_result.csv",
+            ),
+            "index_col": "TIMESTAMP",
             "cols": [index, *entry_fractal_columns],
             "dtype": {col: "boolean" for col in entry_fractal_columns},
             "rename": {col: f"entry_{col}" for col in entry_fractal_columns},
         },
         "exit_fractal": {
             "read": read_exit_fractal,
-            "path": "Fractal",
-            "file_number": exit_fractal_file_number,
+            "file_path": os.path.join(
+                base_path,
+                "Fractal",
+                instrument,
+                f"{exit_fractal_file_number}_result.csv",
+            ),
+            "index_col": "TIMESTAMP",
             "cols": [index, *exit_fractal_columns],
             "dtype": {col: "boolean" for col in entry_fractal_columns},
             "rename": {col: f"exit_{col}" for col in entry_fractal_columns},
         },
         "bb_band": {
             "read": read_bb_fractal,
-            "path": "BB Band",
-            "file_number": bb_file_number,
+            "file_path": os.path.join(
+                base_path,
+                "BB Band",
+                instrument,
+                f"{bb_file_number}_result.csv",
+            ),
+            "index_col": "TIMESTAMP",
             "cols": [index, bb_band_column],
             "rename": {bb_band_column: f"bb_{bb_band_column}"},
         },
@@ -131,29 +146,40 @@ def read_data(
             "read": read_trail_bb_fractal,
             "path": "BB Band",
             "file_number": trail_bb_file_number,
+            "file_path": os.path.join(
+                base_path,
+                "BB Band",
+                instrument,
+                f"{trail_bb_file_number}_result.csv",
+            ),
+            "index_col": "TIMESTAMP",
             "cols": [index, trail_bb_band_column],
             "rename": {trail_bb_band_column: f"trail_{trail_bb_band_column}"},
         },
     }
 
+    read_files(start_date, end_date, all_dfs, file_details)
+
+    return all_dfs
+
+
+def read_files(
+    start_date,
+    end_date,
+    all_dfs,
+    file_details,
+):
     # Loop through each file detail to read additional data
     for _, details in file_details.items():
         if details["read"]:
-            # Construct the path to the data CSV file
-            file_path = os.path.join(
-                base_path,
-                details["path"],
-                instrument,
-                f"{details['file_number']}_result.csv",
-            )
             # Read the data CSV file into a DataFrame
             df = pd.read_csv(
-                file_path,
-                parse_dates=["TIMESTAMP"],
+                details.get("file_path"),
+                parse_dates=[details["index_col"]],
                 date_format="%Y-%m-%d %H:%M:%S",
                 usecols=details["cols"],
                 dtype=details.get("dtype", None),
-                index_col="TIMESTAMP",
+                index_col=details["index_col"],
             )
             df.index = pd.to_datetime(df.index)
             # Filter the DataFrame for the specified date range
@@ -162,8 +188,6 @@ def read_data(
             if "rename" in details:
                 df.rename(columns=details["rename"], inplace=True)
             all_dfs.append(df)
-
-    return all_dfs
 
 
 def load_strategy_data(

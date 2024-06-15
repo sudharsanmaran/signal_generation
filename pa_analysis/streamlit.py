@@ -1,9 +1,11 @@
+import os
 import time
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 
 from pa_analysis.analysis_processor import process
+from pa_analysis.constants import PERIOD_OPTIONS, SD_OPTIONS, TIMEFRAME_OPTIONS
 from source.streamlit import (
     get_flag_combinations,
     get_portfolio_flags,
@@ -146,7 +148,30 @@ def main():
         streamlit_inputs.update(
             {"start_date": start_date, "end_date": end_date}
         )
-
+        calculate_cycles = st.checkbox(
+            "Calculate Cycles",
+            value=saved_inputs.get("calculate_cycles", True),
+        )
+        streamlit_inputs["calculate_cycles"] = calculate_cycles
+        if calculate_cycles:
+            time_frames = st.multiselect(
+                "Time Frame",
+                TIMEFRAME_OPTIONS,
+                default=saved_inputs.get("time_frame", ["2", "3"]),
+            )
+            periods = st.multiselect(
+                "Period",
+                PERIOD_OPTIONS,
+                default=saved_inputs.get("period", ["20", "40"]),
+            )
+            sds = st.multiselect(
+                "Standard Deviation",
+                SD_OPTIONS,
+                default=saved_inputs.get("sd", ["2"]),
+            )
+            streamlit_inputs.update(
+                {"time_frames": time_frames, "periods": periods, "sds": sds}
+            )
     # Check if all required fields are filled
     if (
         portfolio_ids_input
@@ -156,10 +181,15 @@ def main():
         and strategy_pairs
         and start_date
         and end_date
+        and check_cycles_inputs(streamlit_inputs)
     ):
         if st.button("Submit"):
             start = time.time()
-            validated_data = validate(streamlit_inputs)
+            try:
+                validated_data = validate(streamlit_inputs)
+            except Exception as e:
+                st.write(f"Error: {e}")
+                return
             st.session_state.result_dfs = process(validated_data)
             et = time.time()
             st.write(f"Time taken: {et - start} seconds")
@@ -189,6 +219,12 @@ def main():
 
     else:
         st.write("Please fill in all the required fields.")
+
+
+def check_cycles_inputs(input) -> bool:
+    if input["calculate_cycles"]:
+        return input["time_frames"] and input["periods"] and input["sds"]
+    return True
 
 
 if __name__ == "__main__":
