@@ -56,4 +56,5 @@ user_inputs.json
 filter*.csv
 final_result.csv
 pa_analysis_output.zip
-pa_analysis_output/cycle_outpts/cycle_base_df.csv
+pa_analysis_output/cycle_outpts/base_df/base*
+pa_analysis_output/cycle_outpts/results/result*

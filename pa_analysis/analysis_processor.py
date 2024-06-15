@@ -4,6 +4,7 @@ import os
 import pandas as pd
 from pa_analysis.constants import OutputHeader, RankingColumns, SignalColumns
 from pa_analysis.cycle_processor import process_cycles
+from pa_analysis.utils import make_positive, make_round, write_dict_to_csv
 from source.constants import MarketDirection
 from source.data_reader import load_strategy_data
 from source.trade_processor import (
@@ -47,24 +48,6 @@ def process(validated_data):
     flattened_data, sub_header, collapsed_main_header = format(data)
     write_dict_to_csv(flattened_data, sub_header, collapsed_main_header)
     return result
-
-
-def write_dict_to_csv(flattened_data, sub_header, collapsed_main_header):
-    output_dir = "pa_analysis_output"
-    csv_filename = "final_result.csv"
-    csv_file_path = os.path.join(output_dir, csv_filename)
-
-    # Write to CSV
-    with open(csv_file_path, mode="w", newline="") as file:
-        writer = csv.writer(file)
-
-        # Write main and sub headers
-        writer.writerow(collapsed_main_header)
-        writer.writerow(sub_header)
-
-        # Write the data rows
-        for row in flattened_data:
-            writer.writerow(row.values())
 
 
 def format(data):
@@ -480,30 +463,20 @@ def update_ranking_total(data):
         )
 
 
-def make_positive_int(value):
-    if value < 0:
-        return value * -1
-    return value
-
-
-def make_round(value):
-    return round(value, 2)
-
-
 def update_weighted_avg_signal_duration(
     result, direction, mask_df, plus_mask_df, minus_mask_df
 ):
     plus, minus, net = get_col_name(direction)
     result[OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value][plus] = (
         make_round(
-            make_positive_int(
+            make_positive(
                 plus_mask_df["temp"].sum() / plus_mask_df["points"].sum()
             )
         )
     )
     result[OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value][minus] = (
         make_round(
-            make_positive_int(
+            make_positive(
                 minus_mask_df["temp"].sum() / minus_mask_df["points"].sum()
             )
         )
