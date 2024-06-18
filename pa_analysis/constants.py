@@ -59,14 +59,24 @@ class RankingColumns(Enum):
     TOTAL = "Total"
 
 
-TIMEFRAME_OPTIONS = list(
-    map(lambda x: x.strip(), os.getenv("TIMEFRAME_OPTIONS", "").split(","))
+TIMEFRAME_OPTIONS = sorted(
+    list(
+        map(
+            lambda x: int(x.strip()),
+            os.getenv("TIMEFRAME_OPTIONS", "").split(","),
+        )
+    )
 )
-PERIOD_OPTIONS = list(
-    map(lambda x: x.strip(), os.getenv("PERIOD_OPTIONS", "").split(","))
+PERIOD_OPTIONS = sorted(
+    list(
+        map(
+            lambda x: int(x.strip()),
+            os.getenv("PERIOD_OPTIONS", "").split(","),
+        )
+    )
 )
-SD_OPTIONS = list(
-    map(lambda x: x.strip(), os.getenv("SD_OPTIONS", "").split(","))
+SD_OPTIONS = sorted(
+    list(map(lambda x: int(x.strip()), os.getenv("SD_OPTIONS", "").split(",")))
 )
 
 

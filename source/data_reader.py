@@ -158,19 +158,19 @@ def read_data(
         },
     }
 
-    read_files(start_date, end_date, all_dfs, file_details)
-
+    dfs = read_files(start_date, end_date, file_details)
+    all_dfs.extend(dfs.values())
     return all_dfs
 
 
 def read_files(
     start_date,
     end_date,
-    all_dfs,
-    file_details,
+    file_details: dict,
 ):
+    data_frames = {}
     # Loop through each file detail to read additional data
-    for _, details in file_details.items():
+    for file_name, details in file_details.items():
         if details["read"]:
             # Read the data CSV file into a DataFrame
             df = pd.read_csv(
@@ -187,7 +187,8 @@ def read_files(
             # Rename columns if specified
             if "rename" in details:
                 df.rename(columns=details["rename"], inplace=True)
-            all_dfs.append(df)
+            data_frames[file_name] = df
+    return data_frames
 
 
 def load_strategy_data(

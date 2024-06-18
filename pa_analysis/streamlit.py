@@ -154,45 +154,75 @@ def main():
         )
         streamlit_inputs["calculate_cycles"] = calculate_cycles
         if calculate_cycles:
-            time_frames = st.multiselect(
+            st.text("BB Band 1 inputs:")
+            time_frames_1 = st.multiselect(
                 "Time Frame",
                 TIMEFRAME_OPTIONS,
-                default=saved_inputs.get("time_frame", ["2", "3"]),
+                default=saved_inputs.get("time_frame", [2]),
             )
-            st.text("BB Band 1 inputs:")
-            periods = st.multiselect(
+            periods_1 = st.multiselect(
                 "Periods",
                 PERIOD_OPTIONS,
-                default=saved_inputs.get("period", ["20", "40"]),
+                default=saved_inputs.get("period", [20]),
             )
-            sds = st.multiselect(
+            sds_1 = st.multiselect(
                 "Standard Deviations",
                 SD_OPTIONS,
-                default=saved_inputs.get("sd", ["2"]),
+                default=saved_inputs.get("sd", [2]),
             )
             streamlit_inputs.update(
-                {"time_frames": time_frames, "periods": periods, "sds": sds}
+                {
+                    "time_frames_1": time_frames_1,
+                    "periods_1": periods_1,
+                    "sds_1": sds_1,
+                }
             )
 
             st.text("BB Band 2 inputs:")
             check_bb_2 = st.checkbox(
                 "Check BB 2",
-                value=saved_inputs.get("calculate_cycles", True),
+                value=saved_inputs.get("calculate_cycles", False),
             )
             streamlit_inputs["check_bb_2"] = check_bb_2
             if check_bb_2:
-                bb_2_periods = st.multiselect(
-                    "BB 2 Periods",
-                    PERIOD_OPTIONS,
-                    default=saved_inputs.get("period", ["40"]),
+                if time_frames_1:
+                    bb_2_tf_options = TIMEFRAME_OPTIONS[
+                        TIMEFRAME_OPTIONS.index(max(time_frames_1)) :
+                    ]
+                else:
+                    bb_2_tf_options = TIMEFRAME_OPTIONS
+                time_frames_2 = st.multiselect(
+                    "BB 2 Time Frame",
+                    bb_2_tf_options,
                 )
-                bb_2_sds = st.multiselect(
+                if periods_1:
+                    bb_2_period_options = PERIOD_OPTIONS[
+                        PERIOD_OPTIONS.index(max(periods_1)) + 1 :
+                    ]
+                else:
+                    bb_2_period_options = PERIOD_OPTIONS
+                if (
+                    time_frames_2
+                    and time_frames_1
+                    and min(time_frames_2) > max(time_frames_1)
+                ):
+                    bb_2_period_options = PERIOD_OPTIONS
+
+                periods_2 = st.multiselect(
+                    "BB 2 Periods",
+                    bb_2_period_options,
+                )
+                sds_2 = st.multiselect(
                     "BB 2 Standard Deviations",
                     SD_OPTIONS,
-                    default=saved_inputs.get("sd", ["2"]),
+                    default=saved_inputs.get("sd", [2]),
                 )
                 streamlit_inputs.update(
-                    {"bb_2_periods": bb_2_periods, "bb_2_sds": bb_2_sds}
+                    {
+                        "time_frames_2": time_frames_2,
+                        "periods_2": periods_2,
+                        "sds_2": sds_2,
+                    }
                 )
 
     # Check if all required fields are filled
@@ -247,9 +277,9 @@ def main():
 
 def check_cycles_inputs(input) -> bool:
     if input["calculate_cycles"] and input["check_bb_2"]:
-        return input["bb_2_periods"] and input["bb_2_sds"]
+        return input["periods_2"] and input["sds_2"] and input["time_frames_2"]
     elif input["calculate_cycles"]:
-        return input["time_frames"] and input["periods"] and input["sds"]
+        return input["time_frames_1"] and input["periods_1"] and input["sds_1"]
     return True
 
 

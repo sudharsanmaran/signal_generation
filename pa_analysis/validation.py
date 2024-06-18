@@ -12,13 +12,14 @@ class AnalysisInput(BaseModel):
     long_entry_signals: List[tuple]
     short_entry_signals: List[tuple]
 
-    time_frames: List[str] = None
-    periods: List[str] = None
-    sds: List[str] = None
+    time_frames_1: List[int] = None
+    periods_1: List[int] = None
+    sds_1: List[int] = None
     calculate_cycles: bool = False
 
-    bb_2_periods: List[str] = None
-    bb_2_sds: List[str] = None
+    time_frames_2: List[int] = None
+    periods_2: List[int] = None
+    sds_2: List[int] = None
     check_bb_2: bool = False
 
     @field_validator("start_date", "end_date", mode="before")
@@ -43,9 +44,9 @@ class AnalysisInput(BaseModel):
             raise ValueError("calculate_cycles should be a boolean")
         if v:
             if (
-                not values.data["time_frames"]
-                or not values.data["periods"]
-                or not values.data["sds"]
+                not values.data["time_frames_1"]
+                or not values.data["periods_1"]
+                or not values.data["sds_1"]
             ):
                 raise ValueError(
                     "Time Frame, Period and Standard Deviation are required"
@@ -57,7 +58,11 @@ class AnalysisInput(BaseModel):
         if not isinstance(v, bool):
             raise ValueError("calculate_cycles should be a boolean")
         if v:
-            if not values.data["bb_2_periods"] or not values.data["bb_2_sds"]:
+            if (
+                not values.data["periods_2"]
+                or not values.data["sds_2"]
+                or not values.data["time_frames_2"]
+            ):
                 raise ValueError("Period and Standard Deviation are required")
         return v
 
