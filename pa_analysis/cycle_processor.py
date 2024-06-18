@@ -470,12 +470,16 @@ def update_cycle_count_2(merged_df, col, bb_2_cols):
     )
 
     # Create the cycle condition column for end of the cycle
+
     end_conditions = [
         (
             (merged_df[f"close_to_{bb_2_col}"] == "NO")
             & (merged_df["market_direction"] == MarketDirection.LONG)
         )
-        | (
+        for bb_2_col in bb_2_cols
+    ]
+    end_t = [
+        (
             (merged_df[f"close_to_{bb_2_col}"] == "YES")
             & (merged_df["market_direction"] == MarketDirection.SHORT)
         )
@@ -485,29 +489,33 @@ def update_cycle_count_2(merged_df, col, bb_2_cols):
     # Combine end conditions into a single end condition
     combined_end_condition = end_conditions[0]
     for condition in end_conditions[1:]:
-        combined_end_condition |= condition
+        combined_end_condition &= condition
+
+    combined_end_t = end_t[0]
+    for condition in end_t[1:]:
+        combined_end_condition &= condition
+
+    all_end_conditions = combined_end_condition | combined_end_t
 
     # Also include the original end condition for `close_to_{col}`
-    cycle_condition_end = combined_end_condition | (
+    cycle_condition_end = combined_end_condition & (
         (merged_df[f"close_to_{col}"] == "YES")
-        & (merged_df[f"close_to_{col}"].shift(1) == "NO")
     )
 
     # Initialize the cycle_no_{col} with zeros
     merged_df[f"cycle_no_{col}"] = 0
 
     # Apply cycle start condition
-    merged_df.loc[cycle_condition_start, f"cycle_no_{col}"] = 1
+    # merged_df.loc[cycle_condition_start, f"cycle_no_{col}"] = 1
 
     # Define a function to calculate the cycle number within each group
     def calculate_cycle_no(group):
-        cycle_no = group.cumsum()
+        cycle_no = group.cumsum() + 1
         return cycle_no
 
     # Apply the function to each group
     merged_df[f"cycle_no_{col}"] = (
-        merged_df[f"cycle_no_{col}"]
-        .groupby(merged_df["group_id"])
+        cycle_condition_start.groupby(merged_df["group_id"])
         .apply(calculate_cycle_no)
         .reset_index(level=0, drop=True)
     )
@@ -518,10 +526,10 @@ def update_cycle_count_2(merged_df, col, bb_2_cols):
 
     # Now adjust cycle_no_{col} based on the end condition
 
-    end_condition = (
-        cycle_condition_end.groupby(merged_df["group_id"]).cumsum() > 0
-    )
-    merged_df["end_condition"] = end_conditions
+    # end_condition = (
+    #     cycle_condition_end.groupby(merged_df["group_id"]).cumsum() + 1
+    # )
+    merged_df.loc[cycle_condition_end, "temp"] = -1
     merged_df[f"cycle_no_{col}"] = merged_df[f"cycle_no_{col}"].where(
         ~end_condition, 0
     )
