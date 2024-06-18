@@ -123,9 +123,7 @@ def process_strategy(validated_data, strategy_pair, instrument):
     result_base_df = generate_analytics(base_df)
     if validated_data["calculate_cycles"]:
         process_cycles(
-            time_frames=validated_data["time_frames"],
-            periods=validated_data["periods"],
-            sds=validated_data["sds"],
+            **validated_data,
             base_df=base_df,
             instrument=instrument,
         )

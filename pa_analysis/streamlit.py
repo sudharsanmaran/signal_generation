@@ -159,21 +159,44 @@ def main():
                 TIMEFRAME_OPTIONS,
                 default=saved_inputs.get("time_frame", ["2", "3"]),
             )
+            st.text("BB Band 1 inputs:")
             periods = st.multiselect(
-                "Period",
+                "Periods",
                 PERIOD_OPTIONS,
                 default=saved_inputs.get("period", ["20", "40"]),
             )
             sds = st.multiselect(
-                "Standard Deviation",
+                "Standard Deviations",
                 SD_OPTIONS,
                 default=saved_inputs.get("sd", ["2"]),
             )
             streamlit_inputs.update(
                 {"time_frames": time_frames, "periods": periods, "sds": sds}
             )
+
+            st.text("BB Band 2 inputs:")
+            check_bb_2 = st.checkbox(
+                "Check BB 2",
+                value=saved_inputs.get("calculate_cycles", True),
+            )
+            streamlit_inputs["check_bb_2"] = check_bb_2
+            if check_bb_2:
+                bb_2_periods = st.multiselect(
+                    "BB 2 Periods",
+                    PERIOD_OPTIONS,
+                    default=saved_inputs.get("period", ["40"]),
+                )
+                bb_2_sds = st.multiselect(
+                    "BB 2 Standard Deviations",
+                    SD_OPTIONS,
+                    default=saved_inputs.get("sd", ["2"]),
+                )
+                streamlit_inputs.update(
+                    {"bb_2_periods": bb_2_periods, "bb_2_sds": bb_2_sds}
+                )
+
     # Check if all required fields are filled
-    if (
+    all_fields_filled = (
         portfolio_ids_input
         and instruments
         and long_entry_signals
@@ -182,7 +205,8 @@ def main():
         and start_date
         and end_date
         and check_cycles_inputs(streamlit_inputs)
-    ):
+    )
+    if all_fields_filled:
         if st.button("Submit"):
             start = time.time()
             try:
@@ -222,7 +246,9 @@ def main():
 
 
 def check_cycles_inputs(input) -> bool:
-    if input["calculate_cycles"]:
+    if input["calculate_cycles"] and input["check_bb_2"]:
+        return input["bb_2_periods"] and input["bb_2_sds"]
+    elif input["calculate_cycles"]:
         return input["time_frames"] and input["periods"] and input["sds"]
     return True
 

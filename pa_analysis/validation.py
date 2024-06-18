@@ -17,6 +17,10 @@ class AnalysisInput(BaseModel):
     sds: List[str] = None
     calculate_cycles: bool = False
 
+    bb_2_periods: List[str] = None
+    bb_2_sds: List[str] = None
+    check_bb_2: bool = False
+
     @field_validator("start_date", "end_date", mode="before")
     def convert_to_datetime(cls, v):
         """
@@ -46,6 +50,15 @@ class AnalysisInput(BaseModel):
                 raise ValueError(
                     "Time Frame, Period and Standard Deviation are required"
                 )
+        return v
+
+    @field_validator("check_bb_2", mode="after")
+    def validate_bb_2_check(cls, v, values):
+        if not isinstance(v, bool):
+            raise ValueError("calculate_cycles should be a boolean")
+        if v:
+            if not values.data["bb_2_periods"] or not values.data["bb_2_sds"]:
+                raise ValueError("Period and Standard Deviation are required")
         return v
 
 
