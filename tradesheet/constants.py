@@ -93,12 +93,12 @@ class InputFileCols:
 
 
 class InputCols:
-    TAG = "Signal"
-    EXIT_CLOSE = "Exit Price"
-    ENTRY_CLOSE = "Entry Price"
-    EXIT_TYPE = "Exit Types"
-    ENTRY_DT = "Entry Datetime"
-    EXIT_DT = "Exit Datetime"
+    TAG = "SG_Signal"
+    EXIT_CLOSE = "SG_Exit Price"
+    ENTRY_CLOSE = "SG_Entry Price"
+    EXIT_TYPE = "SG_Exit Types"
+    ENTRY_DT = "SG_Entry Datetime"
+    EXIT_DT = "SG_Exit Datetime"
     GREEN = "L"
     RED = "S"
 

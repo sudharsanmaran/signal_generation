@@ -15,18 +15,16 @@ SEGMENT_CLASS = {
 
 
 def generate_tradesheet(
-    input_data, signal_generation_df, strategy_pair=None, instrument=None
+    input_data, signal_generation_df, strategy_pair="", instrument=""
 ):
-    # breakpoint()
     st = time.time()
-    print(input_data[InputFileCols.SEGMENT])
     segment_class = SEGMENT_CLASS.get(input_data["segment"].lower(), None)
     if segment_class:
-        instance = segment_class(input_data, signal_generation_df)
+        instance = segment_class(input_data, signal_generation_df, instrument=instrument, strategy_pair=strategy_pair)
         instance.generate_trade_sheet()
     else:
         print("Provided Segment is incorrect")
-    print(time.time() - st)
+    print(f"{instrument}_{strategy_pair}:   {time.time() - st}")
 
 
 if __name__ == "__main__":

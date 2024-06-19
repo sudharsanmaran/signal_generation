@@ -9,12 +9,11 @@ from tradesheet.utils import percentage, clean_int, get_bool
 
 
 class TradeSheetGenerator:
-
-    def __init__(self, input_data, ee_df):
-
+    def __init__(self, input_data, ee_df, strategy_pair="", instrument=""):
+        self.output_file_name = f"{self.output_file_name}_{instrument}_{strategy_pair}.csv"
         self.start_date = input_data[InputFileCols.START_DATE]
         self.end_date = input_data.get(InputFileCols.END_DATE)
-        self.symbol = input_data.get(InputFileCols.INSTRUMENT)
+        self.symbol = instrument or input_data.get(InputFileCols.INSTRUMENT) 
         self.segment = input_data[InputFileCols.SEGMENT]
         self.expiry = input_data[InputFileCols.EXPIRY]
         self.strike = clean_int(input_data[InputFileCols.STRIKE])
@@ -63,7 +62,6 @@ class TradeSheetGenerator:
             OutputCols.CAPITAL: self.capital,
             OutputCols.VOLUME_MIN: self.no_of_mins,
         })
-        # breakpoint()
         self.ee_df = ee_df[(ee_df[InputCols.ENTRY_DT] >= self.start_date) & (ee_df[InputCols.ENTRY_DT] <= self.end_date)]
 
         if self.ad_based_entry and self.ad not in [InputValues.APPRECIATION, InputValues.DEPRECIATION] and not self.ad_percent:
@@ -301,6 +299,6 @@ class TradeSheetGenerator:
                         output[OutputCols.MIN_RE_EXIT_P] = exit_df['Low'].min()
                     if self.sl_trading and self.risk_at_play and re_entry_price and re_exit_price:
                         output[OutputCols.RE_QTY], output[OutputCols.RE_ROI], output[
-                            OutputCols.RE_PROBABILITY], output[OutputCols.REVISED_RE_QTY] = self.cal_capital_management(re_entry_price, re_exit_price, tag)
+                            OutputCols.RE_PROBABILITY], output[OutputCols.REVISED_RE_QTY] = self.cal_capital_management(re_entry_price, re_exit_price, tag, lot_size)
 
         return output, final_df

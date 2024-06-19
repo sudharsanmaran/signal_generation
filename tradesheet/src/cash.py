@@ -10,7 +10,7 @@ from tradesheet.src.base import TradeSheetGenerator
 
 class CashSegment(TradeSheetGenerator):
     dir_path = CASH_FILE_PATH
-    output_file_name = f"{OUTPUT_PATH}cash_output.csv"
+    output_file_name = f"{OUTPUT_PATH}cash_output"
 
     def iterate_dir_month_wise(self, month_dir):
         df_list = []
@@ -32,10 +32,7 @@ class CashSegment(TradeSheetGenerator):
 
     def generate_trade_sheet(self):
         self.ee_df = self.ee_df[self.ee_df[InputCols.TAG] == InputCols.GREEN]
-        breakpoint()
-        s_t = time.time()
         cash_db_df = self.read_csv_files_in_date_range()
-        print(time.time() - s_t)
         if cash_db_df is not None:
             cash_db_df[DATE] = pd.to_datetime(cash_db_df['Date'] + ' ' + cash_db_df['Time']).dt.floor('min')
             results = []

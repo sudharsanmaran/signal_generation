@@ -13,17 +13,17 @@ from tradesheet.src.cash import CashSegment
 
 class OptionSegment(TradeSheetGenerator):
     dir_path = OPTION_FILE_PATH
-    output_file_name = f"{OUTPUT_PATH}option_output.csv"
+    output_file_name = f"{OUTPUT_PATH}option_output"
     STRIKE_POSTFIX = {
         InputCols.GREEN: "CE",
         InputCols.RED: "PE",
     }
 
-    def __init__(self, input_data, ee_df, hedge=False):
-        super().__init__(input_data, ee_df)
+    def __init__(self, input_data, ee_df, strategy_pair="", instrument="", hedge=False):
+        super().__init__(input_data, ee_df, strategy_pair, instrument)
         self.hedge = hedge
         self.delay_exit = input_data.get(InputFileCols.DELAYED_EXIT, True)
-        self.cash_db_df = CashSegment(input_data, ee_df).read_csv_files_in_date_range()
+        self.cash_db_df = CashSegment(input_data, ee_df, strategy_pair, instrument).read_csv_files_in_date_range()
         self.cash_db_df[DATE] = pd.to_datetime(self.cash_db_df['Date'] + ' ' + self.cash_db_df['Time']).dt.floor('min')
 
         if not self.expiry:
@@ -140,9 +140,7 @@ class OptionSegment(TradeSheetGenerator):
             os.chmod(self.output_file_name, 0o600)
 
     def generate_result_df(self):
-        s_t = time.time()
         option_db_df = self.read_csv_files_in_date_range()
-        print(time.time() - s_t)
         if option_db_df is not None:
             option_db_df[DATE] = pd.to_datetime(option_db_df['Date'] + ' ' + option_db_df['Time'], format="%d/%m/%Y %H:%M:%S").dt.floor('min')
 

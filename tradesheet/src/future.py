@@ -15,12 +15,12 @@ from tradesheet.utils import int_to_roman, get_bool
 
 class FutureSegment(TradeSheetGenerator):
     dir_path = FUTURE_FILE_PATH
-    output_file_name = f"{OUTPUT_PATH}future_output.csv"
+    output_file_name = f"{OUTPUT_PATH}future_output"
 
-    def __init__(self, input_data, ee_df):
-        super().__init__(input_data, ee_df)
+    def __init__(self, input_data, ee_df, strategy_pair="", instrument=""):
+        super().__init__(input_data, ee_df, strategy_pair, instrument)
         self.delay_exit = True
-        self.cash_db_df = CashSegment(input_data, ee_df).read_csv_files_in_date_range()
+        self.cash_db_df = CashSegment(input_data, ee_df, strategy_pair, instrument).read_csv_files_in_date_range()
         self.cash_db_df[DATE] = pd.to_datetime(self.cash_db_df['Date'] + ' ' + self.cash_db_df['Time']).dt.floor('min')
 
         # self.hedge_calculation(input_data)
@@ -86,7 +86,6 @@ class FutureSegment(TradeSheetGenerator):
         return df_list
 
     def hedge_calculation(self, input_data):
-        # breakpoint()
         self.is_hedge = get_bool(input_data.pop("Hedge", False))
         self.hadge_df = None
         if self.is_hedge:
@@ -117,10 +116,7 @@ class FutureSegment(TradeSheetGenerator):
             self.hedge_df.rename(columns=rename_cols, inplace=True)
 
     def generate_trade_sheet(self):
-        breakpoint()
-        s_t = time.time()
         future_db_df = self.read_csv_files_in_date_range()
-        print(time.time() - s_t)
         if future_db_df is not None:
             future_db_df[DATE] = pd.to_datetime(future_db_df['Date'] + ' ' + future_db_df['Time']).dt.floor('min')
             results = []
