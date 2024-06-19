@@ -363,6 +363,7 @@ def get_base_df(kwargs):
         for tf, df in time_frames_1_dfs.items():
             # merge the dataframes
             merged_df = merge_dataframes(df, time_frames_2_dfs, tf_bb_cols)
+            updated_yes_no_columns(bb_cols, merged_df)
             # updated the cycle count
             for col in tf_bb_cols[tf].values():
                 update_cycle_count_2(merged_df, col)
@@ -478,8 +479,13 @@ def update_cycle_columns(df, bb_cols, base_df):
     ].shift(1)
     merged_df["group_id"] = group_condition.cumsum()
 
-    for col in bb_cols:
 
+
+    return merged_df
+
+
+def updated_yes_no_columns(bb_cols, merged_df):
+    for col in bb_cols:
         # update yes/no
         short_condition = (
             merged_df["market_direction"] == MarketDirection.SHORT
@@ -492,8 +498,6 @@ def update_cycle_columns(df, bb_cols, base_df):
         merged_df.loc[short_condition | long_condition, f"close_to_{col}"] = (
             "YES"
         )
-
-    return merged_df
 
 
 def update_cycle_count_2(merged_df, col, bb_2_cols=None):
@@ -518,13 +522,18 @@ def update_cycle_count_2(merged_df, col, bb_2_cols=None):
             cycle_counter = 1
             in_cycle = False
 
+        if idx == 383:
+            a = 1
+
         # Start condition
         start_condition = is_cycle_start(merged_df, col, bb_2_cols, idx)
 
         # End conditions
         end_condition = is_cycle_end(merged_df, bb_2_cols, idx)
 
-        if start_condition and not in_cycle:
+        if (start_condition and not in_cycle) or (
+            start_condition and confirm_start_condition(merged_df, col, idx)
+        ):
             cycle_counter += 1
             in_cycle = True
 
@@ -558,9 +567,7 @@ def is_cycle_end(merged_df, bb_2_cols, idx):
 
 
 def is_cycle_start(merged_df, col, bb_2_cols, idx):
-    start_condition = (merged_df[f"close_to_{col}"].iloc[idx] == "YES") & (
-        merged_df[f"close_to_{col}"].shift(1).iloc[idx] == "NO"
-    )
+    start_condition = confirm_start_condition(merged_df, col, idx)
 
     if bb_2_cols:
         if merged_df["market_direction"].iloc[idx] == MarketDirection.LONG:
@@ -573,9 +580,14 @@ def is_cycle_start(merged_df, col, bb_2_cols, idx):
             )
         start_condition = (
             (merged_df[f"close_to_{col}"].iloc[idx] == "YES")
-            | (start_condition)
         ) & all(bb_2_start_condition)
     return start_condition
+
+
+def confirm_start_condition(merged_df, col, idx):
+    return (merged_df[f"close_to_{col}"].iloc[idx] == "YES") & (
+        merged_df[f"close_to_{col}"].shift(1).iloc[idx] == "NO"
+    )
 
 
 def update_cycle_count_1(merged_df, col):
