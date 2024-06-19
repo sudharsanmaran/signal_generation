@@ -28,6 +28,7 @@ These enumerations and constants are used throughout the trading system to ensur
 """
 
 from enum import Enum
+import os
 
 
 class TradeExitType(Enum):
@@ -59,6 +60,7 @@ class MarketDirection(Enum):
     ALL = "all"
     LONG = "L"
     SHORT = "S"
+    UNKNOWN = "NA"
     PREVIOUS = "previous"
 
 
@@ -104,6 +106,20 @@ confirm_fractal_column_dict = {
 
 MERGED_DF_FOLDER = "merged_df"
 SG_OUTPUT_FOLDER = "signal_generation_output"
+
+# Define the percentage of available CPU to be used
+cpu_percent_to_use = 0.8  # You can adjust this percentage as needed
+
+
+INSTRUMENTS = list(
+    map(lambda x: x.strip(), os.getenv("INSTRUMENTS", "").split(","))
+)
+STOCKS_FNO = list(
+    map(lambda x: x.strip(), os.getenv("STOCKS_FNO", "").split(","))
+)
+STOCKS_NON_FNO = list(
+    map(lambda x: x.strip(), os.getenv("STOCKS_NON_FNO", "").split(","))
+)
 
 
 class OutputColumn(Enum):

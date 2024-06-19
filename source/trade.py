@@ -58,7 +58,9 @@ class Trade:
     skip_rows: bool = False
     no_of_rows_to_skip: Optional[int] = None
 
-    def __init__(self, entry_signal, entry_datetime, entry_price, signal_count):
+    def __init__(
+        self, entry_signal, entry_datetime, entry_price, signal_count
+    ):
         """
         Initialize a Trade instance with entry details.
 
@@ -180,7 +182,7 @@ class Trade:
                 OutputColumn.EXIT_DATETIME.value: exit["exit_datetime"],
                 OutputColumn.EXIT_TYPE.value: exit["exit_type"].value,
                 OutputColumn.INTRADAY_POSITIONAL.value: Trade.type.value,
-                OutputColumn.ENTRY_PRICE: self.entry_price,
+                OutputColumn.ENTRY_PRICE.value: self.entry_price,
                 OutputColumn.EXIT_PRICE.value: exit["exit_price"],
                 OutputColumn.NET_POINTS.value: exit["pnl"],
             }
@@ -195,16 +197,16 @@ def initialize(validated_input):
             Trade.trail_compare_functions[direction]["compare_func"] = (
                 lambda a, b: a > b
             )
-            Trade.trail_compare_functions[direction]["opposite_compare_func"] = (
-                lambda a, b: a < b
-            )
+            Trade.trail_compare_functions[direction][
+                "opposite_compare_func"
+            ] = (lambda a, b: a < b)
         else:
             Trade.trail_compare_functions[direction]["compare_func"] = (
                 lambda a, b: a < b
             )
-            Trade.trail_compare_functions[direction]["opposite_compare_func"] = (
-                lambda a, b: a > b
-            )
+            Trade.trail_compare_functions[direction][
+                "opposite_compare_func"
+            ] = (lambda a, b: a > b)
 
     """
     Initialize Trade class-level attributes based on validated input data.
@@ -224,7 +226,9 @@ def initialize(validated_input):
     Trade.check_trail_bb_band = validated_input.get("check_trail_bb_band")
     Trade.check_entry_based = validated_input.get("check_entry_based")
     Trade.type = validated_input.get("trade_type")
-    Trade.trigger_trade_management = validated_input.get("trigger_trade_management")
+    Trade.trigger_trade_management = validated_input.get(
+        "trigger_trade_management"
+    )
     Trade.market_direction_conditions = {
         "entry": {
             MarketDirection.LONG: validated_input.get("long_entry_signals"),
@@ -236,7 +240,9 @@ def initialize(validated_input):
         },
     }
     Trade.allowed_direction = validated_input.get("allowed_direction")
-    Trade.signal_columns = [f"TAG_{id}" for id in validated_input.get("portfolio_ids")]
+    Trade.signal_columns = [
+        f"TAG_{id}" for id in validated_input.get("portfolio_ids")
+    ]
 
     fractal_exit_count = validated_input.get("fractal_exit_count")
     Trade.fractal_exit_count = (
@@ -260,10 +266,12 @@ def initialize(validated_input):
         },
     }
     set_compare_functions(
-        MarketDirection.LONG, validated_input.get("trail_bb_band_long_direction")
+        MarketDirection.LONG,
+        validated_input.get("trail_bb_band_long_direction"),
     )
     set_compare_functions(
-        MarketDirection.SHORT, validated_input.get("trail_bb_band_short_direction")
+        MarketDirection.SHORT,
+        validated_input.get("trail_bb_band_short_direction"),
     )
 
     if Trade.check_entry_based:

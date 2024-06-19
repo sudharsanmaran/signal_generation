@@ -51,7 +51,6 @@ from collections import deque
 from itertools import chain
 import multiprocessing
 import os
-from dotenv import load_dotenv
 import pandas as pd
 
 from source.constants import (
@@ -62,6 +61,7 @@ from source.constants import (
     TradeType,
     fractal_column_dict,
     confirm_fractal_column_dict,
+    cpu_percent_to_use,
 )
 from source.data_reader import merge_all_df, read_data
 from source.trade import Trade, initialize
@@ -80,12 +80,20 @@ def is_trade_start_time_crossed(row):
     Returns:
         bool: True if the trade start time is crossed, False otherwise"""
 
-    if Trade.type == TradeType.INTRADAY and row.name.time() < Trade.trade_start_time:
+    if (
+        Trade.type == TradeType.INTRADAY
+        and row.name.time() < Trade.trade_start_time
+    ):
         return False
     return True
 
 
-def get_market_direction(row, condition_key):
+def get_market_direction(
+    row,
+    condition_key,
+    signal_columns=Trade.signal_columns,
+    market_direction_conditions=Trade.market_direction_conditions,
+):
     """Get the market direction based on the entry or exit conditions for a trade.
 
     Args:
@@ -95,8 +103,10 @@ def get_market_direction(row, condition_key):
     Returns:
         str: Market direction (LONG or SHORT) or None if no match found"""
 
-    row_directions = row.get(Trade.signal_columns)
-    for direction, signals in Trade.market_direction_conditions[condition_key].items():
+    row_directions = row.get(signal_columns)
+    for direction, signals in market_direction_conditions[
+        condition_key
+    ].items():
         for signal in signals:
             if all(dir == sig for dir, sig in zip(row_directions, signal)):
                 return direction
@@ -184,7 +194,11 @@ def check_exit_fractal_condition(row, market_direction, state):
     if market_direction:
         return row[confirm_fractal_column_dict["exit"][market_direction]]
     elif state.get(MarketDirection.PREVIOUS, None):
-        return row[confirm_fractal_column_dict["exit"][state[MarketDirection.PREVIOUS]]]
+        return row[
+            confirm_fractal_column_dict["exit"][
+                state[MarketDirection.PREVIOUS]
+            ]
+        ]
 
 
 def check_bb_band_entry(row, state, market_direction):
@@ -271,7 +285,9 @@ def check_entry_conditions(row, state):
 
     previous_direction = state.get(MarketDirection.PREVIOUS, None)
     state[MarketDirection.PREVIOUS] = market_direction
-    if previous_direction and signal_change(previous_direction, market_direction):
+    if previous_direction and signal_change(
+        previous_direction, market_direction
+    ):
         state[(market_direction, "entry_based")] = 0
         state["skip_count"] = Trade.steps_entry_based
 
@@ -288,7 +304,10 @@ def check_entry_conditions(row, state):
     ):
         return False, None
 
-    if Trade.type == TradeType.INTRADAY and row.name.time() >= Trade.trade_end_time:
+    if (
+        Trade.type == TradeType.INTRADAY
+        and row.name.time() >= Trade.trade_end_time
+    ):
         return False, None
 
     if Trade.check_entry_fractal:
@@ -296,7 +315,9 @@ def check_entry_conditions(row, state):
             row, state, market_direction, "entry"
         )
         if is_fractal_entry and Trade.check_bb_band:
-            is_bb_band_entry = check_bb_band_entry(row, state, market_direction)
+            is_bb_band_entry = check_bb_band_entry(
+                row, state, market_direction
+            )
 
     if Trade.check_entry_fractal and Trade.check_bb_band:
         return is_fractal_entry and is_bb_band_entry, market_direction
@@ -320,7 +341,10 @@ def is_trade_end_time_reached(row):
     Returns:
         bool: True if trade end time is reached, False otherwise
     """
-    if Trade.type == TradeType.INTRADAY and row.name.time() >= Trade.trade_end_time:
+    if (
+        Trade.type == TradeType.INTRADAY
+        and row.name.time() >= Trade.trade_end_time
+    ):
         return True
     return False
 
@@ -342,9 +366,9 @@ def check_bb_band_trail_exit(row, state, market_direction):
     trail_bb_band_value = row[f"trail_{Trade.trail_bb_band_column}"]
 
     if state.get("trail_first_found", False):
-        if Trade.trail_compare_functions[market_direction]["opposite_compare_func"](
-            row["Close"], trail_bb_band_value
-        ):
+        if Trade.trail_compare_functions[market_direction][
+            "opposite_compare_func"
+        ](row["Close"], trail_bb_band_value):
             state["trail_first_found"] = False
             return True
     else:
@@ -424,7 +448,9 @@ def identify_exit_signals(row, exit_state, entry_state):
     if market_direction:
         previous_direction = exit_state.get(MarketDirection.PREVIOUS, None)
         exit_state[MarketDirection.PREVIOUS] = market_direction
-        if previous_direction and signal_change(previous_direction, market_direction):
+        if previous_direction and signal_change(
+            previous_direction, market_direction
+        ):
             exit_state["signal_count"] += 1
             Trade.reset_trade_entry_id_counter()
             return True, TradeExitType.SIGNAL
@@ -443,7 +469,7 @@ def identify_exit_signals(row, exit_state, entry_state):
     return is_trail_bb_band_exit or is_fractal_exit, exit_type
 
 
-def process_trade(validated_input):
+def multiple_process(validated_input, process: callable):
     """
         Processes trades based on a defined strategy and outputs results.
 
@@ -467,8 +493,8 @@ def process_trade(validated_input):
 
     # Dynamic worker count
     num_workers = min(
+        int(multiprocessing.cpu_count() * cpu_percent_to_use),
         len(strategy_pairs) * len(instruments),
-        multiprocessing.cpu_count(),
     )
     # pool = multiprocessing.Pool(processes=num_workers)
 
@@ -477,7 +503,7 @@ def process_trade(validated_input):
             for strategy_pair in strategy_pairs:
                 try:
                     pool.apply_async(
-                        process_strategy,
+                        process,
                         args=(
                             validated_input,
                             strategy_pair,
@@ -495,11 +521,10 @@ def process_trade(validated_input):
 
 
 def process_strategy(validated_input, strategy_pair, instrument):
-    load_dotenv()
     initialize(validated_input)
     portfolio_ids_str = " - ".join(Trade.portfolio_ids)
     strategy_pair_str = "_".join(map(lambda a: str(a), strategy_pair))
-    file_name = f"merged_df_{instrument}_{strategy_pair_str}.csv"
+    file_name = f"df_{instrument}_{strategy_pair_str}.csv"
 
     all_df = read_data(
         instrument,
@@ -542,7 +567,15 @@ def process_strategy(validated_input, strategy_pair, instrument):
     active_trades, completed_trades = [], []
     for index, row in merged_df.iterrows():
         is_entry, direction = check_entry_conditions(row, entry_state)
-        is_exit, exit_type = identify_exit_signals(row, exit_state, entry_state)
+        is_exit, exit_type = identify_exit_signals(
+            row, exit_state, entry_state
+        )
+        if is_exit:
+            for trade in active_trades[:]:
+                trade.add_exit(row.name, row["Close"], exit_type)
+                if trade.is_trade_closed():
+                    completed_trades.append(trade)
+                    active_trades.remove(trade)
         if is_entry:
             trade = Trade(
                 entry_signal=direction,
@@ -552,17 +585,12 @@ def process_strategy(validated_input, strategy_pair, instrument):
             )
             active_trades.append(trade)
 
-        if is_exit:
-            for trade in active_trades[:]:
-                trade.add_exit(row.name, row["Close"], exit_type)
-                if trade.is_trade_closed():
-                    completed_trades.append(trade)
-                    active_trades.remove(trade)
-
     trade_outputs = []
     for trade in chain(completed_trades, active_trades):
         trade_outputs.extend(
-            trade.formulate_output(instrument, strategy_pair_str, portfolio_ids_str)
+            trade.formulate_output(
+                instrument, strategy_pair_str, portfolio_ids_str
+            )
         )
 
     output_df = pd.DataFrame(trade_outputs)
@@ -570,10 +598,12 @@ def process_strategy(validated_input, strategy_pair, instrument):
         write_dataframe_to_csv(output_df, SG_OUTPUT_FOLDER, file_name)
 
     if Trade.trigger_trade_management:
-        generate_tradesheet(validated_input, output_df, strategy_pair_str, instrument)
+        generate_tradesheet(
+            validated_input, output_df, strategy_pair_str, instrument
+        )
 
 
 def write_dataframe_to_csv(dataframe, folder_name, file_name):
     path = os.path.join(folder_name, file_name)
     os.makedirs(folder_name, exist_ok=True)
-    dataframe.to_csv(path, index=False)
+    dataframe.to_csv(path, index=True)

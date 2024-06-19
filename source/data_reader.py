@@ -89,13 +89,121 @@ def read_data(
     # Get the base path from environment variables
     base_path = os.getenv("DB_PATH")
 
-    # List to store individual strategy DataFrames
-    strategy_dfs = []
-
-    # Flag to check if 'Close' column has been read
-    is_close_read = False
-
     # Loop through each portfolio and strategy ID pair
+    all_dfs = load_strategy_data(
+        instrument,
+        portfolio_ids,
+        strategy_ids,
+        start_date,
+        end_date,
+        base_path,
+    )
+
+    # Index column name
+    index = "TIMESTAMP"
+
+    # Dictionary to store file details for reading additional data
+    file_details = {
+        "entry_fractal": {
+            "read": read_entry_fractal,
+            "file_path": os.path.join(
+                base_path,
+                "Fractal",
+                instrument,
+                f"{entry_fractal_file_number}_result.csv",
+            ),
+            "index_col": "TIMESTAMP",
+            "cols": [index, *entry_fractal_columns],
+            "dtype": {col: "boolean" for col in entry_fractal_columns},
+            "rename": {col: f"entry_{col}" for col in entry_fractal_columns},
+        },
+        "exit_fractal": {
+            "read": read_exit_fractal,
+            "file_path": os.path.join(
+                base_path,
+                "Fractal",
+                instrument,
+                f"{exit_fractal_file_number}_result.csv",
+            ),
+            "index_col": "TIMESTAMP",
+            "cols": [index, *exit_fractal_columns],
+            "dtype": {col: "boolean" for col in entry_fractal_columns},
+            "rename": {col: f"exit_{col}" for col in entry_fractal_columns},
+        },
+        "bb_band": {
+            "read": read_bb_fractal,
+            "file_path": os.path.join(
+                base_path,
+                "BB Band",
+                instrument,
+                f"{bb_file_number}_result.csv",
+            ),
+            "index_col": "TIMESTAMP",
+            "cols": [index, bb_band_column],
+            "rename": {bb_band_column: f"bb_{bb_band_column}"},
+        },
+        "trail_bb_band": {
+            "read": read_trail_bb_fractal,
+            "path": "BB Band",
+            "file_number": trail_bb_file_number,
+            "file_path": os.path.join(
+                base_path,
+                "BB Band",
+                instrument,
+                f"{trail_bb_file_number}_result.csv",
+            ),
+            "index_col": "TIMESTAMP",
+            "cols": [index, trail_bb_band_column],
+            "rename": {trail_bb_band_column: f"trail_{trail_bb_band_column}"},
+        },
+    }
+
+    dfs = read_files(start_date, end_date, file_details)
+    all_dfs.extend(dfs.values())
+    return all_dfs
+
+
+def read_files(
+    start_date,
+    end_date,
+    file_details: dict,
+):
+    data_frames = {}
+    # Loop through each file detail to read additional data
+    for file_name, details in file_details.items():
+        if details["read"]:
+            # Read the data CSV file into a DataFrame
+            df = pd.read_csv(
+                details.get("file_path"),
+                parse_dates=[details["index_col"]],
+                date_format="%Y-%m-%d %H:%M:%S",
+                usecols=details["cols"],
+                dtype=details.get("dtype", None),
+                index_col=details["index_col"],
+            )
+            df.index = pd.to_datetime(df.index)
+            # Filter the DataFrame for the specified date range
+            df = df.loc[start_date:end_date]
+            # Rename columns if specified
+            if "rename" in details:
+                df.rename(columns=details["rename"], inplace=True)
+            data_frames[file_name] = df
+    return data_frames
+
+
+def load_strategy_data(
+    instrument,
+    portfolio_ids,
+    strategy_ids,
+    start_date,
+    end_date,
+    base_path,
+):
+    """
+    Load strategy data from CSV files for the specified instrument, portfolio, and strategy IDs.
+    """
+
+    is_close_read, strategy_dfs = False, []
     for portfolio_id, strategy_id in zip(portfolio_ids, strategy_ids):
         # Construct the path to the strategy CSV file
         strategy_path = os.path.join(
@@ -118,6 +226,7 @@ def read_data(
             )
         except Exception as e:
             print(f"Error reading {strategy_path}: {e}")
+            raise e
         strategy_df.index = pd.to_datetime(strategy_df.index)
         # Filter the DataFrame for the specified date range
         strategy_df = strategy_df.loc[start_date:end_date]
@@ -126,69 +235,4 @@ def read_data(
     # Concatenate all strategy DataFrames along the columns
     all_strategies_df = pd.concat(strategy_dfs, axis=1)
     all_dfs = [all_strategies_df]
-
-    # Index column name
-    index = "TIMESTAMP"
-
-    # Dictionary to store file details for reading additional data
-    file_details = {
-        "entry_fractal": {
-            "read": read_entry_fractal,
-            "path": "Fractal",
-            "file_number": entry_fractal_file_number,
-            "cols": [index, *entry_fractal_columns],
-            "dtype": {col: "boolean" for col in entry_fractal_columns},
-            "rename": {col: f"entry_{col}" for col in entry_fractal_columns},
-        },
-        "exit_fractal": {
-            "read": read_exit_fractal,
-            "path": "Fractal",
-            "file_number": exit_fractal_file_number,
-            "cols": [index, *exit_fractal_columns],
-            "dtype": {col: "boolean" for col in entry_fractal_columns},
-            "rename": {col: f"exit_{col}" for col in entry_fractal_columns},
-        },
-        "bb_band": {
-            "read": read_bb_fractal,
-            "path": "BB Band",
-            "file_number": bb_file_number,
-            "cols": [index, bb_band_column],
-            "rename": {bb_band_column: f"bb_{bb_band_column}"},
-        },
-        "trail_bb_band": {
-            "read": read_trail_bb_fractal,
-            "path": "BB Band",
-            "file_number": trail_bb_file_number,
-            "cols": [index, trail_bb_band_column],
-            "rename": {trail_bb_band_column: f"trail_{trail_bb_band_column}"},
-        },
-    }
-
-    # Loop through each file detail to read additional data
-    for _, details in file_details.items():
-        if details["read"]:
-            # Construct the path to the data CSV file
-            file_path = os.path.join(
-                base_path,
-                details["path"],
-                instrument,
-                f"{details['file_number']}_result.csv",
-            )
-            # Read the data CSV file into a DataFrame
-            df = pd.read_csv(
-                file_path,
-                parse_dates=["TIMESTAMP"],
-                date_format="%Y-%m-%d %H:%M:%S",
-                usecols=details["cols"],
-                dtype=details.get("dtype", None),
-                index_col="TIMESTAMP",
-            )
-            df.index = pd.to_datetime(df.index)
-            # Filter the DataFrame for the specified date range
-            df = df.loc[start_date:end_date]
-            # Rename columns if specified
-            if "rename" in details:
-                df.rename(columns=details["rename"], inplace=True)
-            all_dfs.append(df)
-
     return all_dfs

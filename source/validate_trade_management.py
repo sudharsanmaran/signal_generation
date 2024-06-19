@@ -15,7 +15,9 @@ class TradingConfiguration(BaseModel):
     hedge_delayed_exit: Optional[bool] = None
 
     ade_based_entry: Optional[bool] = False
-    appreciation_depreciation: Optional[Literal["APPRECIATION", "DEPRECIATION"]] = None
+    appreciation_depreciation: Optional[
+        Literal["APPRECIATION", "DEPRECIATION"]
+    ] = None
     ade_percentage: Optional[float] = None
 
     target: Optional[bool] = False
@@ -26,9 +28,9 @@ class TradingConfiguration(BaseModel):
 
     re_deployment: Optional[bool] = False
     re_ade_based_entry: Optional[bool] = None
-    re_appreciation_depreciation: Optional[Literal["APPRECIATION", "DEPRECIATION"]] = (
-        None
-    )
+    re_appreciation_depreciation: Optional[
+        Literal["APPRECIATION", "DEPRECIATION"]
+    ] = None
     re_ade_percentage: Optional[float] = None
 
     dte_based_testing: Optional[bool] = False
@@ -50,7 +52,9 @@ class TradingConfiguration(BaseModel):
     def validate_options(cls, v, values):
         if values.data.get("segment") == "OPTIONS":
             if v is None:
-                raise ValueError("This field is required when segment is OPTIONS")
+                raise ValueError(
+                    "This field is required when segment is OPTIONS"
+                )
         return v
 
     @field_validator(
@@ -100,19 +104,25 @@ class TradingConfiguration(BaseModel):
     @field_validator("dte_from")
     def validate_dte_based_testing(cls, v, values):
         if values.data.get("dte_based_testing") and v is None:
-            raise ValueError("This field is required when DTE - Based testing is True")
+            raise ValueError(
+                "This field is required when DTE - Based testing is True"
+            )
         return v
 
     @field_validator("next_dte_from", "next_expiry")
     def validate_next_expiry_trading(cls, v, values):
         if values.data.get("next_expiry_trading") and v is None:
-            raise ValueError("This field is required when Next Expiry trading is True")
+            raise ValueError(
+                "This field is required when Next Expiry trading is True"
+            )
         return v
 
     @field_validator("volume_minutes")
     def validate_volume_feature(cls, v, values):
         if values.data.get("volume_feature") and v is None:
-            raise ValueError("This field is required when Volume feature is True")
+            raise ValueError(
+                "This field is required when Volume feature is True"
+            )
         return v
 
 
