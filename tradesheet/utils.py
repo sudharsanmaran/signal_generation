@@ -1,4 +1,3 @@
-import pandas as pd
 def clean_int(value):
     try:
         value = int(value.replace(",", "")) if isinstance(value, str) else value
@@ -49,4 +48,3 @@ def get_bool(val):
     else:
         raise ValueError('The value \'{}\' cannot be mapped to boolean.'
                          .format(val))
-

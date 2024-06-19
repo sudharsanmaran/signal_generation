@@ -30,7 +30,7 @@ def generate_tradesheet(
 if __name__ == "__main__":
     input_data = pd.read_csv(
         INPUT_FILE,
-        parse_dates=["Start Date", "End Date"],
+        parse_dates=[InputFileCols.START_DATE, InputFileCols.END_DATE],
         keep_default_na=False,
         dayfirst=True,
     ).to_dict(orient="records")[0]
