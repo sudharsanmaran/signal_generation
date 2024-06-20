@@ -2,7 +2,7 @@ import os
 
 import pandas as pd
 
-from pa_analysis.constants import CycleOutputColumns
+from pa_analysis.constants import BB_Band_Columns, CycleOutputColumns
 from pa_analysis.utils import (
     format_duration,
     make_positive,
@@ -48,6 +48,7 @@ def analyze_cycles(df, time_frame):
         ]
 
         group_start_row = group_data.iloc[0]
+        market_direction = group_start_row["market_direction"]
         for cycle_col in cycle_columns:
             # Filter the group_data to get only the valid cycles and find unique cycle numbers
             unique_cycles = group_data.loc[
@@ -60,7 +61,6 @@ def analyze_cycles(df, time_frame):
                     "period_band": cycle_col[-4:],
                     "cycle_no": cycle,
                 }
-            for cycle in unique_cycles:
                 cycle_data = group_data[group_data[cycle_col] == cycle]
 
                 # real cycle starts from cycle no 2
@@ -135,25 +135,46 @@ def analyze_cycles(df, time_frame):
                     cycle_data.loc[max_idx, "High"]
                 )
                 cycle_analysis[CycleOutputColumns.DURATION_TO_MAX.value] = (
-                    make_round(
-                        (
-                            (
-                                cycle_data.loc[max_idx, "dt"]
-                                - cycle_data["dt"].iloc[0]
-                            ).total_seconds()
-                            / (3600 * 24)
+                    format_duration(
+                        make_positive(
+                            make_round(
+                                (
+                                    (
+                                        cycle_data.loc[max_idx, "dt"]
+                                        - cycle_data["dt"].iloc[0]
+                                    ).total_seconds()
+                                    / (3600 * 24)
+                                )
+                            )
                         )
                     )
                 )
 
                 # upadte duration first yes to first yes to no change
-                first_yes_index = cycle_data[
-                    cycle_data[f"close_to_{cycle_col[9:]}"] == "YES"
-                ]["dt"].iloc[0]
+                # Determine the first_yes_index and first_yes_change_condition based on market direction
+                if market_direction == MarketDirection.LONG:
+                    first_yes_index = cycle_data[
+                        cycle_data[f"close_to_{cycle_col[9:]}"] == "YES"
+                    ]["dt"].iloc[0]
 
-                first_yes_change_condition = (
-                    cycle_data[f"close_to_{cycle_col[9:]}"] == "YES"
-                ) & (cycle_data[f"close_to_{cycle_col[9:]}"].shift(-1) == "NO")
+                    first_yes_change_condition = (
+                        cycle_data[f"close_to_{cycle_col[9:]}"] == "YES"
+                    ) & (
+                        cycle_data[f"close_to_{cycle_col[9:]}"].shift(-1)
+                        == "NO"
+                    )
+
+                elif market_direction == MarketDirection.SHORT:
+                    first_yes_index = cycle_data[
+                        cycle_data[f"close_to_{cycle_col[9:]}"] == "NO"
+                    ]["dt"].iloc[0]
+
+                    first_yes_change_condition = (
+                        cycle_data[f"close_to_{cycle_col[9:]}"] == "NO"
+                    ) & (
+                        cycle_data[f"close_to_{cycle_col[9:]}"].shift(-1)
+                        == "YES"
+                    )
 
                 try:
                     first_yes_change = cycle_data[first_yes_change_condition][
@@ -216,7 +237,7 @@ def analyze_cycles(df, time_frame):
                 )
 
                 cycle_analysis[CycleOutputColumns.AVERAGE_TILL_MAX.value] = (
-                    make_round(cycle_data[:max_idx]["High"].mean())
+                    make_round(cycle_data.iloc[:max_idx]["High"].mean())
                 )
 
                 cycle_analysis[CycleOutputColumns.CYCLE_MIN.value] = (
@@ -245,7 +266,7 @@ def analyze_cycles(df, time_frame):
                 )
 
                 cycle_analysis[CycleOutputColumns.AVERAGE_TILL_MIN.value] = (
-                    make_round(cycle_data[:min_idx]["Low"].mean())
+                    make_round(cycle_data.iloc[:min_idx]["Low"].mean())
                 )
 
                 # category
@@ -332,9 +353,13 @@ def get_base_df(kwargs):
         base_df.index[-1],
     )
 
-    files_to_read, tf_bb_cols, time_frames_1, time_frames_2 = (
-        formulate_files_to_read(kwargs)
-    )
+    (
+        files_to_read,
+        tf_bb_cols,
+        close_time_frames_1,
+        bb_time_frames_1,
+        bb_time_frames_2,
+    ) = formulate_files_to_read(kwargs)
 
     dfs = read_files(
         start_datetime,
@@ -342,31 +367,59 @@ def get_base_df(kwargs):
         files_to_read,
     )
 
-    updated_df = {}
-    for tf, df in dfs.items():
-        updated_df[tf] = update_cycle_columns(
+    bb_time_frames_1_dfs, bb_time_frames_2_dfs, close_time_frames_1_dfs = (
+        {},
+        {},
+        {},
+    )
+    for key, df in dfs.items():
+        tf, type, origin = key
+        if type == "close" and origin == 1:
+            close_time_frames_1_dfs[(tf, origin)] = df
+
+        if type == "bb" and origin == 1:
+            bb_time_frames_1_dfs[(tf, origin)] = df
+
+        if type == "bb" and origin == 2:
+            bb_time_frames_2_dfs[(tf, origin)] = df
+
+    # merge bb1 the dataframes
+    for key, df in close_time_frames_1_dfs.items():
+        df = update_cycle_columns(
             df,
-            tf_bb_cols[tf].values(),
             base_df,
         )
+        update_signal_start_price(df)
+        merged_df = merge_dataframes(df, bb_time_frames_1_dfs, tf_bb_cols)
+        close_time_frames_1_dfs[key] = merged_df
 
-    time_frames_1_dfs, time_frames_2_dfs = {}, {}
-    for tf, df in updated_df.items():
-        if tf in time_frames_1:
-            time_frames_1_dfs[tf] = df
-        else:
-            time_frames_2_dfs[tf] = df
-
-    df_to_analyze = {}
     # update cycle count
+    df_to_analyze = {}
     if kwargs.get("check_bb_2"):
-        for tf, df in time_frames_1_dfs.items():
-            # merge the dataframes
-            merged_df = merge_dataframes(df, time_frames_2_dfs, tf_bb_cols)
-            updated_yes_no_columns(bb_cols, merged_df)
+        for key, df in close_time_frames_1_dfs.items():
+            # merge bb2 the dataframes
+            tf, origin = key
+            merged_df = merge_dataframes(df, bb_time_frames_2_dfs, tf_bb_cols)
+            bb_cols = []
+            for bb_key, cols in tf_bb_cols.items():
+                inner_tf, org = bb_key
+                if org == 2 or inner_tf == tf:
+                    bb_cols.extend(cols.values())
+            updated_yes_no_columns(
+                bb_cols,
+                merged_df,
+            )
+
             # updated the cycle count
-            for col in tf_bb_cols[tf].values():
-                update_cycle_count_2(merged_df, col)
+            if kwargs.get("include_higher_and_lower"):
+                mean_columns = [
+                    col for col in tf_bb_cols[key].values() if "M" in col
+                ]
+                for col in mean_columns:
+                    update_cycle_count_2_L_H(merged_df, col)
+            else:
+                for col in tf_bb_cols[key].values():
+                    update_cycle_count_2(merged_df, col)
 
             df_to_analyze[tf] = merged_df
 
@@ -376,9 +429,17 @@ def get_base_df(kwargs):
                 f"base_df_tf_{tf}.csv",
             )
     else:
-        for tf, df in time_frames_1_dfs.items():
-            for col in tf_bb_cols[tf].values():
-                update_cycle_count_1(df, col)
+        for key, df in close_time_frames_1_dfs.items():
+            updated_yes_no_columns(tf_bb_cols[key].values(), df)
+            if kwargs.get("include_higher_and_lower"):
+                mean_columns = [
+                    col for col in tf_bb_cols[key].values() if "M" in col
+                ]
+                for col in mean_columns:
+                    update_cycle_count_1_L_H(df, col)
+            else:
+                for col in tf_bb_cols[key].values():
+                    update_cycle_count_1(df, col)
             df_to_analyze[tf] = df
 
     return df_to_analyze
@@ -386,49 +447,103 @@ def get_base_df(kwargs):
 
 def formulate_files_to_read(kwargs):
     instrument = kwargs.get("instrument")
-    time_frames_1 = kwargs.get("time_frames_1")
-    time_frames_2 = kwargs.get("time_frames_2")
+    close_time_frames_1 = kwargs.get("close_time_frames_1")
+    bb_time_frames_1 = kwargs.get("bb_time_frames_1")
+    bb_time_frames_2 = kwargs.get("bb_time_frames_2")
 
     # Combine time frames while keeping track of their origin
-    time_frames_with_origin = [(tf, 1) for tf in time_frames_1] + [
-        (tf, 2) for tf in time_frames_2
-    ]
+    close_time_frames_with_origin = [(tf, 1) for tf in close_time_frames_1]
+    bb_time_frames_with_origin = [(tf, 1) for tf in bb_time_frames_1]
+
+    if bb_time_frames_2:
+        bb_time_frames_with_origin.extend([(tf, 2) for tf in bb_time_frames_2])
+
     base_path = os.getenv("BB_DB_PATH")
-    base_cols = {"dt", "Open", "High", "Low", "Close"}
+    index = "dt"
+    base_cols = {
+        "Open",
+        "High",
+        "Low",
+        "Close",
+    }
 
     tf_bb_cols = {
-        tf: get_bb_cols(
+        (tf, origin): get_bb_cols(
             kwargs.get(f"periods_{origin}"),
             kwargs.get(f"sds_{origin}"),
         )
-        for tf, origin in time_frames_with_origin
+        for tf, origin in bb_time_frames_with_origin
     }
 
+    if kwargs.get("include_higher_and_lower"):
+        for tf, origin in bb_time_frames_with_origin:
+            if origin == 1:
+
+                tf_bb_cols[(tf, origin)].update(
+                    get_bb_cols(
+                        kwargs.get(f"periods_{origin}"),
+                        kwargs.get(f"sds_{origin}"),
+                        col_type=BB_Band_Columns.UPPER.value,
+                    )
+                )
+
+                tf_bb_cols[(tf, origin)].update(
+                    get_bb_cols(
+                        kwargs.get(f"periods_{origin}"),
+                        kwargs.get(f"sds_{origin}"),
+                        col_type=BB_Band_Columns.LOWER.value,
+                    )
+                )
+
     rename_dict = {
-        tf: {col: f"{origin}_{tf}_{col[-4:]}" for col in tf_bb_cols[tf]}
-        for tf, origin in time_frames_with_origin
+        (tf, origin): {
+            col: f"{origin}_{tf}_{col[4:5]}_{col[-4:]}"
+            for col in tf_bb_cols[(tf, origin)]
+        }
+        for tf, origin in bb_time_frames_with_origin
     }
 
     files_to_read = {
-        time_frame: {
+        (tf, "bb", origin): {
             "read": True,
-            "cols": [*base_cols, *tf_bb_cols[time_frame]],
+            "cols": [index, *tf_bb_cols[(tf, origin)]],
             "index_col": "dt",
             "file_path": os.path.join(
                 base_path,
-                f"{instrument}_TF_{time_frame}.csv",
+                f"{instrument}_TF_{tf}.csv",
             ),
-            "rename": rename_dict[time_frame],
+            "rename": rename_dict[(tf, origin)],
         }
-        for time_frame, _ in time_frames_with_origin
+        for tf, origin in bb_time_frames_with_origin
     }
 
-    return files_to_read, rename_dict, time_frames_1, time_frames_2
+    files_to_read.update(
+        {
+            (time_frame, "close", origin): {
+                "read": True,
+                "cols": [index, *base_cols],
+                "index_col": "dt",
+                "file_path": os.path.join(
+                    base_path,
+                    f"{instrument}_TF_{time_frame}.csv",
+                ),
+            }
+            for time_frame, origin in close_time_frames_with_origin
+        }
+    )
+
+    return (
+        files_to_read,
+        rename_dict,
+        close_time_frames_1,
+        bb_time_frames_1,
+        bb_time_frames_2,
+    )
 
 
-def get_bb_cols(periods, sds):
+def get_bb_cols(periods, sds, col_type="MEAN"):
     bb_1_cols = {
-        f"P_{int(int(period)/20)}_MEAN_BAND_{period}_{sd}"
+        f"P_{int(int(period)/20)}_{col_type}_BAND_{period}_{sd}"
         for period in periods
         for sd in sds
     }
@@ -436,11 +551,14 @@ def get_bb_cols(periods, sds):
     return bb_1_cols
 
 
-def merge_dataframes(base_df, time_frame_2_dfs: dict, tf_bb_cols: dict):
-    for tf, df in time_frame_2_dfs.items():
-        cols = [f"close_to_{col}" for col in tf_bb_cols[tf].values()]
-        cols.insert(0, "dt")
-        cols.extend([col for col in tf_bb_cols[tf].values()])
+def merge_dataframes(
+    base_df, time_frame_2_dfs: dict, tf_bb_cols: dict, index_reset=True
+):
+    for key, df in time_frame_2_dfs.items():
+        if index_reset:
+            df = df.reset_index().rename(columns={"index": "dt"})
+        cols = ["dt"]
+        cols.extend([col for col in tf_bb_cols[key].values()])
         base_df = pd.merge_asof(
             base_df,
             df[cols],
@@ -452,7 +570,7 @@ def merge_dataframes(base_df, time_frame_2_dfs: dict, tf_bb_cols: dict):
     return base_df
 
 
-def update_cycle_columns(df, bb_cols, base_df):
+def update_cycle_columns(df, base_df):
     # update direction
     base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
     df = df.reset_index().rename(columns={"index": "dt"})
@@ -464,7 +582,16 @@ def update_cycle_columns(df, bb_cols, base_df):
         direction="nearest",
     )
 
-    # update signal start price
+    # update group id
+    group_condition = merged_df["market_direction"] != merged_df[
+        "market_direction"
+    ].shift(1)
+    merged_df["group_id"] = group_condition.cumsum()
+
+    return merged_df
+
+
+def update_signal_start_price(merged_df):
     condition = merged_df["market_direction"] != merged_df[
         "market_direction"
     ].shift(1)
@@ -472,16 +599,6 @@ def update_cycle_columns(df, bb_cols, base_df):
     merged_df["signal_start_price"] = pd.NA
     merged_df.loc[condition, "signal_start_price"] = merged_df["Close"]
     merged_df["signal_start_price"] = merged_df["signal_start_price"].ffill()
-
-    # update group id
-    group_condition = merged_df["market_direction"] != merged_df[
-        "market_direction"
-    ].shift(1)
-    merged_df["group_id"] = group_condition.cumsum()
-
-
-
-    return merged_df
 
 
 def updated_yes_no_columns(bb_cols, merged_df):
@@ -522,9 +639,6 @@ def update_cycle_count_2(merged_df, col, bb_2_cols=None):
             cycle_counter = 1
             in_cycle = False
 
-        if idx == 383:
-            a = 1
-
         # Start condition
         start_condition = is_cycle_start(merged_df, col, bb_2_cols, idx)
 
@@ -547,21 +661,7 @@ def update_cycle_count_2(merged_df, col, bb_2_cols=None):
 def is_cycle_end(merged_df, bb_2_cols, idx):
     if bb_2_cols:
         return any(
-            (
-                (merged_df[bb_2_col].iloc[idx] == "NO")
-                & (
-                    merged_df["market_direction"].iloc[idx]
-                    == MarketDirection.LONG
-                )
-            )
-            | (
-                (merged_df[bb_2_col].iloc[idx] == "YES")
-                & (
-                    merged_df["market_direction"].iloc[idx]
-                    == MarketDirection.SHORT
-                )
-            )
-            for bb_2_col in bb_2_cols
+            merged_df[bb_2_col].iloc[idx] == "YES" for bb_2_col in bb_2_cols
         )
     return False
 
@@ -570,14 +670,9 @@ def is_cycle_start(merged_df, col, bb_2_cols, idx):
     start_condition = confirm_start_condition(merged_df, col, idx)
 
     if bb_2_cols:
-        if merged_df["market_direction"].iloc[idx] == MarketDirection.LONG:
-            bb_2_start_condition = (
-                merged_df[bb_col].iloc[idx] == "YES" for bb_col in bb_2_cols
-            )
-        else:
-            bb_2_start_condition = (
-                merged_df[bb_col].iloc[idx] == "NO" for bb_col in bb_2_cols
-            )
+        bb_2_start_condition = (
+            merged_df[bb_col].iloc[idx] == "NO" for bb_col in bb_2_cols
+        )
         start_condition = (
             (merged_df[f"close_to_{col}"].iloc[idx] == "YES")
         ) & all(bb_2_start_condition)
@@ -614,3 +709,148 @@ def update_cycle_count_1(merged_df, col):
     # Adjust the initial counter
     initial_counter = 1 if merged_df[f"close_to_{col}"].iloc[0] == "YES" else 0
     merged_df[f"cycle_no_{col}"] += initial_counter
+
+
+def update_cycle_count_2_L_H(df, col, bb_2_cols=None):
+    upper_col, lower_col = col.replace("M", "U"), col.replace("M", "L")
+
+    if bb_2_cols is None:
+        # starts with colse_to_2*
+        bb_2_cols = [col for col in df.columns if "close_to_2" in col]
+
+    # Initialize the cycle number column
+    df[f"cycle_no_{col}"] = 0
+
+    # Initialize cycle counter
+    cycle_counter = 1
+    in_cycle = False
+
+    bb_2_start_condition = True
+    for bb_col in bb_2_cols:
+        bb_2_start_condition &= df[bb_col] == "NO"
+    bb_2_end_condition = False
+    for bb_col in bb_2_cols:
+        bb_2_end_condition |= df[bb_col] == "YES"
+
+    cycle_start_condition = {
+        MarketDirection.LONG: (
+            (df[f"close_to_{col}"] == "YES")
+            & (df["market_direction"] == MarketDirection.LONG)
+            & (df[f"close_to_{lower_col}"] == "YES")
+            & bb_2_start_condition
+        ),
+        MarketDirection.SHORT: (
+            (df[f"close_to_{col}"] == "NO")
+            & (df["market_direction"] == MarketDirection.SHORT)
+            & (df[f"close_to_{upper_col}"] == "NO")
+            & bb_2_start_condition
+        ),
+    }
+
+    cycle_end_condition = {
+        MarketDirection.LONG: (
+            (
+                (df["market_direction"] == MarketDirection.LONG)
+                & (df[f"close_to_{lower_col}"] == "YES")
+                & (df[f"close_to_{lower_col}"].shift(1) == "NO")
+            )
+            | bb_2_end_condition
+        ),
+        MarketDirection.SHORT: (
+            (
+                (df["market_direction"] == MarketDirection.SHORT)
+                & (df[f"close_to_{upper_col}"] == "NO")
+                & (df[f"close_to_{upper_col}"].shift(1) == "YES")
+            )
+            | bb_2_end_condition
+        ),
+    }
+
+    for group, group_df in df.groupby("group_id"):
+        # Initialize
+        current_cycle = 1
+        group_indices = group_df.index
+        cycle_counter = pd.Series(0, index=group_indices)
+        in_cycle = pd.Series(False, index=group_indices)
+        market_direction = group_df["market_direction"].iloc[0]
+
+        start_indices = group_indices[
+            cycle_start_condition[market_direction][group_indices]
+        ]
+        end_indices = group_indices[
+            cycle_end_condition[market_direction][group_indices]
+        ]
+
+        for start_idx in start_indices:
+            if not in_cycle[start_idx]:
+                current_cycle += 1
+                end_idx = end_indices[end_indices > start_idx].min()
+                if not pd.isna(end_idx):
+                    in_cycle.loc[start_idx:end_idx] = True
+                    cycle_counter.loc[start_idx:end_idx] = current_cycle
+                else:
+                    in_cycle.loc[start_idx:] = True
+                    cycle_counter.loc[start_idx:] = current_cycle
+
+        df.loc[group_indices, f"cycle_no_{col}"] = cycle_counter
+
+
+def update_cycle_count_1_L_H(df, col):
+    upper_col, lower_col = col.replace("M", "U"), col.replace("M", "L")
+
+    cycle_start_condition = {
+        MarketDirection.LONG: (
+            (df[f"close_to_{col}"] == "YES")
+            & (df["market_direction"] == MarketDirection.LONG)
+            & (df[f"close_to_{lower_col}"] == "YES")
+        ),
+        MarketDirection.SHORT: (
+            (df[f"close_to_{col}"] == "NO")
+            & (df["market_direction"] == MarketDirection.SHORT)
+            & (df[f"close_to_{upper_col}"] == "NO")
+        ),
+    }
+
+    cycle_end_condition = {
+        MarketDirection.LONG: (
+            (df["market_direction"] == MarketDirection.LONG)
+            & (df[f"close_to_{lower_col}"] == "YES")
+            & (df[f"close_to_{lower_col}"].shift(1) == "NO")
+        ),
+        MarketDirection.SHORT: (
+            (df["market_direction"] == MarketDirection.SHORT)
+            & (df[f"close_to_{upper_col}"] == "NO")
+            & (df[f"close_to_{upper_col}"].shift(1) == "YES")
+        ),
+    }
+
+    # Initialize the cycle number column
+    df[f"cycle_no_{col}"] = 0
+
+    for group, group_df in df.groupby("group_id"):
+        # Initialize
+        current_cycle = 1
+        group_indices = group_df.index
+        cycle_counter = pd.Series(0, index=group_indices)
+        in_cycle = pd.Series(False, index=group_indices)
+        market_direction = group_df["market_direction"].iloc[0]
+
+        start_indices = group_indices[
+            cycle_start_condition[market_direction][group_indices]
+        ]
+        end_indices = group_indices[
+            cycle_end_condition[market_direction][group_indices]
+        ]
+
+        for start_idx in start_indices:
+            if not in_cycle[start_idx]:
+                current_cycle += 1
+                end_idx = end_indices[end_indices > start_idx].min()
+                if not pd.isna(end_idx):
+                    in_cycle.loc[start_idx:end_idx] = True
+                    cycle_counter.loc[start_idx:end_idx] = current_cycle
+                else:
+                    in_cycle.loc[start_idx:] = True
+                    cycle_counter.loc[start_idx:] = current_cycle
+
+        df.loc[group_indices, f"cycle_no_{col}"] = cycle_counter

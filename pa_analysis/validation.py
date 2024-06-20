@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import List
 from pydantic import BaseModel, field_validator
 
+from pa_analysis.constants import BB_Band_Columns
+
 
 class AnalysisInput(BaseModel):
     start_date: datetime
@@ -12,12 +14,15 @@ class AnalysisInput(BaseModel):
     long_entry_signals: List[tuple]
     short_entry_signals: List[tuple]
 
-    time_frames_1: List[int] = None
-    periods_1: List[int] = None
-    sds_1: List[int] = None
+    close_time_frames_1: List[int]
+    bb_time_frames_1: List[int]
+    periods_1: List[int]
+    sds_1: List[int]
+    include_higher_and_lower: bool = False
+    # bb_band_column_1: BB_Band_Columns = BB_Band_Columns.MEAN
     calculate_cycles: bool = False
 
-    time_frames_2: List[int] = None
+    bb_time_frames_2: List[int] = None
     periods_2: List[int] = None
     sds_2: List[int] = None
     check_bb_2: bool = False
@@ -44,7 +49,8 @@ class AnalysisInput(BaseModel):
             raise ValueError("calculate_cycles should be a boolean")
         if v:
             if (
-                not values.data["time_frames_1"]
+                not values.data["close_time_frames_1"]
+                or not values.data["bb_time_frames_1"]
                 or not values.data["periods_1"]
                 or not values.data["sds_1"]
             ):
@@ -61,7 +67,7 @@ class AnalysisInput(BaseModel):
             if (
                 not values.data["periods_2"]
                 or not values.data["sds_2"]
-                or not values.data["time_frames_2"]
+                or not values.data["bb_time_frames_2"]
             ):
                 raise ValueError("Period and Standard Deviation are required")
         return v

@@ -155,11 +155,34 @@ def main():
         streamlit_inputs["calculate_cycles"] = calculate_cycles
         if calculate_cycles:
             st.text("BB Band 1 inputs:")
-            time_frames_1 = st.multiselect(
-                "Time Frame",
+
+            close_time_frames_1 = st.multiselect(
+                "Close Time Frame",
                 TIMEFRAME_OPTIONS,
-                default=saved_inputs.get("time_frame", [2]),
+                default=saved_inputs.get("close_time_frames_1", [2]),
             )
+
+            if close_time_frames_1:
+                bb_tf_options = TIMEFRAME_OPTIONS[
+                    TIMEFRAME_OPTIONS.index(max(close_time_frames_1)) :
+                ]
+            else:
+                bb_tf_options = TIMEFRAME_OPTIONS
+
+            bb_time_frames_1 = st.multiselect(
+                "BB Time Frame",
+                bb_tf_options,
+            )
+
+            include_higher_and_lower = st.checkbox(
+                "Include Higher and Lower BB Bands",
+                value=saved_inputs.get("include_higer_and_lower", False),
+            )
+            # bb_band_column_1 = st.selectbox(
+            #     "BB Band Column",
+            #     index=2,
+            #     options=["UPPER", "LOWER", "MEAN"],
+            # )
             periods_1 = st.multiselect(
                 "Periods",
                 PERIOD_OPTIONS,
@@ -172,7 +195,9 @@ def main():
             )
             streamlit_inputs.update(
                 {
-                    "time_frames_1": time_frames_1,
+                    "close_time_frames_1": close_time_frames_1,
+                    "bb_time_frames_1": bb_time_frames_1,
+                    "include_higher_and_lower": include_higher_and_lower,
                     "periods_1": periods_1,
                     "sds_1": sds_1,
                 }
@@ -185,26 +210,29 @@ def main():
             )
             streamlit_inputs["check_bb_2"] = check_bb_2
             if check_bb_2:
-                if time_frames_1:
+                if bb_time_frames_1:
                     bb_2_tf_options = TIMEFRAME_OPTIONS[
-                        TIMEFRAME_OPTIONS.index(max(time_frames_1)) :
+                        TIMEFRAME_OPTIONS.index(max(bb_time_frames_1)) :
                     ]
                 else:
                     bb_2_tf_options = TIMEFRAME_OPTIONS
-                time_frames_2 = st.multiselect(
+
+                bb_time_frames_2 = st.multiselect(
                     "BB 2 Time Frame",
                     bb_2_tf_options,
                 )
+
                 if periods_1:
                     bb_2_period_options = PERIOD_OPTIONS[
                         PERIOD_OPTIONS.index(max(periods_1)) + 1 :
                     ]
                 else:
                     bb_2_period_options = PERIOD_OPTIONS
+
                 if (
-                    time_frames_2
-                    and time_frames_1
-                    and min(time_frames_2) > max(time_frames_1)
+                    bb_time_frames_2
+                    and bb_time_frames_1
+                    and min(bb_time_frames_2) > max(bb_time_frames_1)
                 ):
                     bb_2_period_options = PERIOD_OPTIONS
 
@@ -219,7 +247,7 @@ def main():
                 )
                 streamlit_inputs.update(
                     {
-                        "time_frames_2": time_frames_2,
+                        "bb_time_frames_2": bb_time_frames_2,
                         "periods_2": periods_2,
                         "sds_2": sds_2,
                     }
@@ -277,9 +305,16 @@ def main():
 
 def check_cycles_inputs(input) -> bool:
     if input["calculate_cycles"] and input["check_bb_2"]:
-        return input["periods_2"] and input["sds_2"] and input["time_frames_2"]
+        return (
+            input["periods_2"] and input["sds_2"] and input["bb_time_frames_2"]
+        )
     elif input["calculate_cycles"]:
-        return input["time_frames_1"] and input["periods_1"] and input["sds_1"]
+        return (
+            input["close_time_frames_1"]
+            and input["bb_time_frames_1"]
+            and input["periods_1"]
+            and input["sds_1"]
+        )
     return True
 
 

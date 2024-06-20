@@ -104,3 +104,12 @@ class CycleOutputColumns(Enum):
     AVG_OF_MAX_TO_AVG_OF_MIN = "Avg of Max to Avg of Min"
     MAX_TO_MIN = "Max to Min"
     CLOSE_TO_CLOSE = "Close to Close"
+
+
+class BB_Band_Columns(Enum):
+    MEAN = "MEAN"
+    UPPER = "UPPER"
+    LOWER = "LOWER"
+    # CLOSE = "CLOSE"
+    # HIGH = "HIGH"
+    # LOW = "LOW"
