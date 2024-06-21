@@ -238,9 +238,21 @@ def analyze_cycles(df, time_frame):
                     )
                 )
 
-                cycle_analysis[CycleOutputColumns.AVERAGE_TILL_MAX.value] = (
-                    make_round(cycle_data.iloc[:max_idx]["High"].mean())
-                )
+                if market_direction == MarketDirection.LONG:
+                    cycle_analysis[
+                        CycleOutputColumns.AVERAGE_TILL_MAX.value
+                    ] = make_round(
+                        cycle_data.iloc[min_idx + 1 : max_idx + 1][
+                            "Close"
+                        ].mean()
+                    )
+                else:
+
+                    cycle_analysis[
+                        CycleOutputColumns.AVERAGE_TILL_MAX.value
+                    ] = make_round(
+                        cycle_data.iloc[: max_idx + 1]["Close"].mean()
+                    )
 
                 cycle_analysis[CycleOutputColumns.CYCLE_MIN.value] = (
                     cycle_data.loc[min_idx, "Low"]
@@ -267,9 +279,20 @@ def analyze_cycles(df, time_frame):
                     )
                 )
 
-                cycle_analysis[CycleOutputColumns.AVERAGE_TILL_MIN.value] = (
-                    make_round(cycle_data.iloc[:min_idx]["Low"].mean())
-                )
+                if market_direction == MarketDirection.LONG:
+                    cycle_analysis[
+                        CycleOutputColumns.AVERAGE_TILL_MIN.value
+                    ] = make_round(
+                        cycle_data.iloc[: min_idx + 1]["Low"].mean()
+                    )
+                else:
+                    cycle_analysis[
+                        CycleOutputColumns.AVERAGE_TILL_MIN.value
+                    ] = make_round(
+                        cycle_data.iloc[max_idx + 1 : min_idx + 1][
+                            "Low"
+                        ].mean()
+                    )
 
                 # category
                 if group_start_row["market_direction"] == MarketDirection.LONG:
@@ -322,14 +345,20 @@ def analyze_cycles(df, time_frame):
                     )
                 )
 
-                cycle_analysis[CycleOutputColumns.CLOSE_TO_CLOSE.value] = (
-                    make_positive(
+                if market_direction == MarketDirection.LONG:
+                    cycle_analysis[CycleOutputColumns.CLOSE_TO_CLOSE.value] = (
                         make_round(
                             cycle_data.iloc[-1]["Close"]
                             - cycle_data.iloc[0]["Close"]
                         )
                     )
-                )
+                else:
+                    cycle_analysis[CycleOutputColumns.CLOSE_TO_CLOSE.value] = (
+                        make_round(
+                            cycle_data.iloc[0]["Close"]
+                            - cycle_data.iloc[-1]["Close"]
+                        )
+                    )
 
                 results.append(cycle_analysis)
 
@@ -358,9 +387,6 @@ def get_base_df(kwargs):
     (
         files_to_read,
         tf_bb_cols,
-        close_time_frames_1,
-        bb_time_frames_1,
-        bb_time_frames_2,
     ) = formulate_files_to_read(kwargs)
 
     dfs = read_files(
@@ -537,9 +563,6 @@ def formulate_files_to_read(kwargs):
     return (
         files_to_read,
         rename_dict,
-        close_time_frames_1,
-        bb_time_frames_1,
-        bb_time_frames_2,
     )
 
 
