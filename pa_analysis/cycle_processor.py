@@ -387,8 +387,10 @@ def get_base_df(kwargs):
         tf_bb_cols,
     ) = formulate_files_to_read(kwargs)
 
+    max_tf = max(tf_bb_cols.keys())
+    adjusted_start_datetime = start_datetime - pd.Timedelta(minutes=max_tf[0])
     dfs = read_files(
-        start_datetime,
+        adjusted_start_datetime,
         end_datetime,
         files_to_read,
     )
@@ -411,10 +413,7 @@ def get_base_df(kwargs):
 
     # merge bb1 the dataframes
     for key, df in close_time_frames_1_dfs.items():
-        df = update_cycle_columns(
-            df,
-            base_df,
-        )
+        df = update_cycle_columns(df, base_df, start_datetime)
         update_signal_start_price(df)
         merged_df = merge_dataframes(df, bb_time_frames_1_dfs, tf_bb_cols)
         close_time_frames_1_dfs[key] = merged_df
@@ -425,7 +424,9 @@ def get_base_df(kwargs):
         for key, df in close_time_frames_1_dfs.items():
             # merge bb2 the dataframes
             tf, origin = key
-            merged_df = merge_dataframes(df, bb_time_frames_2_dfs, tf_bb_cols)
+            merged_df = merge_dataframes(
+                df, bb_time_frames_2_dfs, tf_bb_cols, direction="backward"
+            )
             bb_cols = []
             for bb_key in chain(bb_time_frames_1_dfs, bb_time_frames_2_dfs):
                 bb_cols.extend(tf_bb_cols[bb_key].values())
@@ -577,7 +578,11 @@ def get_bb_cols(periods, sds, col_type="MEAN"):
 
 
 def merge_dataframes(
-    base_df, time_frame_2_dfs: dict, tf_bb_cols: dict, index_reset=True
+    base_df,
+    time_frame_2_dfs: dict,
+    tf_bb_cols: dict,
+    index_reset=True,
+    direction="backward",
 ):
     for key, df in time_frame_2_dfs.items():
         if index_reset:
@@ -589,13 +594,13 @@ def merge_dataframes(
             df[cols],
             left_on="dt",
             right_on="dt",
-            direction="nearest",
+            direction=direction,
         )
 
     return base_df
 
 
-def update_cycle_columns(df, base_df):
+def update_cycle_columns(df, base_df, start_datetime):
     # update direction
     base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
     df = df.reset_index().rename(columns={"index": "dt"})
@@ -604,8 +609,10 @@ def update_cycle_columns(df, base_df):
         base_df[["TIMESTAMP", "market_direction"]],
         left_on="dt",
         right_on="TIMESTAMP",
-        direction="nearest",
+        direction="backward",
     )
+
+    merged_df = merged_df[merged_df["dt"] >= start_datetime]
 
     # update group id
     group_condition = merged_df["market_direction"] != merged_df[
