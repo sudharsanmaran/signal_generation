@@ -184,12 +184,14 @@ def analyze_cycles(df, time_frame):
                     first_yes_change = cycle_data["dt"].iloc[-1]
 
                 cycle_analysis[CycleOutputColumns.DURATION_ABOVE_BB.value] = (
-                    make_round(
-                        (
+                    format_duration(
+                        make_round(
                             (
-                                first_yes_change - first_yes_index
-                            ).total_seconds()
-                            / (3600 * 24)
+                                (
+                                    first_yes_change - first_yes_index
+                                ).total_seconds()
+                                / (3600 * 24)
+                            )
                         )
                     )
                 )
@@ -718,13 +720,6 @@ def update_cycle_count_2_L_H(df, col, bb_2_cols=None):
         # starts with colse_to_2*
         bb_2_cols = [col for col in df.columns if "close_to_2" in col]
 
-    # Initialize the cycle number column
-    df[f"cycle_no_{col}"] = 0
-
-    # Initialize cycle counter
-    cycle_counter = 1
-    in_cycle = False
-
     bb_2_start_condition = True
     for bb_col in bb_2_cols:
         bb_2_start_condition &= df[bb_col] == "NO"
@@ -766,33 +761,12 @@ def update_cycle_count_2_L_H(df, col, bb_2_cols=None):
         ),
     }
 
-    for group, group_df in df.groupby("group_id"):
-        # Initialize
-        current_cycle = 1
-        group_indices = group_df.index
-        cycle_counter = pd.Series(0, index=group_indices)
-        in_cycle = pd.Series(False, index=group_indices)
-        market_direction = group_df["market_direction"].iloc[0]
+    # Initialize the cycle number column
+    df[f"cycle_no_{col}"] = 0
 
-        start_indices = group_indices[
-            cycle_start_condition[market_direction][group_indices]
-        ]
-        end_indices = group_indices[
-            cycle_end_condition[market_direction][group_indices]
-        ]
-
-        for start_idx in start_indices:
-            if not in_cycle[start_idx]:
-                current_cycle += 1
-                end_idx = end_indices[end_indices > start_idx].min()
-                if not pd.isna(end_idx):
-                    in_cycle.loc[start_idx:end_idx] = True
-                    cycle_counter.loc[start_idx:end_idx] = current_cycle
-                else:
-                    in_cycle.loc[start_idx:] = True
-                    cycle_counter.loc[start_idx:] = current_cycle
-
-        df.loc[group_indices, f"cycle_no_{col}"] = cycle_counter
+    update_cycle_number_by_condition(
+        df, col, cycle_start_condition, cycle_end_condition
+    )
 
 
 def update_cycle_count_1_L_H(df, col):
@@ -827,6 +801,14 @@ def update_cycle_count_1_L_H(df, col):
     # Initialize the cycle number column
     df[f"cycle_no_{col}"] = 0
 
+    update_cycle_number_by_condition(
+        df, col, cycle_start_condition, cycle_end_condition
+    )
+
+
+def update_cycle_number_by_condition(
+    df, col, cycle_start_condition, cycle_end_condition
+):
     for group, group_df in df.groupby("group_id"):
         # Initialize
         current_cycle = 1
