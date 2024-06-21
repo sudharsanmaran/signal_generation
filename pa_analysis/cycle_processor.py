@@ -1,3 +1,4 @@
+from itertools import chain
 import os
 
 import pandas as pd
@@ -20,7 +21,7 @@ def process_cycles(**kwargs):
 
     # process the data
     for time_frame, df in all_df.items():
-        results = analyze_cycles(df, time_frame)
+        results = analyze_cycles(df, time_frame, kwargs)
 
         headers = results[0].keys()
         write_dict_to_csv(
@@ -31,7 +32,7 @@ def process_cycles(**kwargs):
         )
 
 
-def analyze_cycles(df, time_frame):
+def analyze_cycles(df, time_frame, kwargs):
     # Group by 'group_id'
     groups = df.groupby("group_id")
 
@@ -152,7 +153,9 @@ def analyze_cycles(df, time_frame):
 
                 # upadte duration first yes to first yes to no change
                 # Determine the first_yes_index and first_yes_change_condition based on market direction
-                if market_direction == MarketDirection.LONG:
+                if market_direction == MarketDirection.LONG or not kwargs.get(
+                    "include_higher_and_lower"
+                ):
                     first_yes_index = cycle_data[
                         cycle_data[f"close_to_{cycle_col[9:]}"] == "YES"
                     ]["dt"].iloc[0]
@@ -164,7 +167,9 @@ def analyze_cycles(df, time_frame):
                         == "NO"
                     )
 
-                elif market_direction == MarketDirection.SHORT:
+                elif market_direction == MarketDirection.SHORT and kwargs.get(
+                    "include_higher_and_lower"
+                ):
                     first_yes_index = cycle_data[
                         cycle_data[f"close_to_{cycle_col[9:]}"] == "NO"
                     ]["dt"].iloc[0]
@@ -239,20 +244,17 @@ def analyze_cycles(df, time_frame):
                 )
 
                 if market_direction == MarketDirection.LONG:
+
                     cycle_analysis[
                         CycleOutputColumns.AVERAGE_TILL_MAX.value
                     ] = make_round(
-                        cycle_data.iloc[min_idx + 1 : max_idx + 1][
-                            "Close"
-                        ].mean()
+                        cycle_data.loc[min_idx + 1 : max_idx]["Close"].mean()
                     )
                 else:
 
                     cycle_analysis[
                         CycleOutputColumns.AVERAGE_TILL_MAX.value
-                    ] = make_round(
-                        cycle_data.iloc[: max_idx + 1]["Close"].mean()
-                    )
+                    ] = make_round(cycle_data.loc[:max_idx]["Close"].mean())
 
                 cycle_analysis[CycleOutputColumns.CYCLE_MIN.value] = (
                     cycle_data.loc[min_idx, "Low"]
@@ -282,16 +284,12 @@ def analyze_cycles(df, time_frame):
                 if market_direction == MarketDirection.LONG:
                     cycle_analysis[
                         CycleOutputColumns.AVERAGE_TILL_MIN.value
-                    ] = make_round(
-                        cycle_data.iloc[: min_idx + 1]["Low"].mean()
-                    )
+                    ] = make_round(cycle_data.loc[:min_idx]["Low"].mean())
                 else:
                     cycle_analysis[
                         CycleOutputColumns.AVERAGE_TILL_MIN.value
                     ] = make_round(
-                        cycle_data.iloc[max_idx + 1 : min_idx + 1][
-                            "Low"
-                        ].mean()
+                        cycle_data.loc[max_idx + 1 : min_idx]["Low"].mean()
                     )
 
                 # category
@@ -429,10 +427,8 @@ def get_base_df(kwargs):
             tf, origin = key
             merged_df = merge_dataframes(df, bb_time_frames_2_dfs, tf_bb_cols)
             bb_cols = []
-            for bb_key, cols in tf_bb_cols.items():
-                inner_tf, org = bb_key
-                if org == 2 or inner_tf == tf:
-                    bb_cols.extend(cols.values())
+            for bb_key in chain(bb_time_frames_1_dfs, bb_time_frames_2_dfs):
+                bb_cols.extend(tf_bb_cols[bb_key].values())
             updated_yes_no_columns(
                 bb_cols,
                 merged_df,
@@ -441,12 +437,15 @@ def get_base_df(kwargs):
             # updated the cycle count
             if kwargs.get("include_higher_and_lower"):
                 mean_columns = [
-                    col for col in tf_bb_cols[key].values() if "M" in col
+                    col
+                    for bb_key in bb_time_frames_1_dfs
+                    for col in tf_bb_cols[bb_key].values()
+                    if "M" in col
                 ]
                 for col in mean_columns:
                     update_cycle_count_2_L_H(merged_df, col)
             else:
-                for col in tf_bb_cols[key].values():
+                for col in bb_cols:
                     update_cycle_count_2(merged_df, col)
 
             df_to_analyze[tf] = merged_df
@@ -458,15 +457,16 @@ def get_base_df(kwargs):
             )
     else:
         for key, df in close_time_frames_1_dfs.items():
-            updated_yes_no_columns(tf_bb_cols[key].values(), df)
+            bb_cols = []
+            for bb_key in bb_time_frames_1_dfs:
+                bb_cols.extend(tf_bb_cols[bb_key].values())
+            updated_yes_no_columns(bb_cols, df)
             if kwargs.get("include_higher_and_lower"):
-                mean_columns = [
-                    col for col in tf_bb_cols[key].values() if "M" in col
-                ]
+                mean_columns = [col for col in bb_cols if "M" in col]
                 for col in mean_columns:
                     update_cycle_count_1_L_H(df, col)
             else:
-                for col in tf_bb_cols[key].values():
+                for col in bb_cols:
                     update_cycle_count_1(df, col)
             df_to_analyze[tf] = df
 
