@@ -80,7 +80,7 @@ SD_OPTIONS = sorted(
 )
 
 
-class CycleOutputColumns(Enum):
+class FirstCycleColumns(Enum):
     DURATION_SIGNAL_START_TO_CYCLE_START = (
         "Duration Signal Start to Cycle Start"
     )
@@ -88,22 +88,35 @@ class CycleOutputColumns(Enum):
     MOVE = "Move"
     MOVE_PERCENT = "Move Percent"
     CYCLE_MAX = "Cycle Max"
-    DURATION_TO_MAX = "Duration to Max"
-    DURATION_ABOVE_BB = "Duration Above BB"
-    SIGNAL_START_TO_MAX_POINTS = "Signal Start to Max Points"
-    SIGNAL_START_TO_MAX_PERCENT = "Signal Start to Max Percent"
-    CATEGORY = "Category"
-    MOVE_START_TO_MAX_CYCLE_POINTS = "Move Start to Max Cycle Points"
-    MOVE_START_TO_MAX_CYCLE_PERCENT = "Move Start to Max Cycle Percent"
+    # DURATION_TO_MAX = "Duration to Max"
+    # DURATION_ABOVE_BB = "Duration Above BB"
+    # SIGNAL_START_TO_MAX_POINTS = "Signal Start to Max Points"
+    # SIGNAL_START_TO_MAX_PERCENT = "Signal Start to Max Percent"
+    # CATEGORY = "Category"
+    # MOVE_START_TO_MAX_CYCLE_POINTS = "Move Start to Max Cycle Points"
+    # MOVE_START_TO_MAX_CYCLE_PERCENT = "Move Start to Max Cycle Percent"
     AVERAGE_TILL_MAX = "Average Till Max"
+    POINTS_FRM_AVG_TILL_MAX_TO_MIN = "Points from Avg till Max to Min"
     CYCLE_MIN = "Cycle Min"
-    SIGNAL_START_TO_MINIMUM_POINTS = "Signal Start to Minimum Points"
-    SIGNAL_START_TO_MINIMUM_PERCENT = "Signal Start to Minimum Percent"
-    AVERAGE_TILL_MIN = "Average Till Min"
-    DURATION_BETWEEN_MAX_MIN = "Duration Between Max Min"
-    AVG_OF_MAX_TO_AVG_OF_MIN = "Avg of Max to Avg of Min"
+    # SIGNAL_START_TO_MINIMUM_POINTS = "Signal Start to Minimum Points"
+    # SIGNAL_START_TO_MINIMUM_PERCENT = "Signal Start to Minimum Percent"
+    # AVERAGE_TILL_MIN = "Average Till Min"
+    # DURATION_BETWEEN_MAX_MIN = "Duration Between Max Min"
+    # AVG_OF_MAX_TO_AVG_OF_MIN = "Avg of Max to Avg of Min"
     MAX_TO_MIN = "Max to Min"
     CLOSE_TO_CLOSE = "Close to Close"
+
+
+class SecondCycleIDColumns(Enum):
+    CTC_CYCLE_ID = "CTC Cycle ID"
+    MTM_CYCLE_ID = "MTM Cycle ID"
+
+
+class MTMCrossedCycleColumns(Enum):
+    IS_MTM_CROSS_PNT_3 = "IS_MTM Cross PNT 3"
+    IS_MTM_CROSS_PNT_5 = "IS_MTM Cross PNT 5"
+    IS_MTM_CROSS_PNT_75 = "IS_MTM Cross PNT 75"
+    IS_MTM_CROSS_1 = "IS_MTM Cross 1"
 
 
 class BB_Band_Columns(Enum):

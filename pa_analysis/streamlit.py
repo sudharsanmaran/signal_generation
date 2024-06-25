@@ -193,6 +193,21 @@ def main():
                 SD_OPTIONS,
                 default=saved_inputs.get("sd", [2]),
             )
+
+            close_percent = st.number_input(
+                "Close Percent",
+                value=saved_inputs.get("close_percent", 0.5),
+                max_value=1.0,
+                min_value=0.0,
+            )
+
+            max_to_min_percent = st.number_input(
+                "Max to Min Percent",
+                value=saved_inputs.get("max_to_min_percent", 0.5),
+                max_value=1.0,
+                min_value=0.0,
+            )
+
             streamlit_inputs.update(
                 {
                     "close_time_frames_1": close_time_frames_1,
@@ -200,6 +215,8 @@ def main():
                     "include_higher_and_lower": include_higher_and_lower,
                     "periods_1": periods_1,
                     "sds_1": sds_1,
+                    "close_percent": close_percent,
+                    "max_to_min_percent":  max_to_min_percent,
                 }
             )
 

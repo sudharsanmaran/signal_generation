@@ -19,6 +19,8 @@ class AnalysisInput(BaseModel):
     periods_1: List[int]
     sds_1: List[int]
     include_higher_and_lower: bool = False
+    close_percent: float = None
+    max_to_min_percent: float = None
     # bb_band_column_1: BB_Band_Columns = BB_Band_Columns.MEAN
     calculate_cycles: bool = False
 
@@ -70,6 +72,17 @@ class AnalysisInput(BaseModel):
                 or not values.data["bb_time_frames_2"]
             ):
                 raise ValueError("Period and Standard Deviation are required")
+        return v
+
+    @field_validator("close_percent", "max_to_min_percent", mode="after")
+    def validate_percent(cls, v):
+        if v is not None:
+            if not isinstance(v, (int, float)):
+                raise ValueError("percent should be a number")
+            if v < 0.0:
+                raise ValueError("percent should be a positive number")
+            if v > 1.0:
+                raise ValueError("percent should be less than 1")
         return v
 
 
