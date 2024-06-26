@@ -117,6 +117,10 @@ def update_second_cycle_analytics(
         idx += 1
         updates = {
             "index": [],
+            f"{idx}_{prefix}_{FirstCycleColumns.DURATION_SIGNAL_START_TO_CYCLE_START.value}": [],
+            f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_DURATION.value}": [],
+            f"{idx}_{prefix}_{FirstCycleColumns.MOVE.value}": [],
+            f"{idx}_{prefix}_{FirstCycleColumns.MOVE_PERCENT.value}": [],
             f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MAX.value}": [],
             f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MIN.value}": [],
             f"{idx}_{prefix}_{FirstCycleColumns.POINTS_FROM_MAX.value}": [],
@@ -190,6 +194,27 @@ def update_second_cycle_analytics(
                     continue
 
                 updates["index"].append(cycle_data.index[-1])
+
+                update_signal_start_duration(
+                    group_start_row,
+                    cycle_analysis,
+                    cycle_data,
+                    signal_start_duration_key=f"{idx}_{prefix}_{FirstCycleColumns.DURATION_SIGNAL_START_TO_CYCLE_START.value}",
+                )
+
+                update_cycle_duration(
+                    cycle_analysis,
+                    cycle_data,
+                    cycle_duration_key=f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_DURATION.value}",
+                )
+
+                update_move_and_move_percent(
+                    group_start_row,
+                    cycle_analysis,
+                    cycle_data,
+                    move_key=f"{idx}_{prefix}_{FirstCycleColumns.MOVE.value}",
+                    move_percent_key=f"{idx}_{prefix}_{FirstCycleColumns.MOVE_PERCENT.value}",
+                )
 
                 min_key = f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MIN.value}"
                 max_key = f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MAX.value}"
@@ -609,11 +634,17 @@ def analyze_cycles(df, time_frame, kwargs):
                 )
 
                 update_cycle_duration(
-                    group_start_row, cycle_analysis, cycle_data
+                    cycle_analysis,
+                    cycle_data,
+                    cycle_duration_key=FirstCycleColumns.CYCLE_DURATION.value,
                 )
 
                 update_move_and_move_percent(
-                    group_start_row, cycle_analysis, cycle_data
+                    group_start_row,
+                    cycle_analysis,
+                    cycle_data,
+                    move_key=FirstCycleColumns.MOVE.value,
+                    move_percent_key=FirstCycleColumns.MOVE_PERCENT.value,
                 )
 
                 min_key = FirstCycleColumns.CYCLE_MIN.value
@@ -825,9 +856,9 @@ def analyze_cycles(df, time_frame, kwargs):
     return results
 
 
-def update_cycle_duration(group_start_row, cycle_analysis, cycle_data):
+def update_cycle_duration(cycle_analysis, cycle_data, cycle_duration_key):
 
-    cycle_analysis[FirstCycleColumns.CYCLE_DURATION.value] = format_duration(
+    cycle_analysis[cycle_duration_key] = format_duration(
         make_round(
             (
                 cycle_data.iloc[-1]["dt"] - cycle_data.iloc[0]["dt"]
@@ -846,16 +877,14 @@ def update_signal_start_duration(
     )
 
 
-def update_move_and_move_percent(group_start_row, cycle_analysis, cycle_data):
-    cycle_analysis[FirstCycleColumns.MOVE.value] = make_positive(
+def update_move_and_move_percent(
+    group_start_row, cycle_analysis, cycle_data, move_key, move_percent_key
+):
+    cycle_analysis[move_key] = make_positive(
         make_round(cycle_data.iloc[0]["Close"] - group_start_row["Close"])
     )
-    cycle_analysis[FirstCycleColumns.MOVE_PERCENT.value] = make_positive(
-        make_round(
-            cycle_analysis[FirstCycleColumns.MOVE.value]
-            / group_start_row["Close"]
-            * 100
-        )
+    cycle_analysis[move_percent_key] = make_positive(
+        make_round(cycle_analysis[move_key] / group_start_row["Close"] * 100)
     )
 
 
