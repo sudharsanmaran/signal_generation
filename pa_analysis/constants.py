@@ -90,6 +90,7 @@ class FirstCycleColumns(Enum):
     CYCLE_MAX = "Cycle Max"
     CYCLE_MIN = "Cycle Min"
     MAX_TO_MIN = "Max to Min"
+    POINTS_FROM_MAX = "Points from Maximum"
     AVERAGE_TILL_MAX = "Average Till Max"
     AVERAGE_TILL_MIN = "Average Till Min"
     POINTS_FRM_AVG_TILL_MAX_TO_MIN = "Points from Avg till Max to Min"
