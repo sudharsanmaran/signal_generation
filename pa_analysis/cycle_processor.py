@@ -113,14 +113,30 @@ def update_second_cycle_analytics(
         idx += 1
         updates = {
             "index": [],
-            f"{idx}_{prefix}_second_cycle_no": [],
             f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MAX.value}": [],
             f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MIN.value}": [],
             f"{idx}_{prefix}_{FirstCycleColumns.MAX_TO_MIN.value}": [],
-            f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MAX.value}": [],
-            f"{idx}_{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}": [],
-            # f"{idx}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}": [],
         }
+
+        if cycle_count_col == SecondCycleIDColumns.MTM_CYCLE_ID.value:
+            updates.update(
+                {
+                    f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MAX.value}": [],
+                    f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MIN.value}": [],
+                    f"{idx}_{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}": [],
+                }
+            )
+
+        elif cycle_count_col == SecondCycleIDColumns.CTC_CYCLE_ID.value:
+            updates[
+                f"{idx}_{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}"
+            ] = []
+        # updates[
+        #     f"{idx}_{prefix}_{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}"
+        # ] = []
+        # updates[
+        #     f"{idx}_{prefix}_{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{FirstCycleColumns.MAX_TO_MIN.value}"
+        # ] = []
 
         for group_idx, (group_id, group_data) in enumerate(groups):
 
@@ -130,16 +146,19 @@ def update_second_cycle_analytics(
                 group_data[cycle_col] > 0, cycle_col
             ].unique()
             for cycle in unique_cycles:
-                cycle_analysis = {
-                    f"{idx}_{prefix}_second_cycle_no": cycle,
-                }
+                cycle_analysis = {}
                 cycle_data = group_data[group_data[cycle_col] == cycle]
 
                 next_cycle_first_row = get_next_cycle_first_row(
-                    group_data, cycle, cycle_col, groups, group_idx
+                    group_data,
+                    cycle,
+                    cycle_col,
+                    groups,
+                    group_idx,
+                    cycle_start=0,
                 )
 
-                if next_cycle_first_row is not None:
+                if not cycle_data.empty and next_cycle_first_row is not None:
                     # Create a new DataFrame with the current cycle's data and the next cycle's first row
                     adjusted_cycle_data = pd.concat(
                         [cycle_data, next_cycle_first_row.to_frame().T]
@@ -147,93 +166,121 @@ def update_second_cycle_analytics(
                 else:
                     adjusted_cycle_data = cycle_data
 
-                min_idx, max_idx = get_min_max_idx(
-                    adjusted_cycle_data, group_start_row, group_id, cycle
+                # for difference in cycle min and max calculation
+                is_last_cycle = False
+                if cycle_count_col == SecondCycleIDColumns.CTC_CYCLE_ID.value:
+                    is_last_cycle = False
+                elif (
+                    cycle_count_col == SecondCycleIDColumns.MTM_CYCLE_ID.value
+                ):
+                    is_last_cycle = cycle == unique_cycles[-1]
+
+                min_idx, max_idx, cycle_min, cycle_max = get_min_max_idx(
+                    adjusted_cycle_data,
+                    group_start_row,
+                    group_id,
+                    cycle,
+                    is_last_cycle,
                 )
 
-                if not min_idx or not max_idx:
+                if (not min_idx and not cycle_min) or (
+                    not max_idx and not cycle_max
+                ):
                     continue
 
                 updates["index"].append(cycle_data.index[-1])
 
-                cycle_analysis[
-                    f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MAX.value}"
-                ] = adjusted_cycle_data.loc[max_idx, "High"]
-
-                cycle_analysis[
-                    f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MIN.value}"
-                ] = adjusted_cycle_data.loc[min_idx, "Low"]
-
-                cycle_analysis[
+                min_key = f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MIN.value}"
+                max_key = f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MAX.value}"
+                max_to_min_key = (
                     f"{idx}_{prefix}_{FirstCycleColumns.MAX_TO_MIN.value}"
-                ] = make_round(
-                    cycle_analysis[
-                        f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MAX.value}"
-                    ]
-                    - cycle_analysis[
-                        f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MIN.value}"
-                    ]
+                )
+                update_cycle_min_max(
+                    cycle_analysis,
+                    adjusted_cycle_data,
+                    min_idx,
+                    max_idx,
+                    cycle_min,
+                    cycle_max,
+                    min_key=min_key,
+                    max_key=max_key,
                 )
 
-                if market_direction == MarketDirection.LONG:
+                update_max_to_min(
+                    cycle_analysis,
+                    min_key=min_key,
+                    max_key=max_key,
+                    max_to_min_key=max_to_min_key,
+                )
 
-                    cycle_analysis[
-                        f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MAX.value}"
-                    ] = make_round(
-                        adjusted_cycle_data.loc[min_idx + 1 : max_idx][
-                            "Close"
-                        ].mean()
-                    )
-                else:
+                if cycle_count_col == SecondCycleIDColumns.MTM_CYCLE_ID.value:
 
-                    cycle_analysis[
-                        f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MAX.value}"
-                    ] = make_round(
-                        adjusted_cycle_data.loc[:max_idx]["Close"].mean()
-                    )
-
-                if market_direction == MarketDirection.LONG:
-
-                    cycle_analysis[
-                        f"{idx}_{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}"
-                    ] = make_round(
-                        make_positive(
-                            cycle_analysis[
-                                f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MAX.value}"
-                            ]
-                            - cycle_analysis[
-                                f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MAX.value}"
-                            ]
-                        )
-                    )
-                else:
-                    cycle_analysis[
-                        f"{idx}_{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}"
-                    ] = make_round(
-                        make_positive(
-                            cycle_analysis[
-                                f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MAX.value}"
-                            ]
-                            - cycle_analysis[
-                                f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MIN.value}"
-                            ]
-                        )
+                    avg_min_key = f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MIN.value}"
+                    avg_max_key = f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MAX.value}"
+                    update_avg_till_min_max(
+                        market_direction,
+                        cycle_analysis,
+                        adjusted_cycle_data,
+                        min_idx,
+                        max_idx,
+                        avg_min_key,
+                        avg_max_key,
                     )
 
-                # if market_direction == MarketDirection.LONG:
-                #     cycle_analysis[
-                #         f"{idx}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}"
-                #     ] = make_round(
-                #         cycle_data.iloc[-1]["Close"]
-                #         - cycle_data.iloc[0]["Close"]
-                #     )
-                # else:
-                #     cycle_analysis[
-                #         f"{idx}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}"
-                #     ] = make_round(
-                #         cycle_data.iloc[0]["Close"]
-                #         - cycle_data.iloc[-1]["Close"]
-                #     )
+                    points_frm_avg_till_max_to_min_key = f"{idx}_{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}"
+                    update_pnts_frm_avg_till_max_to_min(
+                        market_direction,
+                        cycle_analysis,
+                        max_key=max_key,
+                        min_key=min_key,
+                        avg_min_key=avg_min_key,
+                        avg_max_key=avg_max_key,
+                        points_frm_avg_till_max_to_min_key=points_frm_avg_till_max_to_min_key,
+                    )
+
+                # if cycle_count_col == SecondCycleIDColumns.MTM_CYCLE_ID.value:
+                # cycle_analysis[
+                #     f"{idx}_{prefix}_{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}"
+                # ] = (
+                #     1
+                #     if cycle_analysis[
+                #         f"{idx}_{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}"
+                #     ]
+                #     > 0
+                #     else -1
+                # )
+
+                # cycle_analysis[
+                #     f"{idx}_{prefix}_{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{FirstCycleColumns.MAX_TO_MIN.value}"
+                # ] = (
+                #     1
+                #     if cycle_analysis[
+                #         f"{idx}_{prefix}_{FirstCycleColumns.MAX_TO_MIN.value}"
+                #     ]
+                #     > 0
+                #     else -1
+                # )
+
+                if cycle_count_col == SecondCycleIDColumns.CTC_CYCLE_ID.value:
+
+                    update_close_to_close(
+                        market_direction,
+                        cycle_analysis,
+                        close_to_close_key=f"{idx}_{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}",
+                        last_close=cycle_data.iloc[-1]["Close"],
+                        first_close=cycle_data.iloc[0]["Close"],
+                    )
+
+                    # cycle_analysis[
+                    #     f"{idx}_{prefix}_{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}"
+                    # ] = (
+                    #     1
+                    #     if cycle_analysis[
+                    #         f"{idx}_{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}"
+                    #     ]
+                    #     > 0
+                    #     else -1
+                    # )
 
                 results.append(cycle_analysis)
 
@@ -242,7 +289,22 @@ def update_second_cycle_analytics(
 
         for col, values in updates.items():
             if col != "index" and values:
-                df.loc[updates["index"], col] = values
+                try:
+                    df.loc[updates["index"], col] = values
+                except Exception:
+                    pass
+
+    # remove unnesasory columns
+    remove_cols = [
+        "adjusted_close_for_max_to_min",
+        "signal_start_price",
+        # "adjusted_colse",
+    ]
+    df.drop(
+        columns=remove_cols,
+        inplace=True,
+        errors="ignore",
+    )
 
     write_dataframe_to_csv(
         df,
@@ -250,6 +312,100 @@ def update_second_cycle_analytics(
         f"base_df_tf_{time_frame}.csv",
     )
     return results
+
+
+def update_close_to_close(
+    market_direction,
+    cycle_analysis,
+    close_to_close_key,
+    last_close,
+    first_close,
+):
+    value = pd.NA
+    if market_direction == MarketDirection.LONG:
+        value = make_round(last_close - first_close)
+    else:
+        value = make_round(first_close - last_close)
+
+    cycle_analysis[close_to_close_key] = value
+
+
+def update_pnts_frm_avg_till_max_to_min(
+    market_direction,
+    cycle_analysis,
+    min_key,
+    max_key,
+    avg_min_key,
+    avg_max_key,
+    points_frm_avg_till_max_to_min_key,
+):
+    value = pd.NA
+    if market_direction == MarketDirection.LONG:
+        value = make_round(
+            make_positive(
+                cycle_analysis[max_key] - cycle_analysis[avg_min_key]
+            )
+        )
+
+    else:
+        value = make_round(
+            make_positive(
+                cycle_analysis[avg_max_key] - cycle_analysis[min_key]
+            )
+        )
+
+    cycle_analysis[points_frm_avg_till_max_to_min_key] = value
+
+
+def update_avg_till_min_max(
+    market_direction,
+    cycle_analysis,
+    adjusted_cycle_data,
+    min_idx,
+    max_idx,
+    avg_min_key,
+    avg_max_key,
+):
+    if market_direction == MarketDirection.LONG:
+        cycle_analysis[avg_min_key] = make_round(
+            adjusted_cycle_data.loc[:min_idx]["Low"].mean()
+        )
+
+        cycle_analysis[avg_max_key] = pd.NA
+
+    else:
+        cycle_analysis[avg_max_key] = make_round(
+            adjusted_cycle_data.loc[:max_idx]["High"].mean()
+        )
+
+        cycle_analysis[avg_min_key] = pd.NA
+
+
+def update_max_to_min(cycle_analysis, min_key, max_key, max_to_min_key):
+    cycle_analysis[max_to_min_key] = make_round(
+        cycle_analysis[max_key] - cycle_analysis[min_key]
+    )
+
+
+def update_cycle_min_max(
+    cycle_analysis,
+    adjusted_cycle_data,
+    min_idx,
+    max_idx,
+    cycle_min,
+    cycle_max,
+    min_key,
+    max_key,
+):
+    if max_idx:
+        cycle_analysis[max_key] = adjusted_cycle_data.loc[max_idx, "High"]
+    else:
+        cycle_analysis[max_key] = cycle_max
+
+    if min_idx:
+        cycle_analysis[min_key] = adjusted_cycle_data.loc[min_idx, "Low"]
+    else:
+        cycle_analysis[min_key] = cycle_min
 
 
 def update_second_cycle_id(df, id_col_name, end_condition_col):
@@ -268,9 +424,16 @@ def update_second_cycle_id(df, id_col_name, end_condition_col):
         df[id_column_name] = 0
 
         start_condition = df[cycle_col] > 1
-        end_condition = (
-            df[end_condition_col] < df[FirstCycleColumns.CLOSE_TO_CLOSE.value]
-        )
+
+        if id_col_name == SecondCycleIDColumns.CTC_CYCLE_ID.value:
+            end_condition = (
+                df[end_condition_col]
+                < df[FirstCycleColumns.CLOSE_TO_CLOSE.value]
+            )
+        elif id_col_name == SecondCycleIDColumns.MTM_CYCLE_ID.value:
+            end_condition = (
+                df[end_condition_col] < df[FirstCycleColumns.MAX_TO_MIN.value]
+            )
 
         cycle_start_condition = {
             MarketDirection.LONG: start_condition,
@@ -292,29 +455,49 @@ def update_second_cycle_id(df, id_col_name, end_condition_col):
         )
 
 
-def get_min_max_idx(cycle_data, group_start_row, group_id, cycle):
-    min_idx, max_idx = None, None
+def get_min_max_idx(
+    cycle_data, group_start_row, group_id, cycle, is_last_cycle=False
+):
+    min_idx, max_idx, cycle_max, cycle_min = None, None, None, None
 
     try:
-        if group_start_row["market_direction"] == MarketDirection.LONG:
-            min_idx = cycle_data["Low"].idxmin()
-            max_idx = cycle_data.loc[cycle_data.index > min_idx][
-                "High"
-            ].idxmax()
+        if is_last_cycle:
+            if group_start_row["market_direction"] == MarketDirection.LONG:
+                min_idx = cycle_data["Low"].idxmin()
+                # here max is avg of start of the cycle to max close price
+                cycle_max = cycle_data.loc[cycle_data.index < min_idx][
+                    "Close"
+                ].mean()
+            else:
+                max_idx = cycle_data["High"].idxmax()
+
+                # here min is avg of start of the cycle to min close price
+                cycle_min = cycle_data.loc[cycle_data.index < max_idx][
+                    "Close"
+                ].mean()
         else:
-            max_idx = cycle_data["High"].idxmax()
-            min_idx = cycle_data.loc[cycle_data.index > max_idx][
-                "Low"
-            ].idxmin()
+            if group_start_row["market_direction"] == MarketDirection.LONG:
+                min_idx = cycle_data["Low"].idxmin()
+                max_idx = cycle_data.loc[cycle_data.index > min_idx][
+                    "High"
+                ].idxmax()
+            else:
+                max_idx = cycle_data["High"].idxmax()
+                min_idx = cycle_data.loc[cycle_data.index > max_idx][
+                    "Low"
+                ].idxmin()
+
     except ValueError:
         print(
             f"can't find data for min and max while following subsequent calculation rule... for grp: {group_id} cycle no: {cycle}"
         )
 
-    return min_idx, max_idx
+    return min_idx, max_idx, cycle_min, cycle_max
 
 
-def get_next_cycle_first_row(group_data, cycle, cycle_col, groups, group_idx):
+def get_next_cycle_first_row(
+    group_data, cycle, cycle_col, groups, group_idx, cycle_start=1
+):
     """
     Retrieves the first row of the next cycle considering both the current group and the next group.
 
@@ -335,12 +518,14 @@ def get_next_cycle_first_row(group_data, cycle, cycle_col, groups, group_idx):
         # If the next cycle is not found in the current group, check the next group
         if group_idx + 1 < len(groups):
             next_group_id, next_group_data = groups[group_idx + 1]
-            next_cycle_data = next_group_data[next_group_data[cycle_col] == 1]
+            next_cycle_data = next_group_data[
+                next_group_data[cycle_col] == cycle_start
+            ]
             if not next_cycle_data.empty:
                 return next_cycle_data.iloc[0]
             # If next cycle in the next group is not found, try the second cycle
             next_next_cycle_data = next_group_data[
-                next_group_data[cycle_col] == 2
+                next_group_data[cycle_col] == cycle_start + 1
             ]
             if not next_next_cycle_data.empty:
                 return next_next_cycle_data.iloc[0]
@@ -359,7 +544,11 @@ def analyze_cycles(df, time_frame, kwargs):
     results = []
     updates = {col.value: [] for col in FirstCycleColumns}
     updates.update(
-        {"index": [], "group_id": [], "period_band": [], "cycle_no": []}
+        {
+            "index": [],
+            "group_id": [],
+            # "period_band": [], "cycle_no": []
+        }
     )
     for group_idx, (group_id, group_data) in enumerate(groups):
         # Identify cycle columns dynamically
@@ -379,8 +568,8 @@ def analyze_cycles(df, time_frame, kwargs):
             for cycle in unique_cycles:
                 cycle_analysis = {
                     "group_id": group_id,
-                    "period_band": cycle_col[-4:],
-                    "cycle_no": cycle,
+                    # "period_band": cycle_col[-4:],
+                    # "cycle_no": cycle,
                 }
                 cycle_data = group_data[group_data[cycle_col] == cycle]
 
@@ -400,7 +589,7 @@ def analyze_cycles(df, time_frame, kwargs):
                 else:
                     adjusted_cycle_data = cycle_data
 
-                min_idx, max_idx = get_min_max_idx(
+                min_idx, max_idx, cycle_min, cycle_max = get_min_max_idx(
                     adjusted_cycle_data, group_start_row, group_id, cycle
                 )
 
@@ -409,45 +598,77 @@ def analyze_cycles(df, time_frame, kwargs):
 
                 updates["index"].append(cycle_data.index[-1])
 
-                cycle_analysis[
-                    FirstCycleColumns.DURATION_SIGNAL_START_TO_CYCLE_START.value
-                ] = format_duration(
-                    make_round(
-                        (
-                            cycle_data.iloc[0]["dt"] - group_start_row["dt"]
-                        ).total_seconds()
-                    )
+                update_cycle_duration(
+                    group_start_row, cycle_analysis, cycle_data
                 )
 
-                cycle_analysis[FirstCycleColumns.CYCLE_DURATION.value] = (
-                    format_duration(
-                        make_round(
-                            (
-                                cycle_data.iloc[-1]["dt"]
-                                - cycle_data.iloc[0]["dt"]
-                            ).total_seconds()
-                        )
-                    )
+                update_move_and_move_percent(
+                    group_start_row, cycle_analysis, cycle_data
                 )
 
-                cycle_analysis[FirstCycleColumns.MOVE.value] = make_positive(
-                    make_round(
-                        cycle_data.iloc[0]["Close"] - group_start_row["Close"]
-                    )
-                )
-                cycle_analysis[FirstCycleColumns.MOVE_PERCENT.value] = (
-                    make_positive(
-                        make_round(
-                            cycle_analysis[FirstCycleColumns.MOVE.value]
-                            / group_start_row["Close"]
-                            * 100
-                        )
-                    )
+                min_key = FirstCycleColumns.CYCLE_MIN.value
+                max_key = FirstCycleColumns.CYCLE_MAX.value
+                max_to_min_key = FirstCycleColumns.MAX_TO_MIN.value
+                update_cycle_min_max(
+                    cycle_analysis,
+                    adjusted_cycle_data,
+                    min_idx,
+                    max_idx,
+                    cycle_min=cycle_min,
+                    cycle_max=cycle_max,
+                    min_key=min_key,
+                    max_key=max_key,
                 )
 
-                cycle_analysis[FirstCycleColumns.CYCLE_MAX.value] = (
-                    adjusted_cycle_data.loc[max_idx, "High"]
+                update_max_to_min(
+                    cycle_analysis,
+                    min_key=min_key,
+                    max_key=max_key,
+                    max_to_min_key=max_to_min_key,
                 )
+
+                avg_min_key = FirstCycleColumns.AVERAGE_TILL_MIN.value
+                avg_max_key = FirstCycleColumns.AVERAGE_TILL_MAX.value
+                update_avg_till_min_max(
+                    market_direction=market_direction,
+                    cycle_analysis=cycle_analysis,
+                    adjusted_cycle_data=adjusted_cycle_data,
+                    min_idx=min_idx,
+                    max_idx=max_idx,
+                    avg_min_key=avg_min_key,
+                    avg_max_key=avg_max_key,
+                )
+
+                points_frm_avg_till_max_to_min_key = (
+                    FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value
+                )
+                update_pnts_frm_avg_till_max_to_min(
+                    market_direction,
+                    cycle_analysis,
+                    max_key=max_key,
+                    min_key=min_key,
+                    avg_min_key=avg_min_key,
+                    avg_max_key=avg_max_key,
+                    points_frm_avg_till_max_to_min_key=points_frm_avg_till_max_to_min_key,
+                )
+
+                # close to close
+                # if not kwargs.get("check_bb_2") and not kwargs.get(
+                #     "include_higher_and_lower"
+                # ):
+
+                #     last_close = next_cycle_first_row["Close"]
+                # else:
+                #     last_close = cycle_data.iloc[-1]["Close"]
+
+                update_close_to_close(
+                    market_direction,
+                    cycle_analysis,
+                    close_to_close_key=FirstCycleColumns.CLOSE_TO_CLOSE.value,
+                    last_close=cycle_data.iloc[-1]["Close"],
+                    first_close=cycle_data.iloc[0]["Close"],
+                )
+
                 # cycle_analysis[FirstCycleColumns.DURATION_TO_MAX.value] = (
                 #     format_duration(
                 #         make_positive(
@@ -513,27 +734,6 @@ def analyze_cycles(df, time_frame, kwargs):
                 #         * 100
                 #     )
                 # )
-
-                if market_direction == MarketDirection.LONG:
-
-                    cycle_analysis[
-                        FirstCycleColumns.AVERAGE_TILL_MAX.value
-                    ] = make_round(
-                        adjusted_cycle_data.loc[min_idx + 1 : max_idx][
-                            "Close"
-                        ].mean()
-                    )
-                else:
-
-                    cycle_analysis[
-                        FirstCycleColumns.AVERAGE_TILL_MAX.value
-                    ] = make_round(
-                        adjusted_cycle_data.loc[:max_idx]["Close"].mean()
-                    )
-
-                cycle_analysis[FirstCycleColumns.CYCLE_MIN.value] = (
-                    adjusted_cycle_data.loc[min_idx, "Low"]
-                )
 
                 # cycle_analysis[
                 #     FirstCycleColumns.SIGNAL_START_TO_MINIMUM_POINTS.value
@@ -611,54 +811,6 @@ def analyze_cycles(df, time_frame, kwargs):
                 #     )
                 # )
 
-                if market_direction == MarketDirection.LONG:
-
-                    cycle_analysis[
-                        FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value
-                    ] = make_round(
-                        make_positive(
-                            cycle_analysis[FirstCycleColumns.CYCLE_MAX.value]
-                            - cycle_analysis[
-                                FirstCycleColumns.AVERAGE_TILL_MAX.value
-                            ]
-                        )
-                    )
-                else:
-                    cycle_analysis[
-                        FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value
-                    ] = make_round(
-                        make_positive(
-                            cycle_analysis[
-                                FirstCycleColumns.AVERAGE_TILL_MAX.value
-                            ]
-                            - cycle_analysis[FirstCycleColumns.CYCLE_MIN.value]
-                        )
-                    )
-
-                cycle_analysis[FirstCycleColumns.MAX_TO_MIN.value] = (
-                    make_round(
-                        cycle_analysis[FirstCycleColumns.CYCLE_MAX.value]
-                        - cycle_analysis[FirstCycleColumns.CYCLE_MIN.value]
-                    )
-                )
-
-                if not kwargs.get("check_bb_2") and not kwargs.get(
-                    "include_higher_and_lower"
-                ):
-
-                    last_close = next_cycle_first_row["Close"]
-                else:
-                    last_close = cycle_data.iloc[0]["Close"]
-
-                if market_direction == MarketDirection.LONG:
-                    cycle_analysis[FirstCycleColumns.CLOSE_TO_CLOSE.value] = (
-                        make_round(last_close - cycle_data.iloc[0]["Close"])
-                    )
-                else:
-                    cycle_analysis[FirstCycleColumns.CLOSE_TO_CLOSE.value] = (
-                        make_round(cycle_data.iloc[0]["Close"] - last_close)
-                    )
-
                 results.append(cycle_analysis)
 
                 for key, value in cycle_analysis.items():
@@ -668,12 +820,38 @@ def analyze_cycles(df, time_frame, kwargs):
         if col != "index" and values:
             df.loc[updates["index"], col] = values
 
-    # write_dataframe_to_csv(
-    #     df,
-    #     "pa_analysis_output/cycle_outpts/base_df",
-    #     f"base_df_tf_{time_frame}.csv",
-    # )
     return results
+
+
+def update_cycle_duration(group_start_row, cycle_analysis, cycle_data):
+    cycle_analysis[
+        FirstCycleColumns.DURATION_SIGNAL_START_TO_CYCLE_START.value
+    ] = format_duration(
+        make_round(
+            (cycle_data.iloc[0]["dt"] - group_start_row["dt"]).total_seconds()
+        )
+    )
+
+    cycle_analysis[FirstCycleColumns.CYCLE_DURATION.value] = format_duration(
+        make_round(
+            (
+                cycle_data.iloc[-1]["dt"] - cycle_data.iloc[0]["dt"]
+            ).total_seconds()
+        )
+    )
+
+
+def update_move_and_move_percent(group_start_row, cycle_analysis, cycle_data):
+    cycle_analysis[FirstCycleColumns.MOVE.value] = make_positive(
+        make_round(cycle_data.iloc[0]["Close"] - group_start_row["Close"])
+    )
+    cycle_analysis[FirstCycleColumns.MOVE_PERCENT.value] = make_positive(
+        make_round(
+            cycle_analysis[FirstCycleColumns.MOVE.value]
+            / group_start_row["Close"]
+            * 100
+        )
+    )
 
 
 def update_duration_above_BB(

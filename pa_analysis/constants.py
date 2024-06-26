@@ -88,6 +88,12 @@ class FirstCycleColumns(Enum):
     MOVE = "Move"
     MOVE_PERCENT = "Move Percent"
     CYCLE_MAX = "Cycle Max"
+    CYCLE_MIN = "Cycle Min"
+    MAX_TO_MIN = "Max to Min"
+    AVERAGE_TILL_MAX = "Average Till Max"
+    AVERAGE_TILL_MIN = "Average Till Min"
+    POINTS_FRM_AVG_TILL_MAX_TO_MIN = "Points from Avg till Max to Min"
+    CLOSE_TO_CLOSE = "Close to Close"
     # DURATION_TO_MAX = "Duration to Max"
     # DURATION_ABOVE_BB = "Duration Above BB"
     # SIGNAL_START_TO_MAX_POINTS = "Signal Start to Max Points"
@@ -95,16 +101,12 @@ class FirstCycleColumns(Enum):
     # CATEGORY = "Category"
     # MOVE_START_TO_MAX_CYCLE_POINTS = "Move Start to Max Cycle Points"
     # MOVE_START_TO_MAX_CYCLE_PERCENT = "Move Start to Max Cycle Percent"
-    AVERAGE_TILL_MAX = "Average Till Max"
-    POINTS_FRM_AVG_TILL_MAX_TO_MIN = "Points from Avg till Max to Min"
-    CYCLE_MIN = "Cycle Min"
+    # POINTS_FRM_AVG_TILL_MIN_TO_MAX = "Points from Avg till Min to Max"
     # SIGNAL_START_TO_MINIMUM_POINTS = "Signal Start to Minimum Points"
     # SIGNAL_START_TO_MINIMUM_PERCENT = "Signal Start to Minimum Percent"
-    # AVERAGE_TILL_MIN = "Average Till Min"
     # DURATION_BETWEEN_MAX_MIN = "Duration Between Max Min"
     # AVG_OF_MAX_TO_AVG_OF_MIN = "Avg of Max to Avg of Min"
-    MAX_TO_MIN = "Max to Min"
-    CLOSE_TO_CLOSE = "Close to Close"
+    # POSITIVE_NEGATIVE = "Positive / Negative"
 
 
 class SecondCycleIDColumns(Enum):
@@ -113,10 +115,10 @@ class SecondCycleIDColumns(Enum):
 
 
 class MTMCrossedCycleColumns(Enum):
-    IS_MTM_CROSS_PNT_3 = "IS_MTM Cross PNT 3"
-    IS_MTM_CROSS_PNT_5 = "IS_MTM Cross PNT 5"
-    IS_MTM_CROSS_PNT_75 = "IS_MTM Cross PNT 75"
-    IS_MTM_CROSS_1 = "IS_MTM Cross 1"
+    IS_MTM_CROSS_PNT_3 = "IS_MTM Crossed .3"
+    IS_MTM_CROSS_PNT_5 = "IS_MTM Crossed .5"
+    IS_MTM_CROSS_PNT_75 = "IS_MTM Crossed .75"
+    IS_MTM_CROSS_1 = "IS_MTM Crossed 1"
 
 
 class BB_Band_Columns(Enum):
