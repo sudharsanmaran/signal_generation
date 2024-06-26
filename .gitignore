@@ -50,6 +50,7 @@ user_inputs*.csv
 .~lock.merged_df*.csv#
 .~lock.output*.csv#
 .~lock.user_inputs*.csv#
+.~lock.*
 user_inputs.json
 
 tradesheet/Output
