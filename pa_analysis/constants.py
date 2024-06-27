@@ -95,6 +95,7 @@ class FirstCycleColumns(Enum):
     AVERAGE_TILL_MIN = "Average Till Min"
     POINTS_FRM_AVG_TILL_MAX_TO_MIN = "Points from Avg till Max to Min"
     CLOSE_TO_CLOSE = "Close to Close"
+    POSITIVE_NEGATIVE = "Positive / Negative"
     # DURATION_TO_MAX = "Duration to Max"
     # DURATION_ABOVE_BB = "Duration Above BB"
     # SIGNAL_START_TO_MAX_POINTS = "Signal Start to Max Points"
@@ -107,7 +108,6 @@ class FirstCycleColumns(Enum):
     # SIGNAL_START_TO_MINIMUM_PERCENT = "Signal Start to Minimum Percent"
     # DURATION_BETWEEN_MAX_MIN = "Duration Between Max Min"
     # AVG_OF_MAX_TO_AVG_OF_MIN = "Avg of Max to Avg of Min"
-    # POSITIVE_NEGATIVE = "Positive / Negative"
 
 
 class SecondCycleIDColumns(Enum):
