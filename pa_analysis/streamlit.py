@@ -1,20 +1,22 @@
-import os
 import time
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 
 from pa_analysis.analysis_processor import process
-from pa_analysis.constants import PERIOD_OPTIONS, SD_OPTIONS, TIMEFRAME_OPTIONS
 from source.streamlit import (
-    get_flag_combinations,
-    get_portfolio_flags,
-    get_portfolio_strategies,
-    get_strategy_id_combinations,
+    check_cycles_inputs,
+    format_set_portfolio_ids,
+    set_cycle_configs,
+    set_instrument,
+    set_long_short_signals,
+    set_portfolio_flags,
+    set_portfolio_ids,
+    set_portfolio_strategies,
     load_input_from_json,
-    select_all_options,
+    set_start_end_datetime,
+    set_strategy_pair,
 )
-from source.constants import INSTRUMENTS
 from pa_analysis.validation import validate
 
 
@@ -60,227 +62,50 @@ def main():
             st.warning("saved data not found")
 
     st.header("PA Analysis")
-    portfolio_ids_input = st.text_input(
-        "Portfolio IDs (comma-separated, e.g., 1, 2, 3)",
-        value=saved_inputs.get("portfolio_ids_input", "F13"),
-    )
-    streamlit_inputs["portfolio_ids_input"] = portfolio_ids_input
+    portfolio_ids_input = set_portfolio_ids(streamlit_inputs, saved_inputs)
 
-    instruments = st.multiselect(
-        "INDICES",
-        options=INSTRUMENTS,
-        default=saved_inputs.get("instruments", ["BANKNIFTY"]),
-    )
-    streamlit_inputs["instruments"] = instruments
+    set_instrument(streamlit_inputs, saved_inputs)
 
     if portfolio_ids_input:
-        portfolio_ids = tuple(
-            map(lambda a: a.strip(), portfolio_ids_input.split(","))
+        portfolio_ids = format_set_portfolio_ids(
+            streamlit_inputs, portfolio_ids_input
         )
-        streamlit_inputs["portfolio_ids"] = portfolio_ids
-        possible_flags_per_portfolio = get_portfolio_flags(
+        possible_flags_per_portfolio = set_portfolio_flags(
             portfolio_ids, streamlit_inputs, saved_inputs
         )
-        filtered_flag_combinations = get_flag_combinations(
-            portfolio_ids, possible_flags_per_portfolio
+        set_long_short_signals(
+            streamlit_inputs,
+            saved_inputs,
+            portfolio_ids,
+            possible_flags_per_portfolio,
         )
-        all_flag_combinations = ["ALL"] + filtered_flag_combinations
-
-        long_entry_signals = st.multiselect(
-            "Long Signals",
-            all_flag_combinations,
-            default=saved_inputs.get("long_entry_signals", "GREEN"),
-            key="long_entry_signals",
-            on_change=select_all_options,
-            args=("long_entry_signals", filtered_flag_combinations),
-        )
-
-        short_entry_signals = st.multiselect(
-            "Short Signals",
-            [
-                combination
-                for combination in all_flag_combinations
-                if combination not in long_entry_signals
-            ],
-            default=saved_inputs.get("short_entry_signals", "RED"),
-            key="short_entry_signals",
-            on_change=select_all_options,
-            args=(
-                "short_entry_signals",
-                filtered_flag_combinations,
-            ),
-        )
-
-        streamlit_inputs.update(
-            {
-                "long_entry_signals": long_entry_signals,
-                "short_entry_signals": short_entry_signals,
-            }
-        )
-
-        strategy_ids_per_portfolio = get_portfolio_strategies(
+        strategy_ids_per_portfolio = set_portfolio_strategies(
             portfolio_ids, streamlit_inputs, saved_inputs
         )
-        filtered_strategy_id_combinations = get_strategy_id_combinations(
-            portfolio_ids, strategy_ids_per_portfolio
+        set_strategy_pair(
+            streamlit_inputs,
+            saved_inputs,
+            portfolio_ids,
+            strategy_ids_per_portfolio,
         )
-        all_filtered_strategy_id_combinations = [
-            "ALL"
-        ] + filtered_strategy_id_combinations
-        strategy_pairs = st.multiselect(
-            "Strategy Pairs",
-            all_filtered_strategy_id_combinations,
-            default=saved_inputs.get("strategy_pairs", None),
-            key="Strategy Pairs",
-            on_change=select_all_options,
-            args=("Strategy Pairs", filtered_strategy_id_combinations),
-        )
-        streamlit_inputs["strategy_pairs"] = strategy_pairs
-
-        start_date = st.text_input(
-            "Start Date (format: dd/mm/yyyy hh:mm:ss)",
-            value=saved_inputs.get("start_date", "3/01/2019 09:00:00"),
-        )
-        end_date = st.text_input(
-            "End Date (format: dd/mm/yyyy hh:mm:ss)",
-            value=saved_inputs.get("end_date", "3/04/2019 16:00:00"),
-        )
-        streamlit_inputs.update(
-            {"start_date": start_date, "end_date": end_date}
-        )
-        calculate_cycles = st.checkbox(
-            "Calculate Cycles",
-            value=saved_inputs.get("calculate_cycles", True),
-        )
-        streamlit_inputs["calculate_cycles"] = calculate_cycles
-        if calculate_cycles:
-            st.text("BB Band 1 inputs:")
-
-            close_time_frames_1 = st.multiselect(
-                "Close Time Frame",
-                TIMEFRAME_OPTIONS,
-                default=saved_inputs.get("close_time_frames_1", [2]),
-            )
-
-            if close_time_frames_1:
-                bb_tf_options = TIMEFRAME_OPTIONS[
-                    TIMEFRAME_OPTIONS.index(max(close_time_frames_1)) :
-                ]
-            else:
-                bb_tf_options = TIMEFRAME_OPTIONS
-
-            bb_time_frames_1 = st.multiselect(
-                "BB Time Frame",
-                bb_tf_options,
-            )
-
-            include_higher_and_lower = st.checkbox(
-                "Include Higher and Lower BB Bands",
-                value=saved_inputs.get("include_higer_and_lower", False),
-            )
-            # bb_band_column_1 = st.selectbox(
-            #     "BB Band Column",
-            #     index=2,
-            #     options=["UPPER", "LOWER", "MEAN"],
-            # )
-            periods_1 = st.multiselect(
-                "Periods",
-                PERIOD_OPTIONS,
-                default=saved_inputs.get("period", [20]),
-            )
-            sds_1 = st.multiselect(
-                "Standard Deviations",
-                SD_OPTIONS,
-                default=saved_inputs.get("sd", [2]),
-            )
-
-            close_percent = st.number_input(
-                "Close Percent",
-                value=saved_inputs.get("close_percent", 0.5),
-                max_value=1.0,
-                min_value=0.0,
-            )
-
-            max_to_min_percent = st.number_input(
-                "Max to Min Percent",
-                value=saved_inputs.get("max_to_min_percent", 0.5),
-                max_value=1.0,
-                min_value=0.0,
-            )
-
-            streamlit_inputs.update(
-                {
-                    "close_time_frames_1": close_time_frames_1,
-                    "bb_time_frames_1": bb_time_frames_1,
-                    "include_higher_and_lower": include_higher_and_lower,
-                    "periods_1": periods_1,
-                    "sds_1": sds_1,
-                    "close_percent": close_percent,
-                    "max_to_min_percent":  max_to_min_percent,
-                }
-            )
-
-            st.text("BB Band 2 inputs:")
-            check_bb_2 = st.checkbox(
-                "Check BB 2",
-                value=saved_inputs.get("calculate_cycles", False),
-            )
-            streamlit_inputs["check_bb_2"] = check_bb_2
-            if check_bb_2:
-                if bb_time_frames_1:
-                    bb_2_tf_options = TIMEFRAME_OPTIONS[
-                        TIMEFRAME_OPTIONS.index(max(bb_time_frames_1)) :
-                    ]
-                else:
-                    bb_2_tf_options = TIMEFRAME_OPTIONS
-
-                bb_time_frames_2 = st.multiselect(
-                    "BB 2 Time Frame",
-                    bb_2_tf_options,
-                )
-
-                if periods_1:
-                    bb_2_period_options = PERIOD_OPTIONS[
-                        PERIOD_OPTIONS.index(max(periods_1)) + 1 :
-                    ]
-                else:
-                    bb_2_period_options = PERIOD_OPTIONS
-
-                if (
-                    bb_time_frames_2
-                    and bb_time_frames_1
-                    and min(bb_time_frames_2) > max(bb_time_frames_1)
-                ):
-                    bb_2_period_options = PERIOD_OPTIONS
-
-                periods_2 = st.multiselect(
-                    "BB 2 Periods",
-                    bb_2_period_options,
-                )
-                sds_2 = st.multiselect(
-                    "BB 2 Standard Deviations",
-                    SD_OPTIONS,
-                    default=saved_inputs.get("sd", [2]),
-                )
-                streamlit_inputs.update(
-                    {
-                        "bb_time_frames_2": bb_time_frames_2,
-                        "periods_2": periods_2,
-                        "sds_2": sds_2,
-                    }
-                )
+        set_start_end_datetime(streamlit_inputs, saved_inputs)
+        set_cycle_configs(streamlit_inputs, saved_inputs)
 
     # Check if all required fields are filled
-    all_fields_filled = (
-        portfolio_ids_input
-        and instruments
-        and long_entry_signals
-        and short_entry_signals
-        and strategy_pairs
-        and start_date
-        and end_date
-        and check_cycles_inputs(streamlit_inputs)
-    )
+    required_fields = [
+        streamlit_inputs["portfolio_ids_input"],
+        streamlit_inputs["instruments"],
+        streamlit_inputs["portfolio_ids"],
+        streamlit_inputs["possible_flags_input"],
+        streamlit_inputs["possible_strategies_input"],
+        streamlit_inputs["strategy_pairs"],
+        streamlit_inputs["start_date"],
+        streamlit_inputs["end_date"],
+        streamlit_inputs["long_entry_signals"],
+        streamlit_inputs["short_entry_signals"],
+        check_cycles_inputs(streamlit_inputs),
+    ]
+    all_fields_filled = all(required_fields)
     if all_fields_filled:
         if st.button("Submit"):
             start = time.time()
@@ -318,21 +143,6 @@ def main():
 
     else:
         st.write("Please fill in all the required fields.")
-
-
-def check_cycles_inputs(input) -> bool:
-    if input["calculate_cycles"] and input["check_bb_2"]:
-        return (
-            input["periods_2"] and input["sds_2"] and input["bb_time_frames_2"]
-        )
-    elif input["calculate_cycles"]:
-        return (
-            input["close_time_frames_1"]
-            and input["bb_time_frames_1"]
-            and input["periods_1"]
-            and input["sds_1"]
-        )
-    return True
 
 
 if __name__ == "__main__":
