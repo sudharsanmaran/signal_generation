@@ -19,35 +19,27 @@ The `validation.py` module provided defines a Pydantic model `StrategyInput` for
 """
 
 # Import necessary libraries
-import ast
-from datetime import datetime, time
 from itertools import chain
 from typing import List, Optional, Union
-from pydantic import BaseModel, ValidationError, field_validator
+from pydantic import ValidationError, field_validator
 
 # Import project-specific constants
 from source.constants import MarketDirection, TradeType
-from source.validate_trade_management import TradingConfiguration
+from source.validation.base_validation import BaseInputs
+from source.validation.validate_trade_management import TradingConfiguration
 
 
-class StrategyInput(BaseModel):
+class StrategyInput(BaseInputs):
     """
     Pydantic model for validating strategy input data.
     """
 
-    portfolio_ids: tuple
-    strategy_pairs: List[tuple]
-    instruments: List[str]
-    start_date: Union[str, datetime]
-    end_date: Union[str, datetime]
     long_entry_signals: List[tuple]
     long_exit_signals: List[tuple]
     short_entry_signals: List[tuple]
     short_exit_signals: List[tuple]
-    trade_type: TradeType
     allowed_direction: MarketDirection
-    trade_start_time: Optional[time] = None
-    trade_end_time: Optional[time] = None
+    trade_type: TradeType
     trigger_trade_management: bool = False
     pa_analysis: bool = False
 
@@ -76,19 +68,6 @@ class StrategyInput(BaseModel):
 
     skip_rows: bool = False
     no_of_rows_to_skip: Optional[int] = None
-
-    @field_validator("start_date", "end_date")
-    def convert_to_datetime(cls, v):
-        """
-        Convert string dates to datetime objects.
-        """
-        if isinstance(v, str):
-            return datetime.strptime(v, "%d/%m/%Y %H:%M:%S")
-        elif isinstance(v, datetime):
-            return v
-        raise ValueError(
-            'Invalid datetime format, should be "dd/mm/yyyy hh:mm:ss"'
-        )
 
     @field_validator("bb_band_sd", "trail_bb_band_sd")
     def validate_bb_band_sd(cls, v):
@@ -127,28 +106,6 @@ class StrategyInput(BaseModel):
                 'Trail BB band direction must be one of the following: "higher", "lower"'
             )
         return v
-
-    # @field_validator("trade_type")
-    # def validate_trade_type(cls, v):
-    #     """
-    #     Validate trade type.
-    #     """
-    #     if v not in {TradeType.INTRADAY, TradeType.POSITIONAL}:
-    #         raise ValueError(
-    #             'Trade type must be one of the following: "Intraday", "Positional"'
-    #         )
-    #     return v
-
-    # @field_validator("allowed_direction")
-    # def validate_allowed_direction(cls, v):
-    #     """
-    #     Validate allowed direction.
-    #     """
-    #     if v not in {MarketDirection.LONG, MarketDirection.SHORT, MarketDirection.ALL}:
-    #         raise ValueError(
-    #             'Allowed direction must be one of the following: "long", "short", "all"'
-    #         )
-    #     return v
 
     @field_validator("fractal_exit_count")
     def validate_fractal_exit_count(cls, v):
@@ -244,7 +201,7 @@ def check_exit_conditions(validated_data):
         )
 
 
-def validate_input(input_data):
+def validate_signal_input(input_data):
     """
     Validate the input data against the StrategyInput model and custom rules.
 

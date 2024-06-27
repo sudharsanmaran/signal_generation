@@ -7,7 +7,7 @@ from pa_analysis.cycle_processor import process_cycles
 from pa_analysis.utils import make_positive, make_round, write_dict_to_csv
 from source.constants import MarketDirection
 from source.data_reader import load_strategy_data
-from source.trade_processor import (
+from source.processors.signal_trade_processor import (
     get_market_direction,
     write_dataframe_to_csv,
 )

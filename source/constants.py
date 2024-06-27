@@ -120,6 +120,25 @@ STOCKS_FNO = list(
 STOCKS_NON_FNO = list(
     map(lambda x: x.strip(), os.getenv("STOCKS_NON_FNO", "").split(","))
 )
+TIMEFRAME_OPTIONS = sorted(
+    list(
+        map(
+            lambda x: int(x.strip()),
+            os.getenv("TIMEFRAME_OPTIONS", "").split(","),
+        )
+    )
+)
+PERIOD_OPTIONS = sorted(
+    list(
+        map(
+            lambda x: int(x.strip()),
+            os.getenv("PERIOD_OPTIONS", "").split(","),
+        )
+    )
+)
+SD_OPTIONS = sorted(
+    list(map(lambda x: int(x.strip()), os.getenv("SD_OPTIONS", "").split(",")))
+)
 
 
 class OutputColumn(Enum):

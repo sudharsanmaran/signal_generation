@@ -17,7 +17,7 @@ from pa_analysis.utils import (
 )
 from source.constants import MarketDirection
 from source.data_reader import read_files
-from source.trade_processor import write_dataframe_to_csv
+from source.processors.signal_trade_processor import write_dataframe_to_csv
 
 
 def process_cycles(**kwargs):
