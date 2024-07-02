@@ -80,52 +80,8 @@ SD_OPTIONS = sorted(
 )
 
 
-class FirstCycleColumns(Enum):
-    DURATION_SIGNAL_START_TO_CYCLE_START = (
-        "Duration Signal Start to Cycle Start"
-    )
-    CYCLE_DURATION = "Cycle Duration"
-    MOVE = "Move"
-    MOVE_PERCENT = "Move Percent"
-    CYCLE_MAX = "Cycle Max"
-    CYCLE_MIN = "Cycle Min"
-    MAX_TO_MIN = "Max to Min"
-    POINTS_FROM_MAX = "Points from Maximum"
-    AVERAGE_TILL_MAX = "Average Till Max"
-    AVERAGE_TILL_MIN = "Average Till Min"
-    POINTS_FRM_AVG_TILL_MAX_TO_MIN = "Points from Avg till Max to Min"
-    CLOSE_TO_CLOSE = "Close to Close"
-    POSITIVE_NEGATIVE = "Positive / Negative"
-    # DURATION_TO_MAX = "Duration to Max"
-    # DURATION_ABOVE_BB = "Duration Above BB"
-    # SIGNAL_START_TO_MAX_POINTS = "Signal Start to Max Points"
-    # SIGNAL_START_TO_MAX_PERCENT = "Signal Start to Max Percent"
-    # CATEGORY = "Category"
-    # MOVE_START_TO_MAX_CYCLE_POINTS = "Move Start to Max Cycle Points"
-    # MOVE_START_TO_MAX_CYCLE_PERCENT = "Move Start to Max Cycle Percent"
-    # POINTS_FRM_AVG_TILL_MIN_TO_MAX = "Points from Avg till Min to Max"
-    # SIGNAL_START_TO_MINIMUM_POINTS = "Signal Start to Minimum Points"
-    # SIGNAL_START_TO_MINIMUM_PERCENT = "Signal Start to Minimum Percent"
-    # DURATION_BETWEEN_MAX_MIN = "Duration Between Max Min"
-    # AVG_OF_MAX_TO_AVG_OF_MIN = "Avg of Max to Avg of Min"
-
-
-class SecondCycleIDColumns(Enum):
-    CTC_CYCLE_ID = "CTC Cycle ID"
-    MTM_CYCLE_ID = "MTM Cycle ID"
-
-
 class MTMCrossedCycleColumns(Enum):
     IS_MTM_CROSS_PNT_3 = "IS_MTM Crossed .3"
     IS_MTM_CROSS_PNT_5 = "IS_MTM Crossed .5"
     IS_MTM_CROSS_PNT_75 = "IS_MTM Crossed .75"
     IS_MTM_CROSS_1 = "IS_MTM Crossed 1"
-
-
-class BB_Band_Columns(Enum):
-    MEAN = "MEAN"
-    UPPER = "UPPER"
-    LOWER = "LOWER"
-    # CLOSE = "CLOSE"
-    # HIGH = "HIGH"
-    # LOW = "LOW"

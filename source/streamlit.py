@@ -38,6 +38,7 @@ from source.constants import (
     STOCKS_FNO,
     STOCKS_NON_FNO,
     TIMEFRAME_OPTIONS,
+    CycleType,
     MarketDirection,
     TradeType,
 )
@@ -335,95 +336,11 @@ def main():
                 possible_flags_per_portfolio = set_portfolio_flags(
                     portfolio_ids, streamlit_inputs, saved_inputs
                 )
-                filtered_flag_combinations = get_flag_combinations(
-                    portfolio_ids, possible_flags_per_portfolio
-                )
-                all_flag_combinations = ["ALL"] + filtered_flag_combinations
-
-                if streamlit_inputs["allowed_direction"] in (
-                    MarketDirection.LONG.value,
-                    MarketDirection.ALL.value,
-                ):
-                    long_entry_signals = st.multiselect(
-                        "Long Entry Signals",
-                        all_flag_combinations,
-                        default=saved_inputs.get("long_entry_signals", None),
-                        key="long_entry_signals",
-                        on_change=select_all_options,
-                        args=(
-                            "long_entry_signals",
-                            filtered_flag_combinations,
-                        ),
-                    )
-                else:
-                    long_entry_signals = []
-
-                if streamlit_inputs["allowed_direction"] in (
-                    MarketDirection.SHORT.value,
-                    MarketDirection.ALL.value,
-                ):
-                    short_entry_signals = st.multiselect(
-                        "Short Entry Signals",
-                        [
-                            combination
-                            for combination in all_flag_combinations
-                            if combination not in long_entry_signals
-                        ],
-                        default=saved_inputs.get("short_entry_signals", None),
-                        key="short_entry_signals",
-                        on_change=select_all_options,
-                        args=(
-                            "short_entry_signals",
-                            filtered_flag_combinations,
-                        ),
-                    )
-                else:
-                    short_entry_signals = []
-
-                if streamlit_inputs["allowed_direction"] in (
-                    MarketDirection.LONG.value,
-                    MarketDirection.ALL.value,
-                ):
-                    long_exit_signals = st.multiselect(
-                        "Long Exit Signals",
-                        set(filtered_flag_combinations)
-                        - set(long_entry_signals),
-                        default=set(
-                            [
-                                *saved_inputs.get("long_exit_signals", []),
-                                *short_entry_signals,
-                            ]
-                        ),
-                    )
-                else:
-                    long_exit_signals = []
-
-                if streamlit_inputs["allowed_direction"] in (
-                    MarketDirection.SHORT.value,
-                    MarketDirection.ALL.value,
-                ):
-                    short_exit_signals = st.multiselect(
-                        "Short Exit Signals",
-                        set(filtered_flag_combinations)
-                        - set(short_entry_signals)
-                        - set(long_exit_signals),
-                        default=set(
-                            [
-                                *saved_inputs.get("short_exit_signals", []),
-                                *long_entry_signals,
-                            ]
-                        ),
-                    )
-                else:
-                    short_exit_signals = []
-
-                streamlit_inputs.update(
-                    {
-                        "long_entry_signals": long_entry_signals,
-                        "short_entry_signals": short_entry_signals,
-                        "long_exit_signals": long_exit_signals,
-                        "short_exit_signals": short_exit_signals,
-                    }
+                set_entry_exit_signals(
+                    streamlit_inputs,
+                    saved_inputs,
+                    portfolio_ids,
+                    possible_flags_per_portfolio,
                 )
                 strategy_ids_per_portfolio = set_portfolio_strategies(
                     portfolio_ids, streamlit_inputs, saved_inputs
@@ -604,6 +521,7 @@ def main():
             portfolio_ids_input = set_portfolio_ids(
                 streamlit_inputs, saved_inputs
             )
+            set_allowed_direction(streamlit_inputs, saved_inputs)
             set_trade_type(streamlit_inputs, saved_inputs)
             set_instrument(streamlit_inputs, saved_inputs)
             if portfolio_ids_input:
@@ -613,13 +531,11 @@ def main():
                 possible_flags_per_portfolio = set_portfolio_flags(
                     portfolio_ids, streamlit_inputs, saved_inputs
                 )
-                long_entry_signals, short_entry_signals = (
-                    set_long_short_signals(
-                        streamlit_inputs,
-                        saved_inputs,
-                        portfolio_ids,
-                        possible_flags_per_portfolio,
-                    )
+                set_entry_exit_signals(
+                    streamlit_inputs,
+                    saved_inputs,
+                    portfolio_ids,
+                    possible_flags_per_portfolio,
                 )
                 strategy_ids_per_portfolio = set_portfolio_strategies(
                     portfolio_ids, streamlit_inputs, saved_inputs
@@ -962,6 +878,100 @@ def main():
         st.error("Please fill in all the required fields.")
 
 
+def set_entry_exit_signals(
+    streamlit_inputs, saved_inputs, portfolio_ids, possible_flags_per_portfolio
+):
+    filtered_flag_combinations = get_flag_combinations(
+        portfolio_ids, possible_flags_per_portfolio
+    )
+    all_flag_combinations = ["ALL"] + filtered_flag_combinations
+
+    if streamlit_inputs["allowed_direction"] in (
+        MarketDirection.LONG.value,
+        MarketDirection.ALL.value,
+    ):
+        long_entry_signals = st.multiselect(
+            "Long Entry Signals",
+            all_flag_combinations,
+            default=saved_inputs.get("long_entry_signals", None),
+            key="long_entry_signals",
+            on_change=select_all_options,
+            args=(
+                "long_entry_signals",
+                filtered_flag_combinations,
+            ),
+        )
+    else:
+        long_entry_signals = []
+
+    if streamlit_inputs["allowed_direction"] in (
+        MarketDirection.SHORT.value,
+        MarketDirection.ALL.value,
+    ):
+        short_entry_signals = st.multiselect(
+            "Short Entry Signals",
+            [
+                combination
+                for combination in all_flag_combinations
+                if combination not in long_entry_signals
+            ],
+            default=saved_inputs.get("short_entry_signals", None),
+            key="short_entry_signals",
+            on_change=select_all_options,
+            args=(
+                "short_entry_signals",
+                filtered_flag_combinations,
+            ),
+        )
+    else:
+        short_entry_signals = []
+
+    if streamlit_inputs["allowed_direction"] in (
+        MarketDirection.LONG.value,
+        MarketDirection.ALL.value,
+    ):
+        long_exit_signals = st.multiselect(
+            "Long Exit Signals",
+            set(filtered_flag_combinations) - set(long_entry_signals),
+            default=set(
+                [
+                    *saved_inputs.get("long_exit_signals", []),
+                    *short_entry_signals,
+                ]
+            ),
+        )
+    else:
+        long_exit_signals = []
+
+    if streamlit_inputs["allowed_direction"] in (
+        MarketDirection.SHORT.value,
+        MarketDirection.ALL.value,
+    ):
+        short_exit_signals = st.multiselect(
+            "Short Exit Signals",
+            set(filtered_flag_combinations)
+            - set(short_entry_signals)
+            - set(long_exit_signals),
+            default=set(
+                [
+                    *saved_inputs.get("short_exit_signals", []),
+                    *long_entry_signals,
+                ]
+            ),
+        )
+    else:
+        short_exit_signals = []
+
+    streamlit_inputs.update(
+        {
+            "long_entry_signals": long_entry_signals,
+            "short_entry_signals": short_entry_signals,
+            "long_exit_signals": long_exit_signals,
+            "short_exit_signals": short_exit_signals,
+        }
+    )
+
+
 def set_cycle_configs(streamlit_inputs, saved_inputs):
 
     calculate_cycles = st.checkbox(
@@ -970,6 +980,17 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
     )
     streamlit_inputs["calculate_cycles"] = calculate_cycles
     if calculate_cycles:
+        cycle_options = [
+            cycle.value
+            for cycle in CycleType
+            if cycle != CycleType.PREVIOUS_CYCLE
+        ]
+        cycle_to_consider = st.selectbox(
+            "Cycle to Consider",
+            cycle_options,
+        )
+        streamlit_inputs["cycle_to_consider"] = cycle_to_consider
+
         st.text("BB Band 1 inputs:")
 
         close_time_frames_1 = st.multiselect(
@@ -1278,7 +1299,8 @@ def set_trade_type(streamlit_inputs, saved_inputs):
 def execute(validated_input, exec_func: callable):
     start = time.time()
     try:
-        multiple_process(validated_input, exec_func)
+        # multiple_process(validated_input, exec_func)
+        exec_func(validated_input, (1, 1), "BANKNIFTY")
     except Exception as e:
         st.error(f"Error executing trade management: {e}")
         return

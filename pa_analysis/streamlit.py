@@ -7,9 +7,10 @@ from pa_analysis.analysis_processor import process
 from source.streamlit import (
     check_cycles_inputs,
     format_set_portfolio_ids,
+    set_allowed_direction,
     set_cycle_configs,
+    set_entry_exit_signals,
     set_instrument,
-    set_long_short_signals,
     set_portfolio_flags,
     set_portfolio_ids,
     set_portfolio_strategies,
@@ -50,8 +51,16 @@ def main():
                 map(lambda x: tuple(x), saved_inputs["long_entry_signals"])
             )
 
+            saved_inputs["long_exit_signals"] = list(
+                map(lambda x: tuple(x), saved_inputs["long_exit_signals"])
+            )
+
             saved_inputs["short_entry_signals"] = list(
                 map(lambda x: tuple(x), saved_inputs["short_entry_signals"])
+            )
+
+            saved_inputs["short_exit_signals"] = list(
+                map(lambda x: tuple(x), saved_inputs["short_exit_signals"])
             )
 
             saved_inputs["strategy_pairs"] = list(
@@ -63,7 +72,7 @@ def main():
 
     st.header("PA Analysis")
     portfolio_ids_input = set_portfolio_ids(streamlit_inputs, saved_inputs)
-
+    set_allowed_direction(streamlit_inputs, saved_inputs)
     set_instrument(streamlit_inputs, saved_inputs)
 
     if portfolio_ids_input:
@@ -73,7 +82,7 @@ def main():
         possible_flags_per_portfolio = set_portfolio_flags(
             portfolio_ids, streamlit_inputs, saved_inputs
         )
-        set_long_short_signals(
+        set_entry_exit_signals(
             streamlit_inputs,
             saved_inputs,
             portfolio_ids,

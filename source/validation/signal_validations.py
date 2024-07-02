@@ -20,16 +20,16 @@ The `validation.py` module provided defines a Pydantic model `StrategyInput` for
 
 # Import necessary libraries
 from itertools import chain
-from typing import List, Optional, Union
+from typing import List, Optional
 from pydantic import ValidationError, field_validator
 
 # Import project-specific constants
 from source.constants import MarketDirection, TradeType
-from source.validation.base_validation import BaseInputs
+from source.validation.base_validation import BaseInputs, FractalInput
 from source.validation.validate_trade_management import TradingConfiguration
 
 
-class StrategyInput(BaseInputs):
+class StrategyInput(BaseInputs, FractalInput):
     """
     Pydantic model for validating strategy input data.
     """
@@ -38,17 +38,10 @@ class StrategyInput(BaseInputs):
     long_exit_signals: List[tuple]
     short_entry_signals: List[tuple]
     short_exit_signals: List[tuple]
-    allowed_direction: MarketDirection
+
     trade_type: TradeType
     trigger_trade_management: bool = False
     pa_analysis: bool = False
-
-    check_entry_fractal: bool = None
-    entry_fractal_file_number: str = None
-
-    check_exit_fractal: bool = None
-    fractal_exit_count: Union[int, str] = None
-    exit_fractal_file_number: str = None
 
     check_bb_band: bool = None
     bb_file_number: str = None
