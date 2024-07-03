@@ -104,32 +104,20 @@ def read_data(
 
     # Dictionary to store file details for reading additional data
     file_details = {
-        "entry_fractal": {
-            "read": read_entry_fractal,
-            "file_path": os.path.join(
-                base_path,
-                "Fractal",
-                instrument,
-                f"{entry_fractal_file_number}_result.csv",
-            ),
-            "index_col": "TIMESTAMP",
-            "cols": [index, *entry_fractal_columns],
-            "dtype": {col: "boolean" for col in entry_fractal_columns},
-            "rename": {col: f"entry_{col}" for col in entry_fractal_columns},
-        },
-        "exit_fractal": {
-            "read": read_exit_fractal,
-            "file_path": os.path.join(
-                base_path,
-                "Fractal",
-                instrument,
-                f"{exit_fractal_file_number}_result.csv",
-            ),
-            "index_col": "TIMESTAMP",
-            "cols": [index, *exit_fractal_columns],
-            "dtype": {col: "boolean" for col in entry_fractal_columns},
-            "rename": {col: f"exit_{col}" for col in entry_fractal_columns},
-        },
+        "entry_fractal": update_entry_fractal_file(
+            instrument,
+            entry_fractal_file_number,
+            read_entry_fractal,
+            base_path,
+            index,
+        ),
+        "exit_fractal": update_exit_fractal_file(
+            instrument,
+            exit_fractal_file_number,
+            read_exit_fractal,
+            base_path,
+            index,
+        ),
         "bb_band": {
             "read": read_bb_fractal,
             "file_path": os.path.join(
@@ -161,6 +149,42 @@ def read_data(
     dfs = read_files(start_date, end_date, file_details)
     all_dfs.extend(dfs.values())
     return all_dfs
+
+
+def update_exit_fractal_file(
+    instrument, exit_fractal_file_number, read_exit_fractal, base_path, index
+):
+    return {
+        "read": read_exit_fractal,
+        "file_path": os.path.join(
+            base_path,
+            "Fractal",
+            instrument,
+            f"{exit_fractal_file_number}_result.csv",
+        ),
+        "index_col": "TIMESTAMP",
+        "cols": [index, *exit_fractal_columns],
+        "dtype": {col: "boolean" for col in entry_fractal_columns},
+        "rename": {col: f"exit_{col}" for col in entry_fractal_columns},
+    }
+
+
+def update_entry_fractal_file(
+    instrument, entry_fractal_file_number, read_entry_fractal, base_path, index
+):
+    return {
+        "read": read_entry_fractal,
+        "file_path": os.path.join(
+            base_path,
+            "Fractal",
+            instrument,
+            f"{entry_fractal_file_number}_result.csv",
+        ),
+        "index_col": "TIMESTAMP",
+        "cols": [index, *entry_fractal_columns],
+        "dtype": {col: "boolean" for col in entry_fractal_columns},
+        "rename": {col: f"entry_{col}" for col in entry_fractal_columns},
+    }
 
 
 def read_files(

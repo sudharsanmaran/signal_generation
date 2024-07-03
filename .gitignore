@@ -55,6 +55,8 @@ user_inputs.json
 
 tradesheet/Output
 
+outputs/*
+
 filter*.csv
 final_result.csv
 pa_analysis_output.zip

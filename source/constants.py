@@ -40,6 +40,7 @@ class TradeExitType(Enum):
     SIGNAL = "SC"
     TRAILING = "TR"
     END = "EOD"
+    CYCLE_CHANGE = "CC"
 
 
 class TradeType(Enum):
@@ -103,9 +104,16 @@ confirm_fractal_column_dict = {
     },
 }
 
-
-MERGED_DF_FOLDER = "merged_df"
-SG_OUTPUT_FOLDER = "signal_generation_output"
+BASE_OUTPUT_FOLDER = "outputs"
+SG = "sg"
+PA = "pa"
+MERGED_DF_FOLDER = f"{BASE_OUTPUT_FOLDER}/{SG}/merged_df"
+SG_OUTPUT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{SG}/signal_generation_output"
+SG_CYCLE_OUTPUT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{SG}/cycle_output"
+PA_ANALYSIS_FOLDER = f"{BASE_OUTPUT_FOLDER}/{PA}/pa_analysis_outputs"
+PA_ANALYSIS_CYCLE_FOLDER = (
+    f"{BASE_OUTPUT_FOLDER}/{PA}/pa_analysis_cycle_outputs"
+)
 
 # Define the percentage of available CPU to be used
 cpu_percent_to_use = 0.8  # You can adjust this percentage as needed
@@ -160,3 +168,54 @@ class OutputColumn(Enum):
     ENTRY_PRICE = "SG_Entry Price"
     EXIT_PRICE = "SG_Exit Price"
     NET_POINTS = "SG_Net points"
+
+
+class BB_Band_Columns(Enum):
+    MEAN = "MEAN"
+    UPPER = "UPPER"
+    LOWER = "LOWER"
+    # CLOSE = "CLOSE"
+    # HIGH = "HIGH"
+    # LOW = "LOW"
+
+
+class FirstCycleColumns(Enum):
+    DURATION_SIGNAL_START_TO_CYCLE_START = (
+        "Duration Signal Start to Cycle Start"
+    )
+    CYCLE_DURATION = "Cycle Duration"
+    MOVE = "Move"
+    MOVE_PERCENT = "Move Percent"
+    CYCLE_MAX = "Cycle Max"
+    CYCLE_MIN = "Cycle Min"
+    MAX_TO_MIN = "Max to Min"
+    POINTS_FROM_MAX = "Points from Maximum"
+    AVERAGE_TILL_MAX = "Average Till Max"
+    AVERAGE_TILL_MIN = "Average Till Min"
+    POINTS_FRM_AVG_TILL_MAX_TO_MIN = "Points from Avg till Max to Min"
+    CLOSE_TO_CLOSE = "Close to Close"
+    POSITIVE_NEGATIVE = "Positive / Negative"
+    # DURATION_TO_MAX = "Duration to Max"
+    # DURATION_ABOVE_BB = "Duration Above BB"
+    # SIGNAL_START_TO_MAX_POINTS = "Signal Start to Max Points"
+    # SIGNAL_START_TO_MAX_PERCENT = "Signal Start to Max Percent"
+    # CATEGORY = "Category"
+    # MOVE_START_TO_MAX_CYCLE_POINTS = "Move Start to Max Cycle Points"
+    # MOVE_START_TO_MAX_CYCLE_PERCENT = "Move Start to Max Cycle Percent"
+    # POINTS_FRM_AVG_TILL_MIN_TO_MAX = "Points from Avg till Min to Max"
+    # SIGNAL_START_TO_MINIMUM_POINTS = "Signal Start to Minimum Points"
+    # SIGNAL_START_TO_MINIMUM_PERCENT = "Signal Start to Minimum Percent"
+    # DURATION_BETWEEN_MAX_MIN = "Duration Between Max Min"
+    # AVG_OF_MAX_TO_AVG_OF_MIN = "Avg of Max to Avg of Min"
+
+
+class SecondCycleIDColumns(Enum):
+    CTC_CYCLE_ID = "CTC Cycle ID"
+    MTM_CYCLE_ID = "MTM Cycle ID"
+
+
+class CycleType(Enum):
+    FIRST_CYCLE = "First Cycle"
+    MTM_CYCLE = "MTM Cycle"
+    CTC_CYCLE = "CTC Cycle"
+    PREVIOUS_CYCLE = "Previous Cycle"

@@ -1,14 +1,16 @@
 from datetime import datetime
 from typing import List
 from pydantic import field_validator
-from source.constants import TradeType
-from source.validation.base_validation import BaseInputs
+from source.constants import CycleType, TradeType
+from source.validation.base_validation import BaseInputs, FractalInput
 from source.validation.validate_trade_management import TradingConfiguration
 
 
-class CycleInputs(BaseInputs):
+class CycleInputs(BaseInputs, FractalInput):
     long_entry_signals: List[tuple]
     short_entry_signals: List[tuple]
+    long_exit_signals: List[tuple]
+    short_exit_signals: List[tuple]
 
     close_time_frames_1: List[int]
     bb_time_frames_1: List[int]
@@ -23,6 +25,8 @@ class CycleInputs(BaseInputs):
     periods_2: List[int] = None
     sds_2: List[int] = None
     check_bb_2: bool = False
+
+    cycle_to_consider: CycleType = None
 
     @field_validator("start_date", "end_date", mode="before")
     def convert_to_datetime(cls, v):
