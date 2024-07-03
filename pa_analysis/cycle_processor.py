@@ -32,7 +32,7 @@ from source.processors.signal_trade_processor import write_dataframe_to_csv
 
 def process_cycles(**kwargs):
     # get the base df
-    all_df = get_cycle_base_df(kwargs)
+    all_df = get_cycle_base_df(**kwargs)
 
     # process the data
     for time_frame, df in all_df.items():
@@ -201,11 +201,6 @@ def update_second_cycle_analytics(
                     is_last_cycle,
                 )
 
-                if (not min_idx and not cycle_min) or (
-                    not max_idx and not cycle_max
-                ):
-                    continue
-
                 updates["index"].append(cycle_data.index[-1])
 
                 update_signal_start_duration(
@@ -345,6 +340,10 @@ def update_pnts_frm_avg_till_max_to_min(
     points_frm_avg_till_max_to_min_key,
 ):
     value = pd.NA
+    if cycle_analysis[max_key] is None or cycle_analysis[min_key] is None:
+        cycle_analysis[points_frm_avg_till_max_to_min_key] = value
+        return
+
     if market_direction == MarketDirection.LONG:
         value = make_round(
             cycle_analysis[max_key] - cycle_analysis[avg_min_key]
@@ -438,9 +437,6 @@ def analyze_cycles(df, time_frame, kwargs):
                 min_idx, max_idx, cycle_min, cycle_max = get_min_max_idx(
                     adjusted_cycle_data, group_start_row, group_id, cycle
                 )
-
-                if not min_idx or not max_idx:
-                    continue
 
                 updates["index"].append(cycle_data.index[-1])
 

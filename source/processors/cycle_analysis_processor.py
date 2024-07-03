@@ -88,6 +88,9 @@ def get_next_cycle_first_row(
 def update_max_to_min(
     cycle_analysis, min_key, max_key, max_to_min_key, is_last_cycle=False
 ):
+    if cycle_analysis[max_key] is None or cycle_analysis[min_key] is None:
+        cycle_analysis[max_to_min_key] = 0
+        return
     value = make_round(cycle_analysis[max_key] - cycle_analysis[min_key])
     if is_last_cycle:
         value *= -1
