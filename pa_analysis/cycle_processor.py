@@ -719,65 +719,65 @@ def prev_weekday(datetime):
 def update_trail_date(df, time_frame):
     df_copy = df.copy()
     df_copy.set_index("dt", inplace=True)
-    
+
     # 30 days
     update_trailling_date(
         df_copy,
-        col_name="trail_date_30",
+        col_name=FirstCycleColumns.TRAIL_DATE_30.value,
         time_delta=timedelta(days=30) + timedelta(minutes=int(time_frame)),
     )
 
     # 90 days
     update_trailling_date(
         df_copy,
-        col_name="trail_date_90",
+        col_name=FirstCycleColumns.TRAIL_DATE_90.value,
         time_delta=timedelta(days=90) + timedelta(minutes=int(time_frame)),
     )
 
     # 180 days
     update_trailling_date(
         df_copy,
-        col_name="trail_date_180",
+        col_name=FirstCycleColumns.TRAIL_DATE_180.value,
         time_delta=timedelta(days=180) + timedelta(minutes=int(time_frame)),
     )
 
     #  270 days
     update_trailling_date(
         df_copy,
-        col_name="trail_date_270",
+        col_name=FirstCycleColumns.TRAIL_DATE_270.value,
         time_delta=timedelta(days=270) + timedelta(minutes=int(time_frame)),
     )
 
     # 365 days
     update_trailling_date(
         df_copy,
-        col_name="trail_date_365",
+        col_name=FirstCycleColumns.TRAIL_DATE_365.value,
         time_delta=timedelta(days=365) + timedelta(minutes=int(time_frame)),
     )
 
     df[FirstCycleColumns.TRAIL_DATE_30.value] = df_copy[
-        "trail_date_30"
+        FirstCycleColumns.TRAIL_DATE_30.value
     ].values
     df[FirstCycleColumns.TRAIL_DATE_90.value] = df_copy[
-        "trail_date_90"
+        FirstCycleColumns.TRAIL_DATE_90.value
     ].values
     df[FirstCycleColumns.TRAIL_DATE_180.value] = df_copy[
-        "trail_date_180"
+        FirstCycleColumns.TRAIL_DATE_180.value
     ].values
     df[FirstCycleColumns.TRAIL_DATE_270.value] = df_copy[
-        "trail_date_270"
+        FirstCycleColumns.TRAIL_DATE_270.value
     ].values
     df[FirstCycleColumns.TRAIL_DATE_365.value] = df_copy[
-        "trail_date_365"
+        FirstCycleColumns.TRAIL_DATE_365.value
     ].values
 
 
-def update_trailling_date(df_copy, col_name="trail_date_1", time_delta):
-    df_copy["trail_date_3"] = df_copy.index - time_delta
+def update_trailling_date(df_copy, col_name, time_delta):
+    df_copy[col_name] = df_copy.index - time_delta
 
-    df_copy["trail_date_3"] = df_copy["trail_date_3"].apply(prev_weekday)
+    df_copy[col_name] = df_copy[col_name].apply(prev_weekday)
 
-    df_copy["trail_date_3"] = df_copy["trail_date_3"].apply(
+    df_copy[col_name] = df_copy[col_name].apply(
         lambda x: x if x in df_copy.index else pd.NaT
     )
 
