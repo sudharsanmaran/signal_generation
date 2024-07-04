@@ -698,10 +698,24 @@ def analyze_cycles(df, time_frame, kwargs):
 
     update_rolling_avg_3_6(df, time_frame)
 
-    update_trail_date(df, time_frame)
-    a = 10
+    trail_dates = {
+        FirstCycleColumns.TRAIL_DATE_30.value: timedelta(days=30),
+        FirstCycleColumns.TRAIL_DATE_90.value: timedelta(days=90),
+        FirstCycleColumns.TRAIL_DATE_180.value: timedelta(days=180),
+        FirstCycleColumns.TRAIL_DATE_270.value: timedelta(days=270),
+        FirstCycleColumns.TRAIL_DATE_365.value: timedelta(days=365),
+    }
+    update_trail_date_close(df, time_frame, trail_dates)
+    update_trail_return(df, trail_dates)
 
     return results
+
+
+def update_trail_return(df, trail_dates):
+    for key in trail_dates:
+        df[f"{key}_return"] = make_round(
+            (df["Close"] / df[f"{key}_Close"] - 1) * 100
+        )
 
 
 def prev_weekday(datetime):
@@ -716,60 +730,20 @@ def prev_weekday(datetime):
     return pre_weekday
 
 
-def update_trail_date(df, time_frame):
+def update_trail_date_close(df, time_frame, trail_dates):
     df_copy = df.copy()
     df_copy.set_index("dt", inplace=True)
 
-    # 30 days
-    update_trailling_date(
-        df_copy,
-        col_name=FirstCycleColumns.TRAIL_DATE_30.value,
-        time_delta=timedelta(days=30) + timedelta(minutes=int(time_frame)),
-    )
+    for key, value in trail_dates.items():
+        update_trailling_date(
+            df_copy, key, value + timedelta(minutes=int(time_frame))
+        )
 
-    # 90 days
-    update_trailling_date(
-        df_copy,
-        col_name=FirstCycleColumns.TRAIL_DATE_90.value,
-        time_delta=timedelta(days=90) + timedelta(minutes=int(time_frame)),
-    )
+        df_copy[f"{key}_Close"] = df_copy[key].map(df_copy["Close"])
 
-    # 180 days
-    update_trailling_date(
-        df_copy,
-        col_name=FirstCycleColumns.TRAIL_DATE_180.value,
-        time_delta=timedelta(days=180) + timedelta(minutes=int(time_frame)),
-    )
+        df_copy[f"{key}_Close"].fillna(0, inplace=True)
 
-    #  270 days
-    update_trailling_date(
-        df_copy,
-        col_name=FirstCycleColumns.TRAIL_DATE_270.value,
-        time_delta=timedelta(days=270) + timedelta(minutes=int(time_frame)),
-    )
-
-    # 365 days
-    update_trailling_date(
-        df_copy,
-        col_name=FirstCycleColumns.TRAIL_DATE_365.value,
-        time_delta=timedelta(days=365) + timedelta(minutes=int(time_frame)),
-    )
-
-    df[FirstCycleColumns.TRAIL_DATE_30.value] = df_copy[
-        FirstCycleColumns.TRAIL_DATE_30.value
-    ].values
-    df[FirstCycleColumns.TRAIL_DATE_90.value] = df_copy[
-        FirstCycleColumns.TRAIL_DATE_90.value
-    ].values
-    df[FirstCycleColumns.TRAIL_DATE_180.value] = df_copy[
-        FirstCycleColumns.TRAIL_DATE_180.value
-    ].values
-    df[FirstCycleColumns.TRAIL_DATE_270.value] = df_copy[
-        FirstCycleColumns.TRAIL_DATE_270.value
-    ].values
-    df[FirstCycleColumns.TRAIL_DATE_365.value] = df_copy[
-        FirstCycleColumns.TRAIL_DATE_365.value
-    ].values
+        df[f"{key}_Close"] = df_copy[f"{key}_Close"].values
 
 
 def update_trailling_date(df_copy, col_name, time_delta):
@@ -777,9 +751,9 @@ def update_trailling_date(df_copy, col_name, time_delta):
 
     df_copy[col_name] = df_copy[col_name].apply(prev_weekday)
 
-    df_copy[col_name] = df_copy[col_name].apply(
-        lambda x: x if x in df_copy.index else pd.NaT
-    )
+    valid_dates = df_copy[col_name].isin(df_copy.index)
+
+    df_copy.loc[~valid_dates, col_name] = pd.NaT
 
 
 def update_rolling_avg_3_6(df, time_frame):

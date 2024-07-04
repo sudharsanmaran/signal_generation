@@ -203,6 +203,12 @@ class FirstCycleColumns(Enum):
     TRAIL_DATE_180 = "Trail Date 180"
     TRAIL_DATE_270 = "Trail Date 270"
     TRAIL_DATE_365 = "Trail Date 365"
+    TRAILLING_30_RETURN = "Trailing 30 Return"
+    TRAILLING_90_RETURN = "Trailing 90 Return"
+    TRAILLING_180_RETURN = "Trailing 180 Return"
+    TRAILLING_270_RETURN = "Trailing 270 Return"
+    TRAILLING_365_RETURN = "Trailing 365 Return"
+
     # DURATION_TO_MAX = "Duration to Max"
     # DURATION_ABOVE_BB = "Duration Above BB"
     # SIGNAL_START_TO_MAX_POINTS = "Signal Start to Max Points"
