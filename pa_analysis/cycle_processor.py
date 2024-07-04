@@ -717,6 +717,11 @@ def update_trail_return(df, trail_dates):
             (df["Close"] / df[f"{key}_Close"] - 1) * 100
         )
 
+        # replace inf to zero
+        df[f"{key}_return"].replace(
+            [float("inf"), float("-inf")], 0, inplace=True
+        )
+
 
 def prev_weekday(datetime):
     pre_weekday = None
