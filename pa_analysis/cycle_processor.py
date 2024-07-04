@@ -1,4 +1,6 @@
+from datetime import timedelta
 import pandas as pd
+from pandas.tseries.offsets import BDay
 
 from pa_analysis.constants import (
     MTMCrossedCycleColumns,
@@ -309,6 +311,14 @@ def update_second_cycle_analytics(
                     df.loc[updates["index"], col] = values
                 except Exception:
                     pass
+
+    if cycle_count_col == SecondCycleIDColumns.CTC_CYCLE_ID.value:
+        update_cumulative_avg(
+            df,
+            cols=[
+                f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{1}_{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}"
+            ],
+        )
 
     # remove unnesasory columns
     remove_cols = [
@@ -668,11 +678,158 @@ def analyze_cycles(df, time_frame, kwargs):
                 for key, value in cycle_analysis.items():
                     updates[key].append(value)
 
+    # update_running_avg(
+    #     cycle_analysis,
+    #     columns=[FirstCycleColumns.CLOSE_TO_CLOSE.value],
+    # )
+
+    # update running avg of f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}"
+
     for col, values in updates.items():
         if col != "index" and values:
             df.loc[updates["index"], col] = values
 
+    update_cumulative_avg(
+        df,
+        cols=[
+            f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}"
+        ],
+    )
+
+    update_rolling_avg_3_6(df, time_frame)
+
+    update_trail_date(df, time_frame)
+    a = 10
+
     return results
+
+
+def prev_weekday(datetime):
+    pre_weekday = None
+    if datetime.weekday() < 5:
+        pre_weekday = datetime
+    else:
+        if datetime.weekday() == 5:
+            pre_weekday = datetime - BDay(1)
+        else:
+            pre_weekday = datetime - BDay(2)
+    return pre_weekday
+
+
+def update_trail_date(df, time_frame):
+    df_copy = df.copy()
+    df_copy.set_index("dt", inplace=True)
+    
+    # 30 days
+    update_trailling_date(
+        df_copy,
+        col_name="trail_date_30",
+        time_delta=timedelta(days=30) + timedelta(minutes=int(time_frame)),
+    )
+
+    # 90 days
+    update_trailling_date(
+        df_copy,
+        col_name="trail_date_90",
+        time_delta=timedelta(days=90) + timedelta(minutes=int(time_frame)),
+    )
+
+    # 180 days
+    update_trailling_date(
+        df_copy,
+        col_name="trail_date_180",
+        time_delta=timedelta(days=180) + timedelta(minutes=int(time_frame)),
+    )
+
+    #  270 days
+    update_trailling_date(
+        df_copy,
+        col_name="trail_date_270",
+        time_delta=timedelta(days=270) + timedelta(minutes=int(time_frame)),
+    )
+
+    # 365 days
+    update_trailling_date(
+        df_copy,
+        col_name="trail_date_365",
+        time_delta=timedelta(days=365) + timedelta(minutes=int(time_frame)),
+    )
+
+    df[FirstCycleColumns.TRAIL_DATE_30.value] = df_copy[
+        "trail_date_30"
+    ].values
+    df[FirstCycleColumns.TRAIL_DATE_90.value] = df_copy[
+        "trail_date_90"
+    ].values
+    df[FirstCycleColumns.TRAIL_DATE_180.value] = df_copy[
+        "trail_date_180"
+    ].values
+    df[FirstCycleColumns.TRAIL_DATE_270.value] = df_copy[
+        "trail_date_270"
+    ].values
+    df[FirstCycleColumns.TRAIL_DATE_365.value] = df_copy[
+        "trail_date_365"
+    ].values
+
+
+def update_trailling_date(df_copy, col_name="trail_date_1", time_delta):
+    df_copy["trail_date_3"] = df_copy.index - time_delta
+
+    df_copy["trail_date_3"] = df_copy["trail_date_3"].apply(prev_weekday)
+
+    df_copy["trail_date_3"] = df_copy["trail_date_3"].apply(
+        lambda x: x if x in df_copy.index else pd.NaT
+    )
+
+
+def update_rolling_avg_3_6(df, time_frame):
+    df_copy = df.copy()
+    df_copy.set_index("dt", inplace=True)
+    time_delta_3 = timedelta(days=90) - timedelta(minutes=int(time_frame))
+    min_periods_3 = int(
+        (time_delta_3 / timedelta(minutes=int(time_frame))) - 1
+    )
+    update_rolling_avg(
+        df_copy,
+        time_delta=time_delta_3,
+        col_name=FirstCycleColumns.ROLLING_AVG_3.value,
+        # min_periods=min_periods_3,
+    )
+    time_delta_6 = timedelta(days=180) - timedelta(minutes=int(time_frame))
+    min_periods_6 = int(
+        (time_delta_6 / timedelta(minutes=int(time_frame))) - 1
+    )
+    update_rolling_avg(
+        df_copy,
+        time_delta=time_delta_6,
+        col_name=FirstCycleColumns.ROLLING_AVG_6.value,
+        # min_periods=min_periods_6,
+    )
+
+    df[FirstCycleColumns.ROLLING_AVG_3.value] = df_copy[
+        FirstCycleColumns.ROLLING_AVG_3.value
+    ].values
+    df[FirstCycleColumns.ROLLING_AVG_6.value] = df_copy[
+        FirstCycleColumns.ROLLING_AVG_6.value
+    ].values
+
+
+def update_rolling_avg(df, time_delta, col_name, min_periods=0):
+
+    df[col_name] = make_round(
+        df[
+            f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}"
+        ]
+        .rolling(time_delta, min_periods=min_periods)
+        .mean()
+    )
+
+
+def update_cumulative_avg(df, cols):
+    for col in cols:
+        df[f"{FirstCycleColumns.CUM_AVG.value}_{col}"] = make_round(
+            df[col].expanding().mean()
+        )
 
 
 def update_positive_negative(cycle_analysis, columns):
