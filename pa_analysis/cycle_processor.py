@@ -1,5 +1,6 @@
 from datetime import timedelta
 import pandas as pd
+import numpy as np
 from pandas.tseries.offsets import BDay
 
 from pa_analysis.constants import (
@@ -190,9 +191,7 @@ def update_second_cycle_analytics(
                 is_last_cycle = False
                 if cycle_count_col == SecondCycleIDColumns.CTC_CYCLE_ID.value:
                     is_last_cycle = False
-                elif (
-                    cycle_count_col == SecondCycleIDColumns.MTM_CYCLE_ID.value
-                ):
+                elif cycle_count_col == SecondCycleIDColumns.MTM_CYCLE_ID.value:
                     is_last_cycle = cycle == unique_cycles[-1]
 
                 min_idx, max_idx, cycle_min, cycle_max = get_min_max_idx(
@@ -252,8 +251,12 @@ def update_second_cycle_analytics(
 
                 if cycle_count_col == SecondCycleIDColumns.MTM_CYCLE_ID.value:
 
-                    avg_min_key = f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MIN.value}"
-                    avg_max_key = f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MAX.value}"
+                    avg_min_key = (
+                        f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MIN.value}"
+                    )
+                    avg_max_key = (
+                        f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MAX.value}"
+                    )
                     update_avg_till_min_max(
                         market_direction,
                         cycle_analysis,
@@ -355,14 +358,10 @@ def update_pnts_frm_avg_till_max_to_min(
         return
 
     if market_direction == MarketDirection.LONG:
-        value = make_round(
-            cycle_analysis[max_key] - cycle_analysis[avg_min_key]
-        )
+        value = make_round(cycle_analysis[max_key] - cycle_analysis[avg_min_key])
 
     else:
-        value = make_round(
-            cycle_analysis[avg_max_key] - cycle_analysis[min_key]
-        )
+        value = make_round(cycle_analysis[avg_max_key] - cycle_analysis[min_key])
 
     cycle_analysis[points_frm_avg_till_max_to_min_key] = value
 
@@ -408,9 +407,7 @@ def analyze_cycles(df, time_frame, kwargs):
     for group_idx, (group_id, group_data) in enumerate(groups):
         # Identify cycle columns dynamically
 
-        cycle_columns = [
-            col for col in group_data.columns if "cycle_no" in col
-        ]
+        cycle_columns = [col for col in group_data.columns if "cycle_no" in col]
 
         group_start_row = group_data.iloc[0]
         market_direction = group_start_row["market_direction"]
@@ -707,15 +704,14 @@ def analyze_cycles(df, time_frame, kwargs):
     }
     update_trail_date_close(df, time_frame, trail_dates)
     update_trail_return(df, trail_dates)
+    update_cumulative_standard_dev(df)
 
     return results
 
 
 def update_trail_return(df, trail_dates):
     for key in trail_dates:
-        df[f"{key}_return"] = make_round(
-            (df["Close"] / df[f"{key}_Close"] - 1) * 100
-        )
+        df[f"{key}_return"] = make_round((df["Close"] / df[f"{key}_Close"] - 1) * 100)
 
         # replace inf to zero
         df[f"{key}_return"].replace(
@@ -740,9 +736,7 @@ def update_trail_date_close(df, time_frame, trail_dates):
     df_copy.set_index("dt", inplace=True)
 
     for key, value in trail_dates.items():
-        update_trailling_date(
-            df_copy, key, value + timedelta(minutes=int(time_frame))
-        )
+        update_trailling_date(df_copy, key, value + timedelta(minutes=int(time_frame)))
 
         df_copy[f"{key}_Close"] = df_copy[key].map(df_copy["Close"])
 
@@ -765,9 +759,7 @@ def update_rolling_avg_3_6(df, time_frame):
     df_copy = df.copy()
     df_copy.set_index("dt", inplace=True)
     time_delta_3 = timedelta(days=90) - timedelta(minutes=int(time_frame))
-    min_periods_3 = int(
-        (time_delta_3 / timedelta(minutes=int(time_frame))) - 1
-    )
+    min_periods_3 = int((time_delta_3 / timedelta(minutes=int(time_frame))) - 1)
     update_rolling_avg(
         df_copy,
         time_delta=time_delta_3,
@@ -775,9 +767,7 @@ def update_rolling_avg_3_6(df, time_frame):
         # min_periods=min_periods_3,
     )
     time_delta_6 = timedelta(days=180) - timedelta(minutes=int(time_frame))
-    min_periods_6 = int(
-        (time_delta_6 / timedelta(minutes=int(time_frame))) - 1
-    )
+    min_periods_6 = int((time_delta_6 / timedelta(minutes=int(time_frame))) - 1)
     update_rolling_avg(
         df_copy,
         time_delta=time_delta_6,
@@ -813,18 +803,16 @@ def update_cumulative_avg(df, cols):
 
 def update_positive_negative(cycle_analysis, columns):
     for col in columns:
-        cycle_analysis[
-            f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{col}"
-        ] = (1 if cycle_analysis[col] > 0 else 0)
+        cycle_analysis[f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{col}"] = (
+            1 if cycle_analysis[col] > 0 else 0
+        )
 
 
 def update_cycle_duration(cycle_analysis, cycle_data, cycle_duration_key):
 
     cycle_analysis[cycle_duration_key] = format_duration(
         make_round(
-            (
-                cycle_data.iloc[-1]["dt"] - cycle_data.iloc[0]["dt"]
-            ).total_seconds()
+            (cycle_data.iloc[-1]["dt"] - cycle_data.iloc[0]["dt"]).total_seconds()
         )
     )
 
@@ -833,9 +821,7 @@ def update_signal_start_duration(
     group_start_row, cycle_analysis, cycle_data, signal_start_duration_key
 ):
     cycle_analysis[signal_start_duration_key] = format_duration(
-        make_round(
-            (cycle_data.iloc[0]["dt"] - group_start_row["dt"]).total_seconds()
-        )
+        make_round((cycle_data.iloc[0]["dt"] - group_start_row["dt"]).total_seconds())
     )
 
 
@@ -859,9 +845,9 @@ def update_duration_above_BB(
     if market_direction == MarketDirection.LONG or not kwargs.get(
         "include_higher_and_lower"
     ):
-        first_yes_index = cycle_data[
-            cycle_data[f"close_to_{cycle_col[9:]}"] == "YES"
-        ]["dt"].iloc[0]
+        first_yes_index = cycle_data[cycle_data[f"close_to_{cycle_col[9:]}"] == "YES"][
+            "dt"
+        ].iloc[0]
 
         first_yes_change_condition = (
             cycle_data[f"close_to_{cycle_col[9:]}"] == "YES"
@@ -870,9 +856,9 @@ def update_duration_above_BB(
     elif market_direction == MarketDirection.SHORT and kwargs.get(
         "include_higher_and_lower"
     ):
-        first_yes_index = cycle_data[
-            cycle_data[f"close_to_{cycle_col[9:]}"] == "NO"
-        ]["dt"].iloc[0]
+        first_yes_index = cycle_data[cycle_data[f"close_to_{cycle_col[9:]}"] == "NO"][
+            "dt"
+        ].iloc[0]
 
         first_yes_change_condition = (
             cycle_data[f"close_to_{cycle_col[9:]}"] == "NO"
@@ -883,13 +869,21 @@ def update_duration_above_BB(
     except IndexError:
         first_yes_change = cycle_data["dt"].iloc[-1]
 
-    cycle_analysis[FirstCycleColumns.DURATION_ABOVE_BB.value] = (
-        format_duration(
-            make_round(
-                (
-                    (first_yes_change - first_yes_index).total_seconds()
-                    / (3600 * 24)
-                )
-            )
-        )
+    cycle_analysis[FirstCycleColumns.DURATION_ABOVE_BB.value] = format_duration(
+        make_round(((first_yes_change - first_yes_index).total_seconds() / (3600 * 24)))
     )
+
+
+def update_cumulative_standard_dev(
+    df, key=f"{FirstCycleColumns.TRAIL_DATE_365.value}_return"
+):
+    # Calculate cumulative count, mean, and sum of squares of differences
+    df["Cumulative Count"] = df[key].expanding().count()
+    df["Cumulative Mean"] = df[key].expanding().mean()
+    df["Cumulative M2"] = (
+        df[key].expanding().apply(lambda x: np.sum((x - x.mean()) ** 2))
+    )
+
+    # Calculate cumulative variance and standard deviation
+    df["Cumulative Variance"] = df["Cumulative M2"] / df["Cumulative Count"]
+    df["Cumulative Std Dev"] = np.sqrt(df["Cumulative Variance"])
