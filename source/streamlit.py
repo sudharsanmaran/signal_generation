@@ -848,6 +848,8 @@ def main():
         ]
         required_fields.extend(cycle_fields)
 
+        add_tp_fields(streamlit_inputs, required_fields)
+
     all_fields_filled = all(required_fields)
 
     if all_fields_filled:
@@ -876,6 +878,16 @@ def main():
                 execute(validated_input, exec_func)
     else:
         st.error("Please fill in all the required fields.")
+
+
+def add_tp_fields(streamlit_inputs, required_fields):
+    if streamlit_inputs["calculate_tp"]:
+        required_fields.extend(
+            [
+                streamlit_inputs["tp_method"],
+                streamlit_inputs["tp_percentage"],
+            ]
+        )
 
 
 def set_entry_exit_signals(
@@ -990,6 +1002,8 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
             cycle_options,
         )
         streamlit_inputs["cycle_to_consider"] = cycle_to_consider
+
+        set_target_profit_inputs(streamlit_inputs, saved_inputs)
 
         st.text("BB Band 1 inputs:")
 
@@ -1106,6 +1120,30 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
                     "sds_2": sds_2,
                 }
             )
+
+
+def set_target_profit_inputs(streamlit_inputs, saved_inputs):
+    st.text("Target Profit:")
+    calculate_tp = st.checkbox(
+        "Calculate Target Profit",
+        value=saved_inputs.get("calculate_tp", True),
+    )
+    streamlit_inputs["calculate_tp"] = calculate_tp
+    if calculate_tp:
+        tp_method = st.selectbox(
+            "TP Method",
+            ["1", "2"],
+            index=0,
+        )
+        tp_percentage = st.number_input(
+            "TP Percentage",
+            min_value=0.0,
+            step=0.01,
+            value=saved_inputs.get("tp_percentage", 0.5),
+        )
+        streamlit_inputs.update(
+            {"tp_method": tp_method, "tp_percentage": tp_percentage}
+        )
 
 
 def set_fractal_exit(streamlit_inputs, saved_inputs):

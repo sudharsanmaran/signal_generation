@@ -37,3 +37,35 @@ class FractalInput(BaseModel):
     check_exit_fractal: bool = None
     fractal_exit_count: Union[int, str] = None
     exit_fractal_file_number: str = None
+
+
+class TargetProfitInput(BaseModel):
+    tp_percentage: float = None
+    tp_method: str = None
+    calculate_tp: bool = False
+
+    @field_validator("tp_percentage")
+    def validate_tp_percent(cls, value):
+        if value and value < 0.0 and value > 1.0:
+            raise ValueError(
+                "tp_percent must be between 0.0 (exclusive) and 1.1 (inclusive)"
+            )
+        return value
+
+    @field_validator("tp_method")
+    def validate_tp_method(cls, value):
+        if value and value not in ("1", "2"):
+            raise ValueError('tp_method must be one of "1" or "2"')
+        return value
+
+    @field_validator("calculate_tp", mode="after")
+    def validate_calculate_tp(cls, v, values):
+        if not isinstance(v, bool):
+            raise ValueError("calculate_tp should be a boolean")
+        if v:
+            if (
+                values.data["tp_percentage"] is None
+                or values.data["tp_method"] is None
+            ):
+                raise ValueError("TP Percent and TP Method are required")
+        return v

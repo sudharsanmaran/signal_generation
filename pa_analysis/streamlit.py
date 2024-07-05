@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 from pa_analysis.analysis_processor import process
 from source.streamlit import (
+    add_tp_fields,
     check_cycles_inputs,
     format_set_portfolio_ids,
     set_allowed_direction,
@@ -114,6 +115,7 @@ def main():
         streamlit_inputs["short_entry_signals"],
         check_cycles_inputs(streamlit_inputs),
     ]
+    add_tp_fields(streamlit_inputs, required_fields)
     all_fields_filled = all(required_fields)
     if all_fields_filled:
         if st.button("Submit"):
