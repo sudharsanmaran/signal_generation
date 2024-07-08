@@ -67,6 +67,8 @@ class Trade:
     cycle_columns: Optional[Dict] = {}
     current_cycle: Optional[str] = None
 
+    calculate_tp: bool = False
+
     def __init__(
         self, entry_signal, entry_datetime, entry_price, signal_count
     ):
@@ -124,6 +126,7 @@ class Trade:
                 TradeExitType.TRAILING,
                 TradeExitType.END,
                 TradeExitType.CYCLE_CHANGE,
+                TradeExitType.TP,
             }:
                 self.trade_closed = True
 
@@ -292,3 +295,6 @@ def initialize(validated_input):
     if validated_input.get("skip_rows"):
         Trade.skip_rows = True
         Trade.no_of_rows_to_skip = validated_input.get("no_of_rows_to_skip")
+
+    if validated_input.get("calculate_tp"):
+        Trade.calculate_tp = True

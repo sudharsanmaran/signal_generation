@@ -41,6 +41,7 @@ class TradeExitType(Enum):
     TRAILING = "TR"
     END = "EOD"
     CYCLE_CHANGE = "CC"
+    TP = "TP"
 
 
 class TradeType(Enum):

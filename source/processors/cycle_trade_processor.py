@@ -12,6 +12,7 @@ from source.constants import (
     FirstCycleColumns,
     MarketDirection,
     SecondCycleIDColumns,
+    TargetProfitColumns,
     TradeExitType,
     TradeType,
     fractal_column_dict,
@@ -889,6 +890,19 @@ def check_cycle_entry_condition(row: pd.Series, state: dict) -> bool:
     return False, None
 
 
+def is_tp_exit(row, exit_state):
+    is_tp_exit = False
+    if (
+        row[TargetProfitColumns.TP_END.value] == "YES"
+        # and exit_state.get("previous_tp", None) == "NO"
+    ):
+        is_tp_exit = True
+
+    # exit_state["previous_tp"] = row[TargetProfitColumns.TP_END.value]
+
+    return is_tp_exit
+
+
 def check_cycle_exit_signals(row, exit_state, entry_state):
     market_direction = row["exit_market_direction"]
     if (
@@ -904,6 +918,9 @@ def check_cycle_exit_signals(row, exit_state, entry_state):
         is_fractal_exit = is_cycle_exit_fractal(
             row, market_direction, exit_state
         )
+
+    if Trade.calculate_tp:
+        tp_exit = is_tp_exit(row, exit_state)
 
     # reset entry id if the signal changes
     # if market_direction:
@@ -924,8 +941,19 @@ def check_cycle_exit_signals(row, exit_state, entry_state):
         Trade.reset_trade_entry_id_counter()
         return True, TradeExitType.CYCLE_CHANGE
 
+    is_exit, exit_type = False, None
+    if Trade.check_exit_fractal and Trade.calculate_tp:
+        if is_fractal_exit:
+            is_exit, exit_type = is_fractal_exit, TradeExitType.FRACTAL
+        if tp_exit:
+            is_exit, exit_type = tp_exit, TradeExitType.TP
+        return is_exit, exit_type
+
     if Trade.check_exit_fractal:
         return is_fractal_exit, TradeExitType.FRACTAL
+
+    if Trade.calculate_tp:
+        return tp_exit, TradeExitType.TP
 
     return False, None
 
@@ -1029,6 +1057,7 @@ def process_cycle(validated_data, strategy_pair, instrument):
         "group_id",
         *signal_columns,
         *cycle_cols[Trade.cycle_to_consider],
+        TargetProfitColumns.TP_END.value,
     ]
 
     merged_df = pd.merge_asof(
