@@ -42,6 +42,7 @@ class FractalInput(BaseModel):
 class FractalCycleInput(BaseModel):
     fractal_sd: int = None
     fractal_tf: int = None
+    fractal_cycle_start: int = None
 
 
 class TargetProfitInput(BaseModel):

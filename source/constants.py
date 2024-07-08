@@ -234,6 +234,7 @@ class TargetProfitColumns(Enum):
 class SecondCycleIDColumns(Enum):
     CTC_CYCLE_ID = "CTC Cycle ID"
     MTM_CYCLE_ID = "MTM Cycle ID"
+    FRACTAL_CYCLE_ID = "Fractal Cycle ID"
 
 
 class CycleType(Enum):

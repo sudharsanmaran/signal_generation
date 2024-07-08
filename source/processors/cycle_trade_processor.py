@@ -623,19 +623,15 @@ def get_cycle_base_df(**kwargs):
         direction="backward",
     )
 
-    # update fractal count
-    for col in fractal_cycle_columns:
-        base_df[f"count_{col}"] = (base_df[col] is True).cumsum()
-        base_df[f"count_{col}"] = base_df[f"count_{col}"].where(
-            base_df[col] is True, ""
-        )
-
-    kwargs["fractal_cycle_columns"].extend(
-        [f"count_{col}" for col in fractal_cycle_columns]
-    )
     # merge bb1 the dataframes
     for key, df in close_time_frames_1_dfs.items():
         df = update_cycle_columns(df, base_df, start_datetime, kwargs)
+
+        # update fractal count
+        update_fractal_counter(df, fractal_cycle_columns)
+        # update fractal count cycle
+        update_fractal_cycle_id(kwargs, df)
+
         update_signal_start_price(df)
         merged_df = merge_dataframes(df, bb_time_frames_1_dfs, tf_bb_cols)
         close_time_frames_1_dfs[key] = merged_df
@@ -694,6 +690,73 @@ def get_cycle_base_df(**kwargs):
             df_to_analyze[tf] = df
 
     return df_to_analyze
+
+
+def update_fractal_counter(base_df, fractal_cycle_columns):
+    for col in fractal_cycle_columns:
+        # Initialize the count column
+        count_col = f"count_{col}"
+        base_df[count_col] = 0
+
+        # Iterate over each group
+        for group_id, group in base_df.groupby("group_id"):
+            # Calculate cumulative sum for True values in the column
+            cumulative_sum = (group[col] == True).cumsum()
+
+            # Update the base_df with the cumulative sum for the group
+            base_df.loc[base_df["group_id"] == group_id, count_col] = (
+                cumulative_sum
+            )
+
+            # Reset count to 0 where the column value is False
+            base_df.loc[
+                (base_df[col] == False) & (base_df["group_id"] == group_id),
+                count_col,
+            ] = 0
+
+
+def update_fractal_cycle_id(kwargs, df):
+    cycle_start_condition = {
+        MarketDirection.LONG: (
+            (df["market_direction"] == MarketDirection.LONG)
+            & (
+                df[f"P_1_FRACTAL_CONFIRMED_LONG_{kwargs.get('fractal_sd')}"]
+                is True
+            )
+            & (
+                df[
+                    f"count_P_1_FRACTAL_CONFIRMED_LONG_{kwargs.get('fractal_sd')}"
+                ]
+                >= kwargs.get("fractal_cycle_start")
+            )
+        ),
+        MarketDirection.SHORT: (
+            (df["market_direction"] == MarketDirection.SHORT)
+            & (
+                df[f"P_1_FRACTAL_CONFIRMED_SHORT_{kwargs.get('fractal_sd')}"]
+                is True
+            )
+            & (
+                df[
+                    f"count_P_1_FRACTAL_CONFIRMED_SHORT_{kwargs.get('fractal_sd')}"
+                ]
+                >= kwargs.get("fractal_cycle_start")
+            )
+        ),
+    }
+
+    cycle_end_condition = {
+        MarketDirection.LONG: df["market_direction"] == False,
+        MarketDirection.SHORT: df["market_direction"] == False,
+    }
+
+    update_cycle_number_by_condition(
+        df,
+        None,
+        cycle_start_condition,
+        cycle_end_condition,
+        id_column_name=SecondCycleIDColumns.FRACTAL_CYCLE_ID.value,
+    )
 
 
 def get_fractal_dataframes(

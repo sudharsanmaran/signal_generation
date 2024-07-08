@@ -1143,8 +1143,18 @@ def set_fractal_inputs(streamlit_inputs, saved_inputs):
             value=saved_inputs.get("fractal_tf", 1),
         )
 
+        fractal_cycle_start = st.number_input(
+            "Fractal Cycle Start",
+            min_value=1,
+            value=saved_inputs.get("fractal_cycle_start", 1),
+        )
+
         streamlit_inputs.update(
-            {"fractal_sd": fractal_sd, "fractal_tf": fractal_tf}
+            {
+                "fractal_sd": fractal_sd,
+                "fractal_tf": fractal_tf,
+                "fractal_cycle_start": fractal_cycle_start,
+            }
         )
 
 
