@@ -39,6 +39,11 @@ class FractalInput(BaseModel):
     exit_fractal_file_number: str = None
 
 
+class FractalCycleInput(BaseModel):
+    fractal_sd: int = None
+    fractal_tf: int = None
+
+
 class TargetProfitInput(BaseModel):
     tp_percentage: float = None
     tp_method: str = None

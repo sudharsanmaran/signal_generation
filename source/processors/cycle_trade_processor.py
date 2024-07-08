@@ -229,16 +229,35 @@ def formulate_files_to_read(kwargs):
             for time_frame, origin in close_time_frames_with_origin
         }
     )
+    # fractalcyle file
+    fractal_cycle_columns = [
+        f"P_1_FRACTAL_CONFIRMED_LONG_{kwargs.get('fractal_sd')}",
+        f"P_1_FRACTAL_CONFIRMED_SHORT_{kwargs.get('fractal_sd')}",
+    ]
+    files_to_read.update(
+        {
+            (kwargs.get("fractal_tf"), "fractal_cycle", None): {
+                "read": True,
+                "cols": [index, *fractal_cycle_columns],
+                "index_col": "dt",
+                "file_path": os.path.join(
+                    os.getenv("FRACTAL_CYCLE_FILE_PATH"),
+                    f"{kwargs.get('fractal_tf')}_result.csv",
+                ),
+            }
+        }
+    )
 
     return (
         files_to_read,
         rename_dict,
+        fractal_cycle_columns,
     )
 
 
 def update_cycle_columns(df, base_df, start_datetime, kwargs):
     # update direction
-    base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
+    # base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
     df = df.reset_index().rename(columns={"index": "dt"})
     signal_columns = [f"TAG_{id}" for id in kwargs.get("portfolio_ids")]
     merged_df = pd.merge_asof(
@@ -248,6 +267,7 @@ def update_cycle_columns(df, base_df, start_datetime, kwargs):
                 "TIMESTAMP",
                 "market_direction",
                 *signal_columns,
+                *kwargs.get("fractal_cycle_columns"),
             ]
         ],
         left_on="dt",
@@ -560,8 +580,10 @@ def get_cycle_base_df(**kwargs):
     (
         files_to_read,
         tf_bb_cols,
+        fractal_cycle_columns,
     ) = formulate_files_to_read(kwargs)
 
+    kwargs["fractal_cycle_columns"] = fractal_cycle_columns
     max_tf = max(tf_bb_cols.keys())
     adjusted_start_datetime = start_datetime - pd.Timedelta(minutes=max_tf[0])
     dfs = read_files(
@@ -570,11 +592,12 @@ def get_cycle_base_df(**kwargs):
         files_to_read,
     )
 
-    bb_time_frames_1_dfs, bb_time_frames_2_dfs, close_time_frames_1_dfs = (
-        {},
-        {},
-        {},
-    )
+    (
+        bb_time_frames_1_dfs,
+        bb_time_frames_2_dfs,
+        close_time_frames_1_dfs,
+        fractal_df,
+    ) = ({}, {}, {}, None)
     for key, df in dfs.items():
         tf, type, origin = key
         if type == "close" and origin == 1:
@@ -586,6 +609,30 @@ def get_cycle_base_df(**kwargs):
         if type == "bb" and origin == 2:
             bb_time_frames_2_dfs[(tf, origin)] = df
 
+        if type == "fractal_cycle":
+            fractal_df = df
+
+    # merge fractal cycle
+    fractal_df = fractal_df.reset_index().rename(columns={"index": "dt"})
+    base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
+    base_df = pd.merge_asof(
+        base_df,
+        fractal_df,
+        left_on="TIMESTAMP",
+        right_on="dt",
+        direction="backward",
+    )
+
+    # update fractal count
+    for col in fractal_cycle_columns:
+        base_df[f"count_{col}"] = (base_df[col] is True).cumsum()
+        base_df[f"count_{col}"] = base_df[f"count_{col}"].where(
+            base_df[col] is True, ""
+        )
+
+    kwargs["fractal_cycle_columns"].extend(
+        [f"count_{col}" for col in fractal_cycle_columns]
+    )
     # merge bb1 the dataframes
     for key, df in close_time_frames_1_dfs.items():
         df = update_cycle_columns(df, base_df, start_datetime, kwargs)
@@ -893,7 +940,8 @@ def check_cycle_entry_condition(row: pd.Series, state: dict) -> bool:
 def is_tp_exit(row, exit_state):
     is_tp_exit = False
     if (
-        row[TargetProfitColumns.TP_END.value] == "YES"
+        row[TargetProfitColumns.TP_END.value]
+        == "YES"
         # and exit_state.get("previous_tp", None) == "NO"
     ):
         is_tp_exit = True

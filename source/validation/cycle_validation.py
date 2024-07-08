@@ -4,13 +4,16 @@ from pydantic import field_validator
 from source.constants import CycleType, TradeType
 from source.validation.base_validation import (
     BaseInputs,
+    FractalCycleInput,
     FractalInput,
     TargetProfitInput,
 )
 from source.validation.validate_trade_management import TradingConfiguration
 
 
-class CycleInputs(BaseInputs, FractalInput, TargetProfitInput):
+class CycleInputs(
+    BaseInputs, FractalInput, TargetProfitInput, FractalCycleInput
+):
     long_entry_signals: List[tuple]
     short_entry_signals: List[tuple]
     long_exit_signals: List[tuple]

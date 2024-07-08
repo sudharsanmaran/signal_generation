@@ -1004,6 +1004,7 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
         streamlit_inputs["cycle_to_consider"] = cycle_to_consider
 
         set_target_profit_inputs(streamlit_inputs, saved_inputs)
+        set_fractal_inputs(streamlit_inputs, saved_inputs)
 
         st.text("BB Band 1 inputs:")
 
@@ -1120,6 +1121,31 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
                     "sds_2": sds_2,
                 }
             )
+
+
+def set_fractal_inputs(streamlit_inputs, saved_inputs):
+    check_fractal = st.checkbox(
+        "Check Fractal",
+        value=saved_inputs.get("check_fractal", False),
+    )
+    streamlit_inputs["check_fractal"] = check_fractal
+    if check_fractal:
+        fractal_sd = st.number_input(
+            "Fractal SD",
+            min_value=1,
+            step=1,
+            value=saved_inputs.get("fractal_sd", 2),
+        )
+
+        fractal_tf = st.number_input(
+            "Fractal Time Frame",
+            min_value=1,
+            value=saved_inputs.get("fractal_tf", 1),
+        )
+
+        streamlit_inputs.update(
+            {"fractal_sd": fractal_sd, "fractal_tf": fractal_tf}
+        )
 
 
 def set_target_profit_inputs(streamlit_inputs, saved_inputs):
