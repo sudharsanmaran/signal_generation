@@ -114,7 +114,7 @@ PA_ANALYSIS_FOLDER = f"{BASE_OUTPUT_FOLDER}/{PA}/pa_analysis_outputs"
 PA_ANALYSIS_CYCLE_FOLDER = (
     f"{BASE_OUTPUT_FOLDER}/{PA}/pa_analysis_cycle_outputs"
 )
-
+TARGET_PROFIT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{PA}/tp_outputs"
 # Define the percentage of available CPU to be used
 cpu_percent_to_use = 0.8  # You can adjust this percentage as needed
 
@@ -218,6 +218,16 @@ class FirstCycleColumns(Enum):
     # SIGNAL_START_TO_MINIMUM_PERCENT = "Signal Start to Minimum Percent"
     # DURATION_BETWEEN_MAX_MIN = "Duration Between Max Min"
     # AVG_OF_MAX_TO_AVG_OF_MIN = "Avg of Max to Avg of Min"
+
+
+class TargetProfitColumns(Enum):
+    TP_CLOSE = "TP Close"
+    TP_CUM_AVG_CLOSE = "TP Cum Avg Close"
+    TP_CUM_AVG_CLOSE_PERCENT = "TP Cum Avg Close Percent"
+    TP_END = "TP End"
+    TP_CUMMIN = "TP CumMin"
+    TP_CUMMAX = "TP CumMax"
+    TP_CLOSE_DIFF_PERCENT = "TP Close Diff Percent"
 
 
 class SecondCycleIDColumns(Enum):

@@ -26,6 +26,7 @@ from source.data_reader import (
 )
 from source.processors.cycle_analysis_processor import (
     update_MTM_CTC_cols,
+    update_target_profit_analysis,
 )
 from source.processors.signal_trade_processor import (
     get_market_direction,
@@ -989,6 +990,16 @@ def process_cycle(validated_data, strategy_pair, instrument):
         cycle_base_df,
         validated_data=validated_data,
         cycle_cols=cycle_cols,
+    )
+
+    update_target_profit_analysis(
+        cycle_base_df,
+        validated_data.get("tp_percentage"),
+        validated_data.get("tp_method"),
+        cycle_col_name=cycle_cols[CycleType.MTM_CYCLE][0],
+        close_col_name=cycle_cols[CycleType.FIRST_CYCLE][0].replace(
+            "cycle_no", "close_to"
+        ),
     )
 
     # update trade cycle columns
