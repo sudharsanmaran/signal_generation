@@ -721,7 +721,7 @@ def update_fractal_cycle_id(kwargs, df):
             (df["market_direction"] == MarketDirection.LONG)
             & (
                 df[f"P_1_FRACTAL_CONFIRMED_LONG_{kwargs.get('fractal_sd')}"]
-                is True
+                == True
             )
             & (
                 df[
@@ -734,7 +734,7 @@ def update_fractal_cycle_id(kwargs, df):
             (df["market_direction"] == MarketDirection.SHORT)
             & (
                 df[f"P_1_FRACTAL_CONFIRMED_SHORT_{kwargs.get('fractal_sd')}"]
-                is True
+                == True
             )
             & (
                 df[

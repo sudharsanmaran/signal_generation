@@ -90,9 +90,19 @@ def get_next_cycle_first_row(
     return None
 
 
-def update_max_to_min(
-    cycle_analysis, min_key, max_key, max_to_min_key, is_last_cycle=False
-):
+def update_max_to_min(**kwargs):
+    required_keys = ["max_key", "min_key", "max_to_min_key", "cycle_analysis"]
+    if not all(key in kwargs for key in required_keys):
+        raise ValueError(
+            f"Required keys are missing in the kwargs: {required_keys}"
+        )
+
+    max_key = kwargs.get("max_key")
+    min_key = kwargs.get("min_key")
+    max_to_min_key = kwargs.get("max_to_min_key")
+    cycle_analysis = kwargs.get("cycle_analysis")
+    is_last_cycle = kwargs.get("is_last_cycle", False)
+
     if cycle_analysis[max_key] is None or cycle_analysis[min_key] is None:
         cycle_analysis[max_to_min_key] = 0
         return
@@ -102,16 +112,32 @@ def update_max_to_min(
     cycle_analysis[max_to_min_key] = value
 
 
-def update_cycle_min_max(
-    cycle_analysis,
-    adjusted_cycle_data,
-    min_idx,
-    max_idx,
-    cycle_min,
-    cycle_max,
-    min_key,
-    max_key,
-):
+def update_cycle_min_max(**kwargs):
+    required_keys = [
+        "cycle_analysis",
+        "adjusted_cycle_data",
+        "min_idx",
+        "max_idx",
+        "cycle_min",
+        "cycle_max",
+        "min_key",
+        "max_key",
+    ]
+
+    if not all([key in kwargs for key in required_keys]):
+        raise ValueError(
+            f"Required keys are missing in the kwargs: {required_keys}"
+        )
+
+    max_idx = kwargs.get("max_idx")
+    min_idx = kwargs.get("min_idx")
+    cycle_min = kwargs.get("cycle_min")
+    cycle_max = kwargs.get("cycle_max")
+    cycle_analysis = kwargs.get("cycle_analysis")
+    adjusted_cycle_data = kwargs.get("adjusted_cycle_data")
+    min_key = kwargs.get("min_key")
+    max_key = kwargs.get("max_key")
+
     if max_idx:
         cycle_analysis[max_key] = adjusted_cycle_data.loc[max_idx, "High"]
     else:
@@ -129,13 +155,26 @@ def adj_close_max_to_min(df, kwargs):
     )
 
 
-def update_close_to_close(
-    market_direction,
-    cycle_analysis,
-    close_to_close_key,
-    last_close,
-    first_close,
-):
+def update_close_to_close(**kwargs):
+
+    required_keys = [
+        "market_direction",
+        "cycle_analysis",
+        "close_to_close_key",
+        "last_close",
+        "first_close",
+    ]
+    if not all(key in kwargs for key in required_keys):
+        raise ValueError(
+            f"Required keys are missing in the kwargs: {required_keys}"
+        )
+
+    market_direction = kwargs.get("market_direction")
+    cycle_analysis = kwargs.get("cycle_analysis")
+    close_to_close_key = kwargs.get("close_to_close_key")
+    last_close = kwargs.get("last_close")
+    first_close = kwargs.get("first_close")
+
     value = pd.NA
     if market_direction == MarketDirection.LONG:
         value = make_round(last_close - first_close)
