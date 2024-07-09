@@ -586,6 +586,7 @@ def update_pnts_frm_avg_till_max_to_min(**kwargs):
     required_keys = [
         "market_direction",
         "cycle_analysis",
+        "points_frm_avg_till_max_to_min_key",
     ]
 
     if not all(key in kwargs for key in required_keys):
@@ -599,9 +600,9 @@ def update_pnts_frm_avg_till_max_to_min(**kwargs):
     max_key = kwargs.get("max_key")
     avg_min_key = kwargs.get("avg_min_key")
     avg_max_key = kwargs.get("avg_max_key")
-    points_frm_avg_till_max_to_min_key = kwargs.get(
+    points_frm_avg_till_max_to_min_key = kwargs[
         "points_frm_avg_till_max_to_min_key"
-    )
+    ]
 
     value = pd.NA
     if cycle_analysis[max_key] is None or cycle_analysis[min_key] is None:
