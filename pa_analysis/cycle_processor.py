@@ -1,7 +1,6 @@
 from datetime import timedelta
-from typing import Dict, List
+from typing import List
 import pandas as pd
-import numpy as np
 from pandas.tseries.offsets import BDay
 
 from pa_analysis.constants import (
@@ -17,6 +16,11 @@ from source.processors.cycle_analysis_processor import (
 )
 from source.processors.cycle_trade_processor import (
     get_cycle_base_df,
+    get_fractal_count_columns,
+    get_fractal_cycle_columns,
+    update_fractal_counter,
+    update_fractal_counter_1,
+    update_fractal_cycle_id,
     update_second_cycle_id,
 )
 from source.utils import (
@@ -34,12 +38,76 @@ from source.constants import (
 from source.processors.signal_trade_processor import write_dataframe_to_csv
 
 
+def update_growth_percent_fractal_count(df, kwargs):
+    """
+    Update the growth percent for the fractal count
+    """
+    # df["long_fractal_count_growth_percent"] = pd.NA
+    # df["short_fractal_count_growth_percent"] = pd.NA
+    fractal_count_columns = get_fractal_count_columns(
+        fractal_sd=kwargs["fractal_count_sd"]
+    )
+    for col in fractal_count_columns:
+        df[f"growth_percent_{col}"] = pd.NA
+        fractal_count_mask = df[f"count_{col}"] > 0
+
+        # Get the close value of the first row where the mask is True
+        first_close_value = df.loc[fractal_count_mask, "Close"].iloc[0]
+
+        # Calculate the growth percent
+        df.loc[fractal_count_mask, f"growth_percent_{col}"] = make_round(
+            (
+                (df.loc[fractal_count_mask, "Close"] - first_close_value)
+                / first_close_value
+            )
+            * 100
+        )
+
+
 def process_cycles(**kwargs):
     # get the base df
     all_df = get_cycle_base_df(**kwargs)
 
     # process the data
     for time_frame, df in all_df.items():
+
+        results = analyze_cycles(df, time_frame, kwargs)
+
+        # max to min percent
+        update_max_to_min_percent(df, kwargs)
+
+        # update fractal count for fracatl cylce for skip initial fractals
+        fractal_cycle_columns = get_fractal_cycle_columns(
+            fractal_sd=kwargs["fractal_sd"]
+        )
+        fractal_count_columns = get_fractal_count_columns(
+            fractal_sd=kwargs["fractal_count_sd"]
+        )
+
+        bb_cycle_column = [col for col in df.columns if "cycle_no_" in col][0]
+
+        update_fractal_counter(
+            df, fractal_cycle_columns, group_by_col=bb_cycle_column
+        )
+        # update fractal count cycle
+        update_fractal_cycle_id(
+            kwargs,
+            df,
+            bb_cycle_col=bb_cycle_column,
+            end_condition_col="adjusted_close_for_max_to_min",
+        )
+
+        update_fractal_counter_1(
+            df,
+            fractal_count_columns,
+            group_by_col=bb_cycle_column,
+            condition=df[SecondCycleIDColumns.FRACTAL_CYCLE_ID.value] > 0,
+            skip_count=kwargs["fractal_count_skip"],
+        )
+
+        # update fractal count growth percent
+        update_growth_percent_fractal_count(df, kwargs)
+
         update_secondary_cycle_analytics(
             df,
             results=[],
@@ -53,11 +121,6 @@ def process_cycles(**kwargs):
                 FirstCycleColumns.CLOSE_TO_CLOSE.value,
             ],
         )
-
-        results = analyze_cycles(df, time_frame, kwargs)
-
-        # max to min percent
-        update_max_to_min_percent(df, kwargs)
 
         first_cycle_columns = [col for col in df.columns if "cycle_no_" in col]
 
@@ -333,7 +396,6 @@ def update_secondary_cycle_analytics(
 
     # Remove unnecessary columns
     cols = [
-        "adjusted_close_for_max_to_min",
         "signal_start_price",
         # "adjusted_close",
     ]

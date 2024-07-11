@@ -2,6 +2,7 @@ from collections import defaultdict, deque
 from itertools import chain
 import os
 
+import numpy as np
 import pandas as pd
 
 
@@ -230,45 +231,50 @@ def formulate_files_to_read(kwargs):
         }
     )
     # fractalcyle file
-    fractal_cycle_columns = [
-        f"P_1_FRACTAL_CONFIRMED_LONG_{kwargs.get('fractal_sd')}",
-        f"P_1_FRACTAL_CONFIRMED_SHORT_{kwargs.get('fractal_sd')}",
-    ]
-    files_to_read.update(
-        {
-            (kwargs.get("fractal_tf"), "fractal_cycle", None): {
-                "read": True,
-                "cols": [index, *fractal_cycle_columns],
-                "index_col": "dt",
-                "file_path": os.path.join(
-                    os.getenv("FRACTAL_CYCLE_COUNT_FILE_PATH"),
-                    f"{kwargs.get('fractal_tf')}_result.csv",
-                ),
+
+    if kwargs.get("fractal_cycle"):
+        fractal_cycle_columns = get_fractal_cycle_columns(
+            fractal_sd=kwargs.get("fractal_sd")
+        )
+        files_to_read.update(
+            {
+                (kwargs.get("fractal_tf"), "fractal_cycle", None): {
+                    "read": True,
+                    "cols": [index, *fractal_cycle_columns],
+                    "index_col": "dt",
+                    "file_path": os.path.join(
+                        os.getenv("FRACTAL_CYCLE_COUNT_FILE_PATH"),
+                        f"{kwargs.get('fractal_tf')}_result.csv",
+                    ),
+                }
             }
-        }
-    )
-    fractal_count_columns = [
-        f"fractal_count_{col}" for col in fractal_cycle_columns
-    ]
-    files_to_read.update(
-        {
-            (kwargs.get("fractal_count_tf"), "fractal_count", None): {
-                "read": True,
-                "cols": [index, *fractal_cycle_columns],
-                "index_col": "dt",
-                "file_path": os.path.join(
-                    os.getenv("FRACTAL_CYCLE_COUNT_FILE_PATH"),
-                    f"{kwargs.get('fractal_count_tf')}_result.csv",
-                ),
-                "rename": {
-                    col: name
-                    for col, name in zip(
-                        fractal_cycle_columns, fractal_count_columns
-                    )
-                },
+        )
+
+    if kwargs.get("fractal_count"):
+
+        fractal_count_columns = get_fractal_count_columns(
+            fractal_sd=kwargs.get("fractal_count_sd")
+        )
+
+        files_to_read.update(
+            {
+                (kwargs.get("fractal_count_tf"), "fractal_count", None): {
+                    "read": True,
+                    "cols": [index, *fractal_cycle_columns],
+                    "index_col": "dt",
+                    "file_path": os.path.join(
+                        os.getenv("FRACTAL_CYCLE_COUNT_FILE_PATH"),
+                        f"{kwargs.get('fractal_count_tf')}_result.csv",
+                    ),
+                    "rename": {
+                        col: name
+                        for col, name in zip(
+                            fractal_cycle_columns, fractal_count_columns
+                        )
+                    },
+                }
             }
-        }
-    )
+        )
 
     return (
         files_to_read,
@@ -276,6 +282,23 @@ def formulate_files_to_read(kwargs):
         fractal_cycle_columns,
         fractal_count_columns,
     )
+
+
+def get_fractal_cycle_columns(fractal_sd):
+    fractal_cycle_columns = [
+        f"P_1_FRACTAL_CONFIRMED_LONG_{fractal_sd}",
+        f"P_1_FRACTAL_CONFIRMED_SHORT_{fractal_sd}",
+    ]
+
+    return fractal_cycle_columns
+
+
+def get_fractal_count_columns(fractal_sd):
+    fractal_cycle_columns = get_fractal_cycle_columns(fractal_sd)
+    fractal_count_columns = [
+        f"fractal_count_{col}" for col in fractal_cycle_columns
+    ]
+    return fractal_count_columns
 
 
 def update_cycle_columns(df, base_df, start_datetime, kwargs):
@@ -439,9 +462,13 @@ def update_cycle_number_by_condition(
     cycle_end_condition,
     id_column_name=None,
     counter_starter=1,
+    group_by_col="group_id",
+    group_start=0,
 ):
-    for group, group_df in df.groupby("group_id"):
+    for group, group_df in df.groupby(group_by_col):
         # Initialize
+        if group < group_start:
+            continue
         current_cycle = counter_starter
         group_indices = group_df.index
         cycle_counter = pd.Series(0, index=group_indices)
@@ -677,14 +704,6 @@ def get_cycle_base_df(**kwargs):
     # merge bb1 the dataframes
     for key, df in close_time_frames_1_dfs.items():
         df = update_cycle_columns(df, base_df, start_datetime, kwargs)
-
-        # update fractal count
-        update_fractal_counter(df, fractal_cycle_columns)
-        # update fractal count cycle
-        update_fractal_cycle_id(kwargs, df)
-
-        update_fractal_counter(df, fractal_count_columns)
-
         update_signal_start_price(df)
         merged_df = merge_dataframes(df, bb_time_frames_1_dfs, tf_bb_cols)
         close_time_frames_1_dfs[key] = merged_df
@@ -745,30 +764,100 @@ def get_cycle_base_df(**kwargs):
     return df_to_analyze
 
 
-def update_fractal_counter(base_df, fractal_cycle_columns):
+def update_fractal_counter(
+    base_df,
+    fractal_cycle_columns,
+    group_by_col="group_id",
+    condition=None,
+    skip_count=0,
+):
     for col in fractal_cycle_columns:
         # Initialize the count column
         count_col = f"count_{col}"
         base_df[count_col] = 0
 
         # Iterate over each group
-        for group_id, group in base_df.groupby("group_id"):
+        for group_id, group in base_df.groupby(group_by_col):
+
+            if group_id < 2:
+                continue
+
             # Calculate cumulative sum for True values in the column
-            cumulative_sum = (group[col] == True).cumsum()
+            # Apply condition if provided, otherwise default to the column being True
+            if condition is not None:
+                cumulative_sum = (
+                    (group[col] == True) & (condition.loc[group.index])
+                ).cumsum()
+            else:
+                cumulative_sum = (group[col] == True).cumsum()
 
             # Update the base_df with the cumulative sum for the group
-            base_df.loc[base_df["group_id"] == group_id, count_col] = (
+            base_df.loc[base_df[group_by_col] == group_id, count_col] = (
                 cumulative_sum
             )
 
             # Reset count to 0 where the column value is False
             base_df.loc[
-                (base_df[col] == False) & (base_df["group_id"] == group_id),
+                (base_df[col] == False) & (base_df[group_by_col] == group_id),
                 count_col,
             ] = 0
 
 
-def update_fractal_cycle_id(kwargs, df):
+def update_fractal_counter_1(
+    base_df,
+    fractal_cycle_columns,
+    group_by_col="group_id",
+    condition=None,
+    skip_count=0,
+):
+    for col in fractal_cycle_columns:
+        # Initialize the count column
+        count_col = f"count_{col}"
+        base_df[count_col] = 0
+
+        # Iterate over each group
+        for group_id, group in base_df.groupby(group_by_col):
+
+            if group_id < 2:
+                continue
+
+            # Calculate the boolean mask for the condition
+            if condition is not None:
+                mask = (group[col] == True) & (condition.loc[group.index])
+            else:
+                mask = group[col] == True
+
+            # Find the indices where the condition is True
+            true_indices = np.where(mask)[0]
+
+            # Skip the first `skip_count` occurrences
+            if len(true_indices) > skip_count:
+                true_indices = true_indices[skip_count:]
+
+            # Initialize a zero array for the cumulative sum
+            cumsum_array = np.zeros(len(group), dtype=int)
+
+            # Set the positions of remaining True values to 1
+            cumsum_array[true_indices] = 1
+
+            # Calculate the cumulative sum
+            cumulative_sum = np.cumsum(cumsum_array)
+
+            # Update the base_df with the cumulative sum for the group
+            base_df.loc[base_df[group_by_col] == group_id, count_col] = (
+                cumulative_sum
+            )
+
+            # Reset count to 0 where the column value is False
+            base_df.loc[
+                (base_df[col] == False) & (base_df[group_by_col] == group_id),
+                count_col,
+            ] = 0
+
+    return base_df
+
+
+def update_fractal_cycle_id(kwargs, df, bb_cycle_col, end_condition_col):
     cycle_start_condition = {
         MarketDirection.LONG: (
             (df["market_direction"] == MarketDirection.LONG)
@@ -780,8 +869,9 @@ def update_fractal_cycle_id(kwargs, df):
                 df[
                     f"count_P_1_FRACTAL_CONFIRMED_LONG_{kwargs.get('fractal_sd')}"
                 ]
-                >= kwargs.get("fractal_cycle_start")
+                > kwargs.get("fractal_cycle_start")
             )
+            & (df[bb_cycle_col] > 2)
         ),
         MarketDirection.SHORT: (
             (df["market_direction"] == MarketDirection.SHORT)
@@ -793,14 +883,20 @@ def update_fractal_cycle_id(kwargs, df):
                 df[
                     f"count_P_1_FRACTAL_CONFIRMED_SHORT_{kwargs.get('fractal_sd')}"
                 ]
-                >= kwargs.get("fractal_cycle_start")
+                > kwargs.get("fractal_cycle_start")
             )
+            & (df[bb_cycle_col] > 2)
         ),
     }
 
+    # adjust max to min
+    end_condition = (
+        df[end_condition_col] < df[FirstCycleColumns.CLOSE_TO_CLOSE.value]
+    )
+
     cycle_end_condition = {
-        MarketDirection.LONG: df["market_direction"] == False,
-        MarketDirection.SHORT: df["market_direction"] == False,
+        MarketDirection.LONG: end_condition,
+        MarketDirection.SHORT: end_condition,
     }
 
     update_cycle_number_by_condition(
@@ -810,6 +906,8 @@ def update_fractal_cycle_id(kwargs, df):
         cycle_end_condition,
         id_column_name=SecondCycleIDColumns.FRACTAL_CYCLE_ID.value,
         counter_starter=0,
+        group_by_col=bb_cycle_col,
+        group_start=1,
     )
 
 

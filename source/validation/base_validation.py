@@ -42,12 +42,41 @@ class FractalInput(BaseModel):
 class FractalCountInput(BaseModel):
     fractal_count_sd: int = None
     fractal_count_tf: int = None
+    fractal_count_skip: int = None
+    fractal_count: bool = None
+
+    @field_validator("fractal_count")
+    def validate_fractal_count(cls, value, values):
+        if value:
+            if (
+                values.data["fractal_count_sd"] is None
+                or values.data["fractal_count_tf"] is None
+                or values.data["fractal_count_skip"] is None
+            ):
+                raise ValueError(
+                    "Fractal Count SD, Fractal Count TF and Fractal Count Skip are required"
+                )
+        return value
 
 
 class FractalCycleInput(BaseModel):
     fractal_sd: int = None
     fractal_tf: int = None
     fractal_cycle_start: int = None
+    fractal_cycle: bool = None
+
+    @field_validator("fractal_cycle")
+    def validate_fractal_cycle(cls, value, values):
+        if value:
+            if (
+                values.data["fractal_sd"] is None
+                or values.data["fractal_tf"] is None
+                or values.data["fractal_cycle_start"] is None
+            ):
+                raise ValueError(
+                    "Fractal SD, Fractal TF and Fractal Cycle Start are required"
+                )
+        return value
 
 
 class TargetProfitInput(BaseModel):

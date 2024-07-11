@@ -1146,7 +1146,7 @@ def set_fractal_inputs(streamlit_inputs, saved_inputs):
 
         fractal_cycle_start = st.number_input(
             "Fractal Cycle Start",
-            min_value=1,
+            min_value=0,
             value=saved_inputs.get("fractal_cycle_start", 1),
         )
 
@@ -1162,6 +1162,7 @@ def set_fractal_inputs(streamlit_inputs, saved_inputs):
         "Fractal Count",
         value=saved_inputs.get("fractal_count", False),
     )
+    streamlit_inputs["fractal_count"] = fractal_count
     if fractal_count:
         fractal_count_sd = st.number_input(
             "Fractal Count SD",
@@ -1175,11 +1176,17 @@ def set_fractal_inputs(streamlit_inputs, saved_inputs):
             min_value=1,
             value=saved_inputs.get("fractal_count_tf", 1),
         )
+        fractal_count_skip = st.number_input(
+            "Fractal Count Skip",
+            min_value=0,
+            value=saved_inputs.get("fractal_count_skip", 1),
+        )
 
         streamlit_inputs.update(
             {
                 "fractal_count_sd": fractal_count_sd,
                 "fractal_count_tf": fractal_count_tf,
+                "fractal_count_skip": fractal_count_skip,
             }
         )
 
