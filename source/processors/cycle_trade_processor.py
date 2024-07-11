@@ -241,9 +241,31 @@ def formulate_files_to_read(kwargs):
                 "cols": [index, *fractal_cycle_columns],
                 "index_col": "dt",
                 "file_path": os.path.join(
-                    os.getenv("FRACTAL_CYCLE_FILE_PATH"),
+                    os.getenv("FRACTAL_CYCLE_COUNT_FILE_PATH"),
                     f"{kwargs.get('fractal_tf')}_result.csv",
                 ),
+            }
+        }
+    )
+    fractal_count_columns = [
+        f"fractal_count_{col}" for col in fractal_cycle_columns
+    ]
+    files_to_read.update(
+        {
+            (kwargs.get("fractal_count_tf"), "fractal_count", None): {
+                "read": True,
+                "cols": [index, *fractal_cycle_columns],
+                "index_col": "dt",
+                "file_path": os.path.join(
+                    os.getenv("FRACTAL_CYCLE_COUNT_FILE_PATH"),
+                    f"{kwargs.get('fractal_count_tf')}_result.csv",
+                ),
+                "rename": {
+                    col: name
+                    for col, name in zip(
+                        fractal_cycle_columns, fractal_count_columns
+                    )
+                },
             }
         }
     )
@@ -252,6 +274,7 @@ def formulate_files_to_read(kwargs):
         files_to_read,
         rename_dict,
         fractal_cycle_columns,
+        fractal_count_columns,
     )
 
 
@@ -268,6 +291,7 @@ def update_cycle_columns(df, base_df, start_datetime, kwargs):
                 "market_direction",
                 *signal_columns,
                 *kwargs.get("fractal_cycle_columns"),
+                *kwargs.get("fractal_count_columns"),
             ]
         ],
         left_on="dt",
@@ -570,6 +594,35 @@ def update_cycle_count_1(merged_df, col):
     merged_df[f"cycle_no_{col}"] += initial_counter
 
 
+def merge_fractal_data(base_df, fractal_df, fractal_count_df):
+    # Reset index and rename for merging
+    fractal_df = fractal_df.reset_index().rename(columns={"index": "dt"})
+    fractal_count_df = fractal_count_df.reset_index().rename(
+        columns={"index": "dt"}
+    )
+    base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
+
+    # Merge fractal cycle data
+    base_df = pd.merge_asof(
+        base_df,
+        fractal_df,
+        left_on="TIMESTAMP",
+        right_on="dt",
+        direction="backward",
+    ).drop(columns=["dt"])
+
+    # Merge fractal count data
+    base_df = pd.merge_asof(
+        base_df,
+        fractal_count_df,
+        left_on="TIMESTAMP",
+        right_on="dt",
+        direction="backward",
+    ).drop(columns=["dt"])
+
+    return base_df
+
+
 def get_cycle_base_df(**kwargs):
     base_df = kwargs.get("base_df")
     start_datetime, end_datetime = (
@@ -581,9 +634,12 @@ def get_cycle_base_df(**kwargs):
         files_to_read,
         tf_bb_cols,
         fractal_cycle_columns,
+        fractal_count_columns,
     ) = formulate_files_to_read(kwargs)
 
     kwargs["fractal_cycle_columns"] = fractal_cycle_columns
+    kwargs["fractal_count_columns"] = fractal_count_columns
+
     max_tf = max(tf_bb_cols.keys())
     adjusted_start_datetime = start_datetime - pd.Timedelta(minutes=max_tf[0])
     dfs = read_files(
@@ -597,7 +653,8 @@ def get_cycle_base_df(**kwargs):
         bb_time_frames_2_dfs,
         close_time_frames_1_dfs,
         fractal_df,
-    ) = ({}, {}, {}, None)
+        fractal_count_df,
+    ) = ({}, {}, {}, None, None)
     for key, df in dfs.items():
         tf, type, origin = key
         if type == "close" and origin == 1:
@@ -612,16 +669,10 @@ def get_cycle_base_df(**kwargs):
         if type == "fractal_cycle":
             fractal_df = df
 
-    # merge fractal cycle
-    fractal_df = fractal_df.reset_index().rename(columns={"index": "dt"})
-    base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
-    base_df = pd.merge_asof(
-        base_df,
-        fractal_df,
-        left_on="TIMESTAMP",
-        right_on="dt",
-        direction="backward",
-    )
+        if type == "fractal_count":
+            fractal_count_df = df
+
+    base_df = merge_fractal_data(base_df, fractal_df, fractal_count_df)
 
     # merge bb1 the dataframes
     for key, df in close_time_frames_1_dfs.items():
@@ -631,6 +682,8 @@ def get_cycle_base_df(**kwargs):
         update_fractal_counter(df, fractal_cycle_columns)
         # update fractal count cycle
         update_fractal_cycle_id(kwargs, df)
+
+        update_fractal_counter(df, fractal_count_columns)
 
         update_signal_start_price(df)
         merged_df = merge_dataframes(df, bb_time_frames_1_dfs, tf_bb_cols)
@@ -756,6 +809,7 @@ def update_fractal_cycle_id(kwargs, df):
         cycle_start_condition,
         cycle_end_condition,
         id_column_name=SecondCycleIDColumns.FRACTAL_CYCLE_ID.value,
+        counter_starter=0,
     )
 
 

@@ -39,6 +39,11 @@ class FractalInput(BaseModel):
     exit_fractal_file_number: str = None
 
 
+class FractalCountInput(BaseModel):
+    fractal_count_sd: int = None
+    fractal_count_tf: int = None
+
+
 class FractalCycleInput(BaseModel):
     fractal_sd: int = None
     fractal_tf: int = None

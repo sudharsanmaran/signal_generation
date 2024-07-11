@@ -40,7 +40,7 @@ def process_cycles(**kwargs):
 
     # process the data
     for time_frame, df in all_df.items():
-        update_second_cycle_analytics_1(
+        update_secondary_cycle_analytics(
             df,
             results=[],
             time_frame=time_frame,
@@ -70,7 +70,7 @@ def process_cycles(**kwargs):
             first_cycle_columns=first_cycle_columns,
             second_cycle_columns=secondary_cycle_columns,
         )
-        update_second_cycle_analytics_1(
+        update_secondary_cycle_analytics(
             df,
             results,
             time_frame,
@@ -99,7 +99,7 @@ def process_cycles(**kwargs):
             first_cycle_columns=first_cycle_columns,
             second_cycle_columns=secondary_cycle_columns,
         )
-        update_second_cycle_analytics_1(
+        update_secondary_cycle_analytics(
             df,
             results,
             time_frame,
@@ -152,7 +152,7 @@ def update_max_to_min_percent(df, kwargs):
     ] = "YES"
 
 
-def update_second_cycle_analytics_1(
+def update_secondary_cycle_analytics(
     df,
     results,
     time_frame,

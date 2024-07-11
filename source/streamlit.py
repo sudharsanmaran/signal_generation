@@ -1124,12 +1124,13 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
 
 
 def set_fractal_inputs(streamlit_inputs, saved_inputs):
-    check_fractal = st.checkbox(
-        "Check Fractal",
-        value=saved_inputs.get("check_fractal", False),
+    fractal_cycle = st.checkbox(
+        "Fractal Cycle",
+        value=saved_inputs.get("fractal_cycle", False),
     )
-    streamlit_inputs["check_fractal"] = check_fractal
-    if check_fractal:
+
+    streamlit_inputs["fractal_cycle"] = fractal_cycle
+    if fractal_cycle:
         fractal_sd = st.number_input(
             "Fractal SD",
             min_value=1,
@@ -1154,6 +1155,31 @@ def set_fractal_inputs(streamlit_inputs, saved_inputs):
                 "fractal_sd": fractal_sd,
                 "fractal_tf": fractal_tf,
                 "fractal_cycle_start": fractal_cycle_start,
+            }
+        )
+
+    fractal_count = st.checkbox(
+        "Fractal Count",
+        value=saved_inputs.get("fractal_count", False),
+    )
+    if fractal_count:
+        fractal_count_sd = st.number_input(
+            "Fractal Count SD",
+            min_value=1,
+            step=1,
+            value=saved_inputs.get("fractal_count_sd", 2),
+        )
+
+        fractal_count_tf = st.number_input(
+            "Fractal Count Time Frame",
+            min_value=1,
+            value=saved_inputs.get("fractal_count_tf", 1),
+        )
+
+        streamlit_inputs.update(
+            {
+                "fractal_count_sd": fractal_count_sd,
+                "fractal_count_tf": fractal_count_tf,
             }
         )
 
