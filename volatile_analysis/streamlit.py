@@ -16,11 +16,15 @@ def main():
     instrument = st.text_input("Instrument", value="BANKNIFTY")
     streamlit_inputs["instrument"] = instrument
 
-    parameter_id = st.number_input("Parameter ID", value=1, step=1)
-    streamlit_inputs["parameter_id"] = parameter_id
+    periods = st.multiselect("Periods", options=[20, 40], default=[20])
+    streamlit_inputs["periods"] = periods
 
-    period = st.selectbox("Period", options=[5, 20, 30], index=1)
-    streamlit_inputs["period"] = period
+    streamlit_inputs["parameter_id"] = {}
+    for period in periods:
+        parameter_id = st.number_input(
+            f"Parameter ID for {period}", value=1, step=1
+        )
+        streamlit_inputs["parameter_id"].update({period: parameter_id})
 
     set_start_end_datetime(streamlit_inputs, {})
 

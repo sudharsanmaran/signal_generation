@@ -3,27 +3,31 @@ from source.utils import make_round
 from volatile_analysis.constants import AnalysisConstant, VolatileTag
 
 
-def cumulative_stddev(df, col):
+def cumulative_stddev(df, col, period):
     """Calculate the cumulative standard deviation of a list of numbers."""
-    df[AnalysisConstant.CUM_STD.value] = df[col].expanding().std()
+    df[f"{period}_{AnalysisConstant.CUM_STD.value}"] = (
+        df[col].expanding().std()
+    )
     return df
 
 
-def cumulutaive_avg_volatility(df, col):
+def cumulutaive_avg_volatility(df, col, period):
     """Calculate the cumulative average volatility of a list of numbers."""
-    df[AnalysisConstant.CUM_AVG_VOLATILITY.value] = df[col].expanding().mean()
-
+    df[f"{period}_{AnalysisConstant.CUM_AVG_VOLATILITY.value}"] = (
+        df[col].expanding().mean()
+    )
     return df
 
 
 def z_score(
     df,
     col,
+    period,
     cum_std_col=AnalysisConstant.CUM_STD.value,
     cum_avg_volatility_col=AnalysisConstant.CUM_AVG_VOLATILITY.value,
 ):
     """Calculate the z score of a list of numbers."""
-    df[AnalysisConstant.Z_SCORE.value] = make_round(
+    df[f"{period}_{AnalysisConstant.Z_SCORE.value}"] = make_round(
         (df[cum_avg_volatility_col] - df[col]) / df[cum_std_col]
     ).fillna(0)
 
@@ -38,20 +42,20 @@ def normalize_column(df, col, new_col, threshold=0.5):
 
 
 def trailing_window_sum(
-    df, window_size, col=AnalysisConstant.NORM_Z_SCORE.value
+    df, window_size, period, col=AnalysisConstant.NORM_Z_SCORE.value
 ):
     """Calculate the trailing window sum of a list of numbers."""
-    df[AnalysisConstant.TRAIL_WINDOW_SUM.value] = (
+    df[f"{period}_{AnalysisConstant.TRAIL_WINDOW_SUM.value}"] = (
         df[col].rolling(window=window_size).sum()
     )
     return df
 
 
 def trailing_window_avg(
-    df, window_size, col=AnalysisConstant.TRAIL_WINDOW_SUM.value
+    df, window_size, period, col=AnalysisConstant.TRAIL_WINDOW_SUM.value
 ):
     """Calculate the trailing window average of a list of numbers."""
-    df[AnalysisConstant.TRAIL_WINDOW_AVG.value] = (
+    df[f"{period}_{AnalysisConstant.TRAIL_WINDOW_AVG.value}"] = (
         df[col].rolling(window=window_size).mean()
     )
     return df
@@ -98,40 +102,34 @@ def get_first_tag(df, col):
     return first_tag
 
 
-def update_group_id(df):
+def update_group_id(
+    df,
+    col=AnalysisConstant.VOLATILE_TAG.value,
+    new_col=AnalysisConstant.GROUP_ID.value,
+):
     pd.set_option("display.max_rows", None)
 
     # Define the condition for tagging group changes
     condition = (
-        (df[AnalysisConstant.VOLATILE_TAG.value] == VolatileTag.HV.value)
-        & (
-            df[AnalysisConstant.VOLATILE_TAG.value].shift(1)
-            == VolatileTag.LV.value
-        )
+        (df[col] == VolatileTag.HV.value)
+        & (df[col].shift(1) == VolatileTag.LV.value)
     ) | (
-        (df[AnalysisConstant.VOLATILE_TAG.value] == VolatileTag.LV.value)
-        & (
-            df[AnalysisConstant.VOLATILE_TAG.value].shift(1)
-            == VolatileTag.HV.value
-        )
+        (df[col] == VolatileTag.LV.value)
+        & (df[col].shift(1) == VolatileTag.HV.value)
     )
 
     # Skip initial NaN values
-    first_valid_index = df[
-        AnalysisConstant.VOLATILE_TAG.value
-    ].first_valid_index()
+    first_valid_index = df[col].first_valid_index()
 
     # Initialize GROUP_ID with 0
-    df[AnalysisConstant.GROUP_ID.value] = 0
+    df[new_col] = 0
 
     if first_valid_index is not None:
         # Apply the condition starting from the first valid index
         condition = condition[first_valid_index:]
 
         # Mark the groups based on the condition
-        df.loc[first_valid_index:, AnalysisConstant.GROUP_ID.value] = (
-            condition.cumsum() + 1
-        )
+        df.loc[first_valid_index:, new_col] = condition.cumsum() + 1
 
     return df
 
