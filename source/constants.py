@@ -108,6 +108,7 @@ confirm_fractal_column_dict = {
 BASE_OUTPUT_FOLDER = "outputs"
 SG = "sg"
 PA = "pa"
+VA = "va"
 MERGED_DF_FOLDER = f"{BASE_OUTPUT_FOLDER}/{SG}/merged_df"
 SG_OUTPUT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{SG}/signal_generation_output"
 SG_CYCLE_OUTPUT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{SG}/cycle_output"
@@ -116,6 +117,7 @@ PA_ANALYSIS_CYCLE_FOLDER = (
     f"{BASE_OUTPUT_FOLDER}/{PA}/pa_analysis_cycle_outputs"
 )
 TARGET_PROFIT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{PA}/tp_outputs"
+VOLATILE_OUTPUT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{VA}/volatile_outputs"
 # Define the percentage of available CPU to be used
 cpu_percent_to_use = 0.8  # You can adjust this percentage as needed
 

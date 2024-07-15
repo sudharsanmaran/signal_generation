@@ -1403,13 +1403,13 @@ def set_trade_type(streamlit_inputs, saved_inputs):
     return trade_type, trade_start_time, trade_end_time
 
 
-def execute(validated_input, exec_func: callable):
+def execute(validated_input, exec_func: callable, module="Trade Management"):
     start = time.time()
     try:
         multiple_process(validated_input, exec_func)
         # exec_func(validated_input, (1, 1, 1), "BANKNIFTY")
     except Exception as e:
-        st.error(f"Error executing trade management: {e}")
+        st.error(f"Error executing {module}: {e}")
         return
     stop = time.time()
 
