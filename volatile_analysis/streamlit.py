@@ -1,7 +1,4 @@
-# streamlit for inputs
-
-# z score input
-
+import time
 import streamlit as st
 
 from source.streamlit import set_start_end_datetime, validate
@@ -55,7 +52,14 @@ def main():
         if st.button("Submit"):
             validated_input = validate(streamlit_inputs, key=validate_inputs)
             if validated_input:
-                process_volatile(validated_data=validated_input)
+                try:
+                    start = time.time()
+                    process_volatile(validated_data=validated_input)
+                    st.success(
+                        f"Data processed successfully, time taken: {time.time()-start}"
+                    )
+                except Exception as e:
+                    st.write(f"Error: {e}")
     else:
         st.warning("Please fill all the required fields")
 

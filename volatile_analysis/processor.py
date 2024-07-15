@@ -162,7 +162,6 @@ def get_next_group_first_row(group_id, df):
     if next_group.empty:
         return None
     return next_group.iloc[0]
-    return
 
 
 def get_base_df(validated_data):
