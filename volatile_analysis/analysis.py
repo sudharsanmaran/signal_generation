@@ -80,12 +80,7 @@ def update_cycle_id(
 ):
     """Update the cycle id of a dataframe."""
 
-    pd.set_option("display.max_rows", None)
-
-    first_tag_index = (
-        df[col].isin([VolatileTag.HV.value, VolatileTag.LV.value]).idxmax()
-    )
-    first_tag = df.loc[first_tag_index, col]
+    first_tag = get_first_tag(df, col)
     # make condition
     condition = (df[col] == first_tag) & (df[col].shift(1) != first_tag)
 
@@ -95,11 +90,61 @@ def update_cycle_id(
     return df
 
 
-def cycle_duration(data):
+def get_first_tag(df, col):
+    first_tag_index = (
+        df[col].isin([VolatileTag.HV.value, VolatileTag.LV.value]).idxmax()
+    )
+    first_tag = df.loc[first_tag_index, col]
+    return first_tag
+
+
+def update_group_id(df):
+    pd.set_option("display.max_rows", None)
+
+    # Define the condition for tagging group changes
+    condition = (
+        (df[AnalysisConstant.VOLATILE_TAG.value] == VolatileTag.HV.value)
+        & (
+            df[AnalysisConstant.VOLATILE_TAG.value].shift(1)
+            == VolatileTag.LV.value
+        )
+    ) | (
+        (df[AnalysisConstant.VOLATILE_TAG.value] == VolatileTag.LV.value)
+        & (
+            df[AnalysisConstant.VOLATILE_TAG.value].shift(1)
+            == VolatileTag.HV.value
+        )
+    )
+
+    # Skip initial NaN values
+    first_valid_index = df[
+        AnalysisConstant.VOLATILE_TAG.value
+    ].first_valid_index()
+
+    # Initialize GROUP_ID with 0
+    df[AnalysisConstant.GROUP_ID.value] = 0
+
+    if first_valid_index is not None:
+        # Apply the condition starting from the first valid index
+        condition = condition[first_valid_index:]
+
+        # Mark the groups based on the condition
+        df.loc[first_valid_index:, AnalysisConstant.GROUP_ID.value] = (
+            condition.cumsum() + 1
+        )
+
+    return df
+
+
+def get_group_duration(group_data):
     """Calculate the cycle duration of a list of numbers."""
-    pass
+    duration = group_data.index[-1] - group_data.index[0]
+    return duration
 
 
 def close_to_close(data):
     """Calculate the close to close of a list of numbers."""
     pass
+
+
+# pd.set_option("display.max_rows", None)
