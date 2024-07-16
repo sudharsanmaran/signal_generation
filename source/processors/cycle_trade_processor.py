@@ -250,7 +250,7 @@ def formulate_files_to_read(kwargs):
             }
         )
 
-    if kwargs.get("fractal_count"):
+    if kwargs.get("fractal_cycle") and kwargs.get("fractal_count"):
 
         fractal_count_columns = get_fractal_count_columns(
             fractal_sd=kwargs.get("fractal_count_sd")
@@ -279,16 +279,16 @@ def formulate_files_to_read(kwargs):
         files_to_read,
         rename_dict,
     ]
-    if kwargs.get("fractal_count"):
-        result.append(fractal_count_columns)
-    else:
-        result.append(None)
 
     if kwargs.get("fractal_cycle"):
         result.append(fractal_cycle_columns)
     else:
         result.append(None)
 
+    if kwargs.get("fractal_cycle") and kwargs.get("fractal_count"):
+        result.append(fractal_count_columns)
+    else:
+        result.append(None)
     return tuple(result)
 
 
@@ -319,10 +319,10 @@ def update_cycle_columns(df, base_df, start_datetime, kwargs):
         "market_direction",
         *signal_columns,
     ]
-    if kwargs.get("include_fractal_cycle"):
+    if kwargs.get("fractal_cycle"):
         cols.extend(kwargs.get("fractal_cycle_columns"))
 
-    if kwargs.get("include_fractal_count"):
+    if kwargs.get("fractal_count"):
         cols.extend(kwargs.get("fractal_count_columns"))
 
     merged_df = pd.merge_asof(
@@ -718,6 +718,7 @@ def get_cycle_base_df(**kwargs):
     base_df = merge_fractal_data(base_df, fractal_df, fractal_count_df)
 
     # merge bb1 the dataframes
+
     for key, df in close_time_frames_1_dfs.items():
         df = update_cycle_columns(df, base_df, start_datetime, kwargs)
         update_signal_start_price(df)
