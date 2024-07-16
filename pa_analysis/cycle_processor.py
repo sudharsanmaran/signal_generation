@@ -76,51 +76,56 @@ def process_cycles(**kwargs):
         # max to min percent
         update_max_to_min_percent(df, kwargs)
 
+        if kwargs.get("fractal_cycle") or kwargs.get("fractal_count"):
+            bb_cycle_column = [
+                col for col in df.columns if "cycle_no_" in col
+            ][0]
         # update fractal count for fracatl cylce for skip initial fractals
-        fractal_cycle_columns = get_fractal_cycle_columns(
-            fractal_sd=kwargs["fractal_sd"]
-        )
-        fractal_count_columns = get_fractal_count_columns(
-            fractal_sd=kwargs["fractal_count_sd"]
-        )
+        if kwargs.get("fractal_cycle"):
+            fractal_cycle_columns = get_fractal_cycle_columns(
+                fractal_sd=kwargs["fractal_sd"]
+            )
 
-        bb_cycle_column = [col for col in df.columns if "cycle_no_" in col][0]
+            update_fractal_counter(
+                df, fractal_cycle_columns, group_by_col=bb_cycle_column
+            )
+            # update fractal count cycle
+            update_fractal_cycle_id(
+                kwargs,
+                df,
+                bb_cycle_col=bb_cycle_column,
+                end_condition_col="adjusted_close_for_max_to_min",
+            )
 
-        update_fractal_counter(
-            df, fractal_cycle_columns, group_by_col=bb_cycle_column
-        )
-        # update fractal count cycle
-        update_fractal_cycle_id(
-            kwargs,
-            df,
-            bb_cycle_col=bb_cycle_column,
-            end_condition_col="adjusted_close_for_max_to_min",
-        )
+        if kwargs.get("fractal_cycle") and kwargs.get("fractal_count"):
+            fractal_count_columns = get_fractal_count_columns(
+                fractal_sd=kwargs["fractal_count_sd"]
+            )
 
-        update_fractal_counter_1(
-            df,
-            fractal_count_columns,
-            group_by_col=bb_cycle_column,
-            condition=df[SecondCycleIDColumns.FRACTAL_CYCLE_ID.value] > 0,
-            skip_count=kwargs["fractal_count_skip"],
-        )
+            update_fractal_counter_1(
+                df,
+                fractal_count_columns,
+                group_by_col=bb_cycle_column,
+                condition=df[SecondCycleIDColumns.FRACTAL_CYCLE_ID.value] > 0,
+                skip_count=kwargs["fractal_count_skip"],
+            )
 
-        # update fractal count growth percent
-        update_growth_percent_fractal_count(df, kwargs)
+            # update fractal count growth percent
+            update_growth_percent_fractal_count(df, kwargs)
 
-        update_secondary_cycle_analytics(
-            df,
-            results=[],
-            time_frame=time_frame,
-            prefix="FRACTAL",
-            cycle_count_col=SecondCycleIDColumns.FRACTAL_CYCLE_ID.value,
-            analytics_needed=[
-                FirstCycleColumns.CYCLE_MAX.value,
-                FirstCycleColumns.CYCLE_MIN.value,
-                FirstCycleColumns.POINTS_FROM_MAX.value,
-                FirstCycleColumns.CLOSE_TO_CLOSE.value,
-            ],
-        )
+            update_secondary_cycle_analytics(
+                df,
+                results=[],
+                time_frame=time_frame,
+                prefix="FRACTAL",
+                cycle_count_col=SecondCycleIDColumns.FRACTAL_CYCLE_ID.value,
+                analytics_needed=[
+                    FirstCycleColumns.CYCLE_MAX.value,
+                    FirstCycleColumns.CYCLE_MIN.value,
+                    FirstCycleColumns.POINTS_FROM_MAX.value,
+                    FirstCycleColumns.CLOSE_TO_CLOSE.value,
+                ],
+            )
 
         first_cycle_columns = [col for col in df.columns if "cycle_no_" in col]
 

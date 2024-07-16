@@ -96,6 +96,23 @@ class CycleInputs(
                 raise ValueError("percent should be less than 1")
         return v
 
+    @field_validator("fractal_count", mode="after")
+    def validate_fractal_count(cls, v, values):
+        if v:
+            if (
+                values.data["fractal_count_sd"] is None
+                or values.data["fractal_count_tf"] is None
+                or values.data["fractal_count_skip"] is None
+            ):
+                raise ValueError(
+                    "Fractal Count SD, Fractal Count TF and Fractal Count Skip are required"
+                )
+            if not values.data["fractal_cycle"]:
+                raise ValueError(
+                    "Fractal Cycle should be enabled to calculate Fractal Count"
+                )
+        return v
+
 
 class CycleTradeInputs(CycleInputs):
     trade_type: TradeType
