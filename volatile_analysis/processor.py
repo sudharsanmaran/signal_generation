@@ -70,9 +70,7 @@ def get_files_data(validated_data):
 def process_volatile(validated_data):
 
     dfs = get_base_df(validated_data)
-    df, include_next_first_row = update_volatile_cycle_id(
-        validated_data, dfs
-    )
+    df, include_next_first_row = update_volatile_cycle_id(validated_data, dfs)
     df = analyse_volatile(
         df,
         tagcol=f"{validated_data['time_frames'][0]}_{validated_data['periods'][0]}_{AnalysisConstant.VOLATILE_TAG.value}",
