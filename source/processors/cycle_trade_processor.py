@@ -275,13 +275,21 @@ def formulate_files_to_read(kwargs):
                 }
             }
         )
-
-    return (
+    result = [
         files_to_read,
         rename_dict,
-        fractal_cycle_columns,
-        fractal_count_columns,
-    )
+    ]
+    if kwargs.get("fractal_count"):
+        result.append(fractal_count_columns)
+    else:
+        result.append(None)
+
+    if kwargs.get("fractal_cycle"):
+        result.append(fractal_cycle_columns)
+    else:
+        result.append(None)
+
+    return tuple(result)
 
 
 def get_fractal_cycle_columns(fractal_sd):
@@ -306,17 +314,20 @@ def update_cycle_columns(df, base_df, start_datetime, kwargs):
     # base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
     df = df.reset_index().rename(columns={"index": "dt"})
     signal_columns = [f"TAG_{id}" for id in kwargs.get("portfolio_ids")]
+    cols = [
+        "TIMESTAMP",
+        "market_direction",
+        *signal_columns,
+    ]
+    if kwargs.get("include_fractal_cycle"):
+        cols.extend(kwargs.get("fractal_cycle_columns"))
+
+    if kwargs.get("include_fractal_count"):
+        cols.extend(kwargs.get("fractal_count_columns"))
+
     merged_df = pd.merge_asof(
         df,
-        base_df[
-            [
-                "TIMESTAMP",
-                "market_direction",
-                *signal_columns,
-                *kwargs.get("fractal_cycle_columns"),
-                *kwargs.get("fractal_count_columns"),
-            ]
-        ],
+        base_df[cols],
         left_on="dt",
         right_on="TIMESTAMP",
         direction="backward",
@@ -622,30 +633,35 @@ def update_cycle_count_1(merged_df, col):
 
 
 def merge_fractal_data(base_df, fractal_df, fractal_count_df):
+
+    if base_df is not None:
+        base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
+
     # Reset index and rename for merging
-    fractal_df = fractal_df.reset_index().rename(columns={"index": "dt"})
-    fractal_count_df = fractal_count_df.reset_index().rename(
-        columns={"index": "dt"}
-    )
-    base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
+    if fractal_df is not None:
+        fractal_df = fractal_df.reset_index().rename(columns={"index": "dt"})
+        # Merge fractal cycle data
+        base_df = pd.merge_asof(
+            base_df,
+            fractal_df,
+            left_on="TIMESTAMP",
+            right_on="dt",
+            direction="backward",
+        ).drop(columns=["dt"])
 
-    # Merge fractal cycle data
-    base_df = pd.merge_asof(
-        base_df,
-        fractal_df,
-        left_on="TIMESTAMP",
-        right_on="dt",
-        direction="backward",
-    ).drop(columns=["dt"])
+    if fractal_count_df is not None:
+        fractal_count_df = fractal_count_df.reset_index().rename(
+            columns={"index": "dt"}
+        )
 
-    # Merge fractal count data
-    base_df = pd.merge_asof(
-        base_df,
-        fractal_count_df,
-        left_on="TIMESTAMP",
-        right_on="dt",
-        direction="backward",
-    ).drop(columns=["dt"])
+        # Merge fractal count data
+        base_df = pd.merge_asof(
+            base_df,
+            fractal_count_df,
+            left_on="TIMESTAMP",
+            right_on="dt",
+            direction="backward",
+        ).drop(columns=["dt"])
 
     return base_df
 
