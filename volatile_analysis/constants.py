@@ -14,6 +14,7 @@ class AnalysisConstant(Enum):
 
 
 class VolatileTag(Enum):
+    ALL = "All"
     LV = "LV"
     HV = "HV"
 

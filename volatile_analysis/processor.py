@@ -15,16 +15,20 @@ from volatile_analysis.analysis import (
     trailing_window_avg,
     trailing_window_sum,
     update_cycle_id,
-    update_group_id,
+    update_cycle_id_multi_tag,
     update_volatile_tag,
     z_score,
 )
-from volatile_analysis.constants import AnalysisColumn, AnalysisConstant
+from volatile_analysis.constants import (
+    AnalysisColumn,
+    AnalysisConstant,
+    VolatileTag,
+)
 
 
 def get_files_data(validated_data):
     base_path = os.getenv("VOLATILE_DB_PATH")
-    time_frame = validated_data["time_frame"]
+    time_frames = validated_data["time_frames"]
     parameter_id = validated_data["parameter_id"]
     cols = [
         "h",
@@ -57,6 +61,7 @@ def get_files_data(validated_data):
             "index_col": index,
             "cols": [index, *cols],
         }
+        for time_frame in time_frames
     }
 
     return files_to_read
@@ -64,28 +69,110 @@ def get_files_data(validated_data):
 
 def process_volatile(validated_data):
 
-    df = get_base_df(validated_data)
-    # df = analyse_volatile(df, validated_data["parameter_id"])
+    dfs = get_base_df(validated_data)
+    df, include_next_first_row = update_volatile_cycle_group_id(
+        validated_data, dfs
+    )
+    df = analyse_volatile(
+        df,
+        tagcol=f"{validated_data['time_frames'][0]}_{validated_data['periods'][0]}_{AnalysisConstant.VOLATILE_TAG.value}",
+        group_by_col=AnalysisConstant.CYCLE_ID.value,
+        include_next_first_row=include_next_first_row,
+        analyze=validated_data["analyze"],
+    )
 
     write_dataframe_to_csv(df, VOLATILE_OUTPUT_FOLDER, "volatile_analysis.csv")
     return
 
 
-def analyse_volatile(df):
-    groups = df.groupby(AnalysisConstant.GROUP_ID.value)
+def update_volatile_cycle_group_id(validated_data, dfs):
+    def get_columns(timeframes, periods):
+        return {
+            timeframe: [
+                f"{timeframe}_{period}_{AnalysisConstant.VOLATILE_TAG.value}"
+                for period in periods
+            ]
+            for timeframe in timeframes
+        }
+
+    def process_single_dataframe(df, periods, timeframes):
+        if len(periods) == 1:
+            period = periods[0]
+            timeframe = timeframes[0]
+            col = f"{timeframe}_{period}_{AnalysisConstant.VOLATILE_TAG.value}"
+            update_cycle_id(
+                df, col=col, new_col=AnalysisConstant.CYCLE_ID.value
+            )
+            return df, True
+        else:
+            cols = list(get_columns(timeframes, periods).values())[0]
+            update_cycle_id_multi_tag(
+                df, cols=cols, new_col=AnalysisConstant.CYCLE_ID.value
+            )
+            return df, False
+
+    def merge_dataframes(dfs, cols):
+        iter_dfs = iter(dfs.items())
+        _, merged_df = next(iter_dfs)
+        for tf, df in iter_dfs:
+            df = df[[*cols[tf]]]
+            merged_df = merged_df.merge(df, on="dt", how="outer").ffill()
+        return merged_df
+
+    def process_multiple_dataframes(dfs, periods, timeframes):
+        cols = get_columns(timeframes, periods)
+        merged_df = merge_dataframes(dfs, cols)
+        flat_cols = []
+        for col in cols.values():
+            flat_cols.extend(col)
+
+        update_cycle_id_multi_tag(
+            merged_df, cols=flat_cols, new_col=AnalysisConstant.CYCLE_ID.value
+        )
+        return merged_df, False
+
+    if len(dfs) == 1:
+        timeframe = validated_data["time_frames"]
+        df = dfs[timeframe[0]]
+        return process_single_dataframe(
+            df, validated_data["periods"], timeframe
+        )
+    else:
+        return process_multiple_dataframes(
+            dfs, validated_data["periods"], validated_data["time_frames"]
+        )
+
+
+def analyse_volatile(
+    df,
+    group_by_col,
+    tagcol=AnalysisConstant.VOLATILE_TAG.value,
+    include_next_first_row=False,
+    analyze=VolatileTag.ALL.value,
+):
+    groups = df.groupby(group_by_col)
     analysis = defaultdict(list)
     for group_id, group_data in groups:
         group_analysis = {}
         if group_id < 1:
             continue
 
+        if analyze != VolatileTag.ALL.value:
+            if group_data[tagcol].iloc[0] != analyze:
+                continue
+
         group_analysis["index"] = group_data.index[-1]
 
-        next_row = get_next_group_first_row(group_id=group_id, df=df)
-        if next_row is not None:
-            adjusted_group_data = pd.concat(
-                [group_data, next_row.to_frame().T]
+        if include_next_first_row:
+            next_row = get_next_group_first_row(
+                group_id=group_id, df=df, group_by_col=group_by_col
             )
+            if next_row is not None:
+                adjusted_group_data = pd.concat(
+                    [group_data, next_row.to_frame().T]
+                )
+            else:
+                adjusted_group_data = group_data
         else:
             adjusted_group_data = group_data
 
@@ -165,8 +252,8 @@ def get_min_max(group_data):
     return group_data.loc[max_id], group_data.loc[min_id]
 
 
-def get_next_group_first_row(group_id, df):
-    next_group = df[df[AnalysisConstant.GROUP_ID.value] == group_id + 1]
+def get_next_group_first_row(group_id, df, group_by_col):
+    next_group = df[df[group_by_col] == group_id + 1]
     if next_group.empty:
         return None
     return next_group.iloc[0]
@@ -180,54 +267,44 @@ def get_base_df(validated_data):
 
     dfs = read_files(start_date, end_date, files_to_read)
 
-    df = dfs[validated_data.get("time_frame")]
+    for time_frame, df in dfs.items():
+        for period, parameter_id in validated_data["parameter_id"].items():
+            update_z_score(
+                df,
+                f"calculate_stdv_{parameter_id}_{period}",
+                period,
+            )
 
-    for period, parameter_id in validated_data["parameter_id"].items():
-        update_z_score(
-            df,
-            f"calculate_stdv_{parameter_id}_{period}",
-            period,
-        )
+            normalize_column(
+                df,
+                f"{period}_{AnalysisConstant.Z_SCORE.value}",
+                f"{period}_{AnalysisConstant.NORM_Z_SCORE.value}",
+                validated_data["z_score_threshold"],
+            )
 
-        normalize_column(
-            df,
-            f"{period}_{AnalysisConstant.Z_SCORE.value}",
-            f"{period}_{AnalysisConstant.NORM_Z_SCORE.value}",
-            validated_data["z_score_threshold"],
-        )
+            trailing_window_sum(
+                df,
+                validated_data["sum_window_size"],
+                period,
+                col=f"{period}_{AnalysisConstant.NORM_Z_SCORE.value}",
+            )
 
-        trailing_window_sum(
-            df,
-            validated_data["sum_window_size"],
-            period,
-            col=f"{period}_{AnalysisConstant.NORM_Z_SCORE.value}",
-        )
+            trailing_window_avg(
+                df,
+                validated_data["avg_window_size"],
+                period,
+                col=f"{period}_{AnalysisConstant.TRAIL_WINDOW_SUM.value}",
+            )
 
-        trailing_window_avg(
-            df,
-            validated_data["avg_window_size"],
-            period,
-            col=f"{period}_{AnalysisConstant.TRAIL_WINDOW_SUM.value}",
-        )
+            update_volatile_tag(
+                df,
+                validated_data["lv_tag"],
+                validated_data["hv_tag"],
+                col=f"{period}_{AnalysisConstant.TRAIL_WINDOW_AVG.value}",
+                new_col=f"{time_frame}_{period}_{AnalysisConstant.VOLATILE_TAG.value}",
+            )
 
-        update_volatile_tag(
-            df,
-            validated_data["lv_tag"],
-            validated_data["hv_tag"],
-            col=f"{period}_{AnalysisConstant.TRAIL_WINDOW_AVG.value}",
-            new_col=f"{period}_{AnalysisConstant.VOLATILE_TAG.value}",
-        )
-        update_cycle_id(
-            df,
-            col=f"{period}_{AnalysisConstant.VOLATILE_TAG.value}",
-            new_col=f"{period}_{AnalysisConstant.CYCLE_ID.value}",
-        )
-        update_group_id(
-            df,
-            col=f"{period}_{AnalysisConstant.VOLATILE_TAG.value}",
-            new_col=f"{period}_{AnalysisConstant.GROUP_ID.value}",
-        )
-    return df
+    return dfs
 
 
 def update_z_score(df, col_name, period):

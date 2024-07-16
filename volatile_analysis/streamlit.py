@@ -2,6 +2,7 @@ import time
 import streamlit as st
 
 from source.streamlit import set_start_end_datetime, validate
+from volatile_analysis.constants import VolatileTag
 from volatile_analysis.processor import process_volatile
 from volatile_analysis.validation import validate_inputs
 
@@ -10,8 +11,10 @@ def main():
     st.title("Volatility Analysis")
     streamlit_inputs = {}
 
-    time_frame = st.number_input("Time Frame", value=2, step=1, min_value=1)
-    streamlit_inputs["time_frame"] = time_frame
+    time_frames = st.multiselect(
+        "Time Frames", options=[1, 2, 3, 4, 5, 6], default=[1]
+    )
+    streamlit_inputs["time_frames"] = time_frames
 
     instrument = st.text_input("Instrument", value="BANKNIFTY")
     streamlit_inputs["instrument"] = instrument
@@ -49,6 +52,10 @@ def main():
     streamlit_inputs["lv_tag"] = lv_tag
     hv_tag = st.number_input("HV Tag", step=1, value=15)
     streamlit_inputs["hv_tag"] = hv_tag
+
+    option = [tag.value for tag in VolatileTag]
+    analyze = st.selectbox("Analyze", option, index=0)
+    streamlit_inputs["analyze"] = analyze
 
     required_fileds = [sum_window_size, avg_window_size, lv_tag, hv_tag]
     if all(required_fileds):

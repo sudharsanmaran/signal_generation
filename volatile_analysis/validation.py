@@ -4,7 +4,7 @@ from pydantic import BaseModel, field_validator
 
 
 class VolitileInputs(BaseModel):
-    time_frame: int
+    time_frames: List[int]
     instrument: str
     periods: List[int]
     parameter_id: dict[int, int]
@@ -17,6 +17,8 @@ class VolitileInputs(BaseModel):
     avg_window_size: int
     lv_tag: float
     hv_tag: float
+
+    analyze: str
 
     @field_validator("hv_tag")
     def validate_hv_tag(cls, v, values):

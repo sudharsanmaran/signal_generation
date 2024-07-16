@@ -1,3 +1,5 @@
+from functools import reduce
+import operator
 import pandas as pd
 from source.utils import make_round
 from volatile_analysis.constants import AnalysisConstant, VolatileTag
@@ -84,13 +86,62 @@ def update_cycle_id(
 ):
     """Update the cycle id of a dataframe."""
 
-    first_tag = get_first_tag(df, col)
-    # make condition
-    condition = (df[col] == first_tag) & (df[col].shift(1) != first_tag)
+    condition = (df[col] == VolatileTag.LV.value) & (
+        df[col].shift(1) != VolatileTag.LV.value
+    ) | (df[col] == VolatileTag.HV.value) & (
+        df[col].shift(1) != VolatileTag.HV.value
+    )
 
     df[new_col] = 0
     df.loc[condition, new_col] = 1
     df[new_col] = df[new_col].cumsum()
+    return df
+
+
+def update_cycle_id_multi_tag(
+    df,
+    cols,
+    col=AnalysisConstant.VOLATILE_TAG.value,
+    new_col=AnalysisConstant.CYCLE_ID.value,
+):
+    """Update the cycle id of a dataframe."""
+
+    # make condition
+    start_condition = reduce(
+        operator.and_, (df[cols[0]] == df[col] for col in cols[1:])
+    )
+
+    end_condition = reduce(
+        operator.or_, (df[cols[0]] != df[col] for col in cols[1:])
+    )
+
+    df_indices = df.index
+    start_indices = df_indices[start_condition]
+    end_indices = df_indices[end_condition]
+
+    df = updated_cycle_id_by_start_end(start_indices, end_indices, df, new_col)
+    return df
+
+
+def updated_cycle_id_by_start_end(
+    start_indices, end_indices, df, new_col, counter=0
+):
+    """Update the cycle id of a dataframe based on start and end conditions."""
+    in_cycle = pd.Series(False, index=df.index)
+    cycle_counter = pd.Series(0, index=df.index)
+
+    for start_idx in start_indices:
+        if not in_cycle[start_idx]:
+            counter += 1
+            end_idx = end_indices[end_indices > start_idx].min()
+            if not pd.isna(end_idx):
+                in_cycle.loc[start_idx:end_idx] = True
+                cycle_counter.loc[start_idx:end_idx] = counter
+            else:
+                in_cycle.loc[start_idx:] = True
+                cycle_counter.loc[start_idx:] = counter
+
+    df[new_col] = cycle_counter
     return df
 
 
