@@ -15,6 +15,7 @@ log.txt
 Pipfile.lock
 env3.*
 env
+virtual
 .env
 docs_build
 site_build
@@ -35,10 +36,33 @@ archive.zip
 deployment-docker-compose.yml
 
 alembic/versions/*
-output.csv
-merged_df.csv
-.~lock.output.csv#
-.~lock.merged_df.csv#
-merged_df_1.csv
-merged_df_2.csv
-merged_df_4.csv
+
+# Ignore all merged_df files
+merged_df*.csv
+df*.csv
+
+# Ignore all output files
+output*.csv
+
+# Ignore all user_inputs files
+user_inputs*.csv
+
+# Ignore lock files for user_inputs, merged_df and output files
+.~lock.merged_df*.csv#
+.~lock.output*.csv#
+.~lock.user_inputs*.csv#
+.~lock.*
+user_inputs.json
+
+tradesheet/Output
+
+outputs/*
+
+filter*.csv
+final_result.csv
+pa_analysis_output.zip
+pa_analysis_output/cycle_outpts/base_df/base*
+pa_analysis_output/cycle_outpts/results/result*
+pa_analysis_output/cycle_outpts/cycle_base_df.csv
+pa_analysis_output/cycle_outpts/base_df/.~lock.base_df_tf_2.csv#
+.env
