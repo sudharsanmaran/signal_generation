@@ -848,6 +848,8 @@ def main():
         ]
         required_fields.extend(cycle_fields)
 
+        add_tp_fields(streamlit_inputs, required_fields)
+
     all_fields_filled = all(required_fields)
 
     if all_fields_filled:
@@ -876,6 +878,16 @@ def main():
                 execute(validated_input, exec_func)
     else:
         st.error("Please fill in all the required fields.")
+
+
+def add_tp_fields(streamlit_inputs, required_fields):
+    if streamlit_inputs["calculate_tp"]:
+        required_fields.extend(
+            [
+                streamlit_inputs["tp_method"],
+                streamlit_inputs["tp_percentage"],
+            ]
+        )
 
 
 def set_entry_exit_signals(
@@ -990,6 +1002,9 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
             cycle_options,
         )
         streamlit_inputs["cycle_to_consider"] = cycle_to_consider
+
+        set_target_profit_inputs(streamlit_inputs, saved_inputs)
+        set_fractal_inputs(streamlit_inputs, saved_inputs)
 
         st.text("BB Band 1 inputs:")
 
@@ -1106,6 +1121,98 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
                     "sds_2": sds_2,
                 }
             )
+
+
+def set_fractal_inputs(streamlit_inputs, saved_inputs):
+    fractal_cycle = st.checkbox(
+        "Fractal Cycle",
+        value=saved_inputs.get("fractal_cycle", False),
+    )
+
+    streamlit_inputs["fractal_cycle"] = fractal_cycle
+    if fractal_cycle:
+        fractal_sd = st.number_input(
+            "Fractal SD",
+            min_value=1,
+            step=1,
+            value=saved_inputs.get("fractal_sd", 2),
+        )
+
+        fractal_tf = st.number_input(
+            "Fractal Time Frame",
+            min_value=1,
+            value=saved_inputs.get("fractal_tf", 1),
+        )
+
+        fractal_cycle_start = st.number_input(
+            "Fractal Cycle Start",
+            min_value=0,
+            value=saved_inputs.get("fractal_cycle_start", 1),
+        )
+
+        streamlit_inputs.update(
+            {
+                "fractal_sd": fractal_sd,
+                "fractal_tf": fractal_tf,
+                "fractal_cycle_start": fractal_cycle_start,
+            }
+        )
+
+    fractal_count = st.checkbox(
+        "Fractal Count",
+        value=saved_inputs.get("fractal_count", False),
+    )
+    streamlit_inputs["fractal_count"] = fractal_count
+    if fractal_count:
+        fractal_count_sd = st.number_input(
+            "Fractal Count SD",
+            min_value=1,
+            step=1,
+            value=saved_inputs.get("fractal_count_sd", 2),
+        )
+
+        fractal_count_tf = st.number_input(
+            "Fractal Count Time Frame",
+            min_value=1,
+            value=saved_inputs.get("fractal_count_tf", 1),
+        )
+        fractal_count_skip = st.number_input(
+            "Fractal Count Skip",
+            min_value=0,
+            value=saved_inputs.get("fractal_count_skip", 1),
+        )
+
+        streamlit_inputs.update(
+            {
+                "fractal_count_sd": fractal_count_sd,
+                "fractal_count_tf": fractal_count_tf,
+                "fractal_count_skip": fractal_count_skip,
+            }
+        )
+
+
+def set_target_profit_inputs(streamlit_inputs, saved_inputs):
+    st.text("Target Profit:")
+    calculate_tp = st.checkbox(
+        "Calculate Target Profit",
+        value=saved_inputs.get("calculate_tp", True),
+    )
+    streamlit_inputs["calculate_tp"] = calculate_tp
+    if calculate_tp:
+        tp_method = st.selectbox(
+            "TP Method",
+            ["1", "2"],
+            index=0,
+        )
+        tp_percentage = st.number_input(
+            "TP Percentage",
+            min_value=0.0,
+            step=0.01,
+            value=saved_inputs.get("tp_percentage", 0.5),
+        )
+        streamlit_inputs.update(
+            {"tp_method": tp_method, "tp_percentage": tp_percentage}
+        )
 
 
 def set_fractal_exit(streamlit_inputs, saved_inputs):
@@ -1296,13 +1403,13 @@ def set_trade_type(streamlit_inputs, saved_inputs):
     return trade_type, trade_start_time, trade_end_time
 
 
-def execute(validated_input, exec_func: callable):
+def execute(validated_input, exec_func: callable, module="Trade Management"):
     start = time.time()
     try:
         multiple_process(validated_input, exec_func)
         # exec_func(validated_input, (1, 1, 1), "BANKNIFTY")
     except Exception as e:
-        st.error(f"Error executing trade management: {e}")
+        st.error(f"Error executing {module}: {e}")
         return
     stop = time.time()
 

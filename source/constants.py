@@ -41,6 +41,7 @@ class TradeExitType(Enum):
     TRAILING = "TR"
     END = "EOD"
     CYCLE_CHANGE = "CC"
+    TP = "TP"
 
 
 class TradeType(Enum):
@@ -107,6 +108,7 @@ confirm_fractal_column_dict = {
 BASE_OUTPUT_FOLDER = "outputs"
 SG = "sg"
 PA = "pa"
+VA = "va"
 MERGED_DF_FOLDER = f"{BASE_OUTPUT_FOLDER}/{SG}/merged_df"
 SG_OUTPUT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{SG}/signal_generation_output"
 SG_CYCLE_OUTPUT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{SG}/cycle_output"
@@ -114,7 +116,8 @@ PA_ANALYSIS_FOLDER = f"{BASE_OUTPUT_FOLDER}/{PA}/pa_analysis_outputs"
 PA_ANALYSIS_CYCLE_FOLDER = (
     f"{BASE_OUTPUT_FOLDER}/{PA}/pa_analysis_cycle_outputs"
 )
-
+TARGET_PROFIT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{PA}/tp_outputs"
+VOLATILE_OUTPUT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{VA}/volatile_outputs"
 # Define the percentage of available CPU to be used
 cpu_percent_to_use = 0.8  # You can adjust this percentage as needed
 
@@ -195,6 +198,17 @@ class FirstCycleColumns(Enum):
     POINTS_FRM_AVG_TILL_MAX_TO_MIN = "Points from Avg till Max to Min"
     CLOSE_TO_CLOSE = "Close to Close"
     POSITIVE_NEGATIVE = "Positive / Negative"
+    CUM_AVG = "Cumulative Avg"
+    ROLLING_AVG_3 = "Rolling Avg 3 Months"
+    ROLLING_AVG_6 = "Rolling Avg 6 Months"
+    TRAILLING_30_DAYS = "Trailing 30 Days"
+    TRAILLING_90_DAYS = "Trailing 90 Days"
+    TRAILLING_180_DAYS = "Trailing 180 Days"
+    TRAILLING_270_DAYS = "Trailing 270 Days"
+    TRAILLING_365_DAYS = "Trailing 365 Days"
+    Z_SCORE = "Z Score"
+    PERCENT = "Percent"
+
     # DURATION_TO_MAX = "Duration to Max"
     # DURATION_ABOVE_BB = "Duration Above BB"
     # SIGNAL_START_TO_MAX_POINTS = "Signal Start to Max Points"
@@ -209,9 +223,20 @@ class FirstCycleColumns(Enum):
     # AVG_OF_MAX_TO_AVG_OF_MIN = "Avg of Max to Avg of Min"
 
 
+class TargetProfitColumns(Enum):
+    TP_CLOSE = "TP Close"
+    TP_CUM_AVG_CLOSE = "TP Cum Avg Close"
+    TP_CUM_AVG_CLOSE_PERCENT = "TP Cum Avg Close Percent"
+    TP_END = "TP End"
+    TP_CUMMIN = "TP CumMin"
+    TP_CUMMAX = "TP CumMax"
+    TP_CLOSE_DIFF_PERCENT = "TP Close Diff Percent"
+
+
 class SecondCycleIDColumns(Enum):
     CTC_CYCLE_ID = "CTC Cycle ID"
     MTM_CYCLE_ID = "MTM Cycle ID"
+    FRACTAL_CYCLE_ID = "Fractal Cycle ID"
 
 
 class CycleType(Enum):

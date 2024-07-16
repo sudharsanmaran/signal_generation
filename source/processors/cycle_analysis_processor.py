@@ -1,10 +1,15 @@
 import pandas as pd
-from source.constants import FirstCycleColumns, MarketDirection
-from source.utils import make_round
+from source.constants import (
+    TARGET_PROFIT_FOLDER,
+    FirstCycleColumns,
+    MarketDirection,
+    TargetProfitColumns,
+)
+from source.utils import make_round, write_dataframe_to_csv
 
 
 def get_min_max_idx(
-    cycle_data, group_start_row, group_id, cycle, is_last_cycle=False
+    cycle_data, group_start_row, group_id, cycle=None, is_last_cycle=False
 ):
     min_idx, max_idx, cycle_max, cycle_min = None, None, None, None
 
@@ -85,9 +90,19 @@ def get_next_cycle_first_row(
     return None
 
 
-def update_max_to_min(
-    cycle_analysis, min_key, max_key, max_to_min_key, is_last_cycle=False
-):
+def update_max_to_min(**kwargs):
+    required_keys = ["max_key", "min_key", "max_to_min_key", "cycle_analysis"]
+    if not all(key in kwargs for key in required_keys):
+        raise ValueError(
+            f"Required keys are missing in the kwargs: {required_keys}"
+        )
+
+    max_key = kwargs.get("max_key")
+    min_key = kwargs.get("min_key")
+    max_to_min_key = kwargs.get("max_to_min_key")
+    cycle_analysis = kwargs.get("cycle_analysis")
+    is_last_cycle = kwargs.get("is_last_cycle", False)
+
     if cycle_analysis[max_key] is None or cycle_analysis[min_key] is None:
         cycle_analysis[max_to_min_key] = 0
         return
@@ -97,16 +112,32 @@ def update_max_to_min(
     cycle_analysis[max_to_min_key] = value
 
 
-def update_cycle_min_max(
-    cycle_analysis,
-    adjusted_cycle_data,
-    min_idx,
-    max_idx,
-    cycle_min,
-    cycle_max,
-    min_key,
-    max_key,
-):
+def update_cycle_min_max(**kwargs):
+    required_keys = [
+        "cycle_analysis",
+        "adjusted_cycle_data",
+        "min_idx",
+        "max_idx",
+        "cycle_min",
+        "cycle_max",
+        "min_key",
+        "max_key",
+    ]
+
+    if not all([key in kwargs for key in required_keys]):
+        raise ValueError(
+            f"Required keys are missing in the kwargs: {required_keys}"
+        )
+
+    max_idx = kwargs.get("max_idx")
+    min_idx = kwargs.get("min_idx")
+    cycle_min = kwargs.get("cycle_min")
+    cycle_max = kwargs.get("cycle_max")
+    cycle_analysis = kwargs.get("cycle_analysis")
+    adjusted_cycle_data = kwargs.get("adjusted_cycle_data")
+    min_key = kwargs.get("min_key")
+    max_key = kwargs.get("max_key")
+
     if max_idx:
         cycle_analysis[max_key] = adjusted_cycle_data.loc[max_idx, "High"]
     else:
@@ -124,13 +155,26 @@ def adj_close_max_to_min(df, kwargs):
     )
 
 
-def update_close_to_close(
-    market_direction,
-    cycle_analysis,
-    close_to_close_key,
-    last_close,
-    first_close,
-):
+def update_close_to_close(**kwargs):
+
+    required_keys = [
+        "market_direction",
+        "cycle_analysis",
+        "close_to_close_key",
+        "last_close",
+        "first_close",
+    ]
+    if not all(key in kwargs for key in required_keys):
+        raise ValueError(
+            f"Required keys are missing in the kwargs: {required_keys}"
+        )
+
+    market_direction = kwargs.get("market_direction")
+    cycle_analysis = kwargs.get("cycle_analysis")
+    close_to_close_key = kwargs.get("close_to_close_key")
+    last_close = kwargs.get("last_close")
+    first_close = kwargs.get("first_close")
+
     value = pd.NA
     if market_direction == MarketDirection.LONG:
         value = make_round(last_close - first_close)
@@ -244,3 +288,131 @@ def update_MTM_CTC_cols(df, validated_data):
             df.loc[updates["index"], col] = values
 
     return results
+
+
+def tp_method_1(df, tp_percent, cycle_col_name, close_col_name):
+    # tp_close
+    df[TargetProfitColumns.TP_CLOSE.value] = 0.0
+    df[TargetProfitColumns.TP_CUM_AVG_CLOSE.value] = 0.0
+    df[TargetProfitColumns.TP_CUM_AVG_CLOSE_PERCENT.value] = 0.0
+
+    # groups = df.groupby("group_id")
+    # for group_id, group_data in groups:
+
+    df[TargetProfitColumns.TP_CLOSE.value] = df.loc[
+        (df[cycle_col_name] > 1) & (df[close_col_name] == "YES"), "Close"
+    ]
+    # cum avg tp_close
+    df[TargetProfitColumns.TP_CUM_AVG_CLOSE.value] = (
+        df[TargetProfitColumns.TP_CLOSE.value].expanding().mean()
+    )
+    # tp_cum_avg_tp_close_percent (depends on market direction)
+    df.loc[
+        df["market_direction"] == MarketDirection.LONG,
+        TargetProfitColumns.TP_CUM_AVG_CLOSE_PERCENT.value,
+    ] = df[TargetProfitColumns.TP_CUM_AVG_CLOSE.value] * (
+        1 + (tp_percent / 10)
+    )
+
+    # Update for 'SHORT' market direction
+    df.loc[
+        df["market_direction"] == MarketDirection.SHORT,
+        TargetProfitColumns.TP_CUM_AVG_CLOSE_PERCENT.value,
+    ] = df[TargetProfitColumns.TP_CUM_AVG_CLOSE.value] * (
+        1 - (tp_percent / 10)
+    )
+
+    # tp_end(yes/no) (depends on market direction)
+    df[TargetProfitColumns.TP_END.value] = "NO"
+    df.loc[
+        (df["market_direction"] == MarketDirection.LONG)
+        & (
+            df["High"] > df[TargetProfitColumns.TP_CUM_AVG_CLOSE_PERCENT.value]
+        ),
+        TargetProfitColumns.TP_END.value,
+    ] = "YES"
+
+    df.loc[
+        (df["market_direction"] == MarketDirection.SHORT)
+        & (df["Low"] < df[TargetProfitColumns.TP_CUM_AVG_CLOSE_PERCENT.value]),
+        TargetProfitColumns.TP_END.value,
+    ] = "YES"
+
+
+def tp_method_2(df, tp_percent, cycle_col_name, close_col_name):
+    df[TargetProfitColumns.TP_CUMMAX.value] = 0.0
+    df[TargetProfitColumns.TP_CUMMIN.value] = 0.0
+    df[TargetProfitColumns.TP_CLOSE_DIFF_PERCENT.value] = 0.0
+    df[TargetProfitColumns.TP_END.value] = "NO"
+
+    groups = df.groupby("group_id")
+    for group_id, group_data in groups:
+        group_start_row = group_data.iloc[0]
+        # for market direction long find cummax
+        min_idx, max_idx, cycle_min, cycle_max = get_min_max_idx(
+            group_data, group_start_row, group_id
+        )
+
+        if group_start_row["market_direction"] == MarketDirection.LONG:
+
+            df.loc[
+                (df["group_id"] == group_id) & (df.index > min_idx),
+                TargetProfitColumns.TP_CUMMAX.value,
+            ] = df.loc[
+                (df["group_id"] == group_id) & (df.index > min_idx), "Low"
+            ].cummax()
+
+            df.loc[
+                (df["group_id"] == group_id) & (df.index > min_idx),
+                TargetProfitColumns.TP_CLOSE_DIFF_PERCENT.value,
+            ] = (
+                df[TargetProfitColumns.TP_CUMMAX.value]
+                / group_data.loc[min_idx]["Low"]
+                - 1
+            ) * 100
+
+            # tp_end(yes/no) (depends on market direction)
+            df.loc[
+                (df["group_id"] == group_id)
+                & (df.index > min_idx)
+                & (
+                    df[TargetProfitColumns.TP_CLOSE_DIFF_PERCENT.value]
+                    > tp_percent
+                ),
+                TargetProfitColumns.TP_END.value,
+            ] = "YES"
+
+        elif group_start_row["market_direction"] == MarketDirection.SHORT:
+            # find cummax from max_idx
+            df.loc[
+                (df["group_id"] == group_id) & (df.index > max_idx),
+                TargetProfitColumns.TP_CUMMIN.value,
+            ] = df.loc[df.index > max_idx, "High"].cummin()
+
+            df.loc[
+                (df["group_id"] == group_id) & (df.index > max_idx),
+                TargetProfitColumns.TP_CLOSE_DIFF_PERCENT.value,
+            ] = (
+                df[TargetProfitColumns.TP_CUMMIN.value]
+                / group_data.loc[max_idx]["High"]
+                - 1
+            ) * 100
+
+            # tp_end(yes/no) (depends on market direction)
+            df.loc[
+                (df["group_id"] == group_id)
+                & (df.index > max_idx)
+                & (
+                    df[TargetProfitColumns.TP_CLOSE_DIFF_PERCENT.value]
+                    > tp_percent
+                ),
+                TargetProfitColumns.TP_END.value,
+            ] = "YES"
+
+
+def update_target_profit_analysis(
+    df, tp_percent, tp_method, cycle_col_name, close_col_name
+):
+    methods = {"1": tp_method_1, "2": tp_method_2}
+    methods[tp_method](df, tp_percent, cycle_col_name, close_col_name)
+    write_dataframe_to_csv(df, TARGET_PROFIT_FOLDER, "base_df.csv")

@@ -2,6 +2,7 @@ from collections import defaultdict, deque
 from itertools import chain
 import os
 
+import numpy as np
 import pandas as pd
 
 
@@ -12,6 +13,7 @@ from source.constants import (
     FirstCycleColumns,
     MarketDirection,
     SecondCycleIDColumns,
+    TargetProfitColumns,
     TradeExitType,
     TradeType,
     fractal_column_dict,
@@ -26,6 +28,7 @@ from source.data_reader import (
 )
 from source.processors.cycle_analysis_processor import (
     update_MTM_CTC_cols,
+    update_target_profit_analysis,
 )
 from source.processors.signal_trade_processor import (
     get_market_direction,
@@ -227,16 +230,80 @@ def formulate_files_to_read(kwargs):
             for time_frame, origin in close_time_frames_with_origin
         }
     )
+    # fractalcyle file
+
+    if kwargs.get("fractal_cycle"):
+        fractal_cycle_columns = get_fractal_cycle_columns(
+            fractal_sd=kwargs.get("fractal_sd")
+        )
+        files_to_read.update(
+            {
+                (kwargs.get("fractal_tf"), "fractal_cycle", None): {
+                    "read": True,
+                    "cols": [index, *fractal_cycle_columns],
+                    "index_col": "dt",
+                    "file_path": os.path.join(
+                        os.getenv("FRACTAL_CYCLE_COUNT_FILE_PATH"),
+                        f"{kwargs.get('fractal_tf')}_result.csv",
+                    ),
+                }
+            }
+        )
+
+    if kwargs.get("fractal_count"):
+
+        fractal_count_columns = get_fractal_count_columns(
+            fractal_sd=kwargs.get("fractal_count_sd")
+        )
+
+        files_to_read.update(
+            {
+                (kwargs.get("fractal_count_tf"), "fractal_count", None): {
+                    "read": True,
+                    "cols": [index, *fractal_cycle_columns],
+                    "index_col": "dt",
+                    "file_path": os.path.join(
+                        os.getenv("FRACTAL_CYCLE_COUNT_FILE_PATH"),
+                        f"{kwargs.get('fractal_count_tf')}_result.csv",
+                    ),
+                    "rename": {
+                        col: name
+                        for col, name in zip(
+                            fractal_cycle_columns, fractal_count_columns
+                        )
+                    },
+                }
+            }
+        )
 
     return (
         files_to_read,
         rename_dict,
+        fractal_cycle_columns,
+        fractal_count_columns,
     )
+
+
+def get_fractal_cycle_columns(fractal_sd):
+    fractal_cycle_columns = [
+        f"P_1_FRACTAL_CONFIRMED_LONG_{fractal_sd}",
+        f"P_1_FRACTAL_CONFIRMED_SHORT_{fractal_sd}",
+    ]
+
+    return fractal_cycle_columns
+
+
+def get_fractal_count_columns(fractal_sd):
+    fractal_cycle_columns = get_fractal_cycle_columns(fractal_sd)
+    fractal_count_columns = [
+        f"fractal_count_{col}" for col in fractal_cycle_columns
+    ]
+    return fractal_count_columns
 
 
 def update_cycle_columns(df, base_df, start_datetime, kwargs):
     # update direction
-    base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
+    # base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
     df = df.reset_index().rename(columns={"index": "dt"})
     signal_columns = [f"TAG_{id}" for id in kwargs.get("portfolio_ids")]
     merged_df = pd.merge_asof(
@@ -246,6 +313,8 @@ def update_cycle_columns(df, base_df, start_datetime, kwargs):
                 "TIMESTAMP",
                 "market_direction",
                 *signal_columns,
+                *kwargs.get("fractal_cycle_columns"),
+                *kwargs.get("fractal_count_columns"),
             ]
         ],
         left_on="dt",
@@ -393,9 +462,13 @@ def update_cycle_number_by_condition(
     cycle_end_condition,
     id_column_name=None,
     counter_starter=1,
+    group_by_col="group_id",
+    group_start=0,
 ):
-    for group, group_df in df.groupby("group_id"):
+    for group, group_df in df.groupby(group_by_col):
         # Initialize
+        if group < group_start:
+            continue
         current_cycle = counter_starter
         group_indices = group_df.index
         cycle_counter = pd.Series(0, index=group_indices)
@@ -548,6 +621,35 @@ def update_cycle_count_1(merged_df, col):
     merged_df[f"cycle_no_{col}"] += initial_counter
 
 
+def merge_fractal_data(base_df, fractal_df, fractal_count_df):
+    # Reset index and rename for merging
+    fractal_df = fractal_df.reset_index().rename(columns={"index": "dt"})
+    fractal_count_df = fractal_count_df.reset_index().rename(
+        columns={"index": "dt"}
+    )
+    base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
+
+    # Merge fractal cycle data
+    base_df = pd.merge_asof(
+        base_df,
+        fractal_df,
+        left_on="TIMESTAMP",
+        right_on="dt",
+        direction="backward",
+    ).drop(columns=["dt"])
+
+    # Merge fractal count data
+    base_df = pd.merge_asof(
+        base_df,
+        fractal_count_df,
+        left_on="TIMESTAMP",
+        right_on="dt",
+        direction="backward",
+    ).drop(columns=["dt"])
+
+    return base_df
+
+
 def get_cycle_base_df(**kwargs):
     base_df = kwargs.get("base_df")
     start_datetime, end_datetime = (
@@ -558,7 +660,12 @@ def get_cycle_base_df(**kwargs):
     (
         files_to_read,
         tf_bb_cols,
+        fractal_cycle_columns,
+        fractal_count_columns,
     ) = formulate_files_to_read(kwargs)
+
+    kwargs["fractal_cycle_columns"] = fractal_cycle_columns
+    kwargs["fractal_count_columns"] = fractal_count_columns
 
     max_tf = max(tf_bb_cols.keys())
     adjusted_start_datetime = start_datetime - pd.Timedelta(minutes=max_tf[0])
@@ -568,11 +675,13 @@ def get_cycle_base_df(**kwargs):
         files_to_read,
     )
 
-    bb_time_frames_1_dfs, bb_time_frames_2_dfs, close_time_frames_1_dfs = (
-        {},
-        {},
-        {},
-    )
+    (
+        bb_time_frames_1_dfs,
+        bb_time_frames_2_dfs,
+        close_time_frames_1_dfs,
+        fractal_df,
+        fractal_count_df,
+    ) = ({}, {}, {}, None, None)
     for key, df in dfs.items():
         tf, type, origin = key
         if type == "close" and origin == 1:
@@ -583,6 +692,14 @@ def get_cycle_base_df(**kwargs):
 
         if type == "bb" and origin == 2:
             bb_time_frames_2_dfs[(tf, origin)] = df
+
+        if type == "fractal_cycle":
+            fractal_df = df
+
+        if type == "fractal_count":
+            fractal_count_df = df
+
+    base_df = merge_fractal_data(base_df, fractal_df, fractal_count_df)
 
     # merge bb1 the dataframes
     for key, df in close_time_frames_1_dfs.items():
@@ -645,6 +762,153 @@ def get_cycle_base_df(**kwargs):
             df_to_analyze[tf] = df
 
     return df_to_analyze
+
+
+def update_fractal_counter(
+    base_df,
+    fractal_cycle_columns,
+    group_by_col="group_id",
+    condition=None,
+    skip_count=0,
+):
+    for col in fractal_cycle_columns:
+        # Initialize the count column
+        count_col = f"count_{col}"
+        base_df[count_col] = 0
+
+        # Iterate over each group
+        for group_id, group in base_df.groupby(group_by_col):
+
+            if group_id < 2:
+                continue
+
+            # Calculate cumulative sum for True values in the column
+            # Apply condition if provided, otherwise default to the column being True
+            if condition is not None:
+                cumulative_sum = (
+                    (group[col] == True) & (condition.loc[group.index])
+                ).cumsum()
+            else:
+                cumulative_sum = (group[col] == True).cumsum()
+
+            # Update the base_df with the cumulative sum for the group
+            base_df.loc[base_df[group_by_col] == group_id, count_col] = (
+                cumulative_sum
+            )
+
+            # Reset count to 0 where the column value is False
+            base_df.loc[
+                (base_df[col] == False) & (base_df[group_by_col] == group_id),
+                count_col,
+            ] = 0
+
+
+def update_fractal_counter_1(
+    base_df,
+    fractal_cycle_columns,
+    group_by_col="group_id",
+    condition=None,
+    skip_count=0,
+):
+    for col in fractal_cycle_columns:
+        # Initialize the count column
+        count_col = f"count_{col}"
+        base_df[count_col] = 0
+
+        # Iterate over each group
+        for group_id, group in base_df.groupby(group_by_col):
+
+            if group_id < 2:
+                continue
+
+            # Calculate the boolean mask for the condition
+            if condition is not None:
+                mask = (group[col] == True) & (condition.loc[group.index])
+            else:
+                mask = group[col] == True
+
+            # Find the indices where the condition is True
+            true_indices = np.where(mask)[0]
+
+            # Skip the first `skip_count` occurrences
+            if len(true_indices) > skip_count:
+                true_indices = true_indices[skip_count:]
+
+            # Initialize a zero array for the cumulative sum
+            cumsum_array = np.zeros(len(group), dtype=int)
+
+            # Set the positions of remaining True values to 1
+            cumsum_array[true_indices] = 1
+
+            # Calculate the cumulative sum
+            cumulative_sum = np.cumsum(cumsum_array)
+
+            # Update the base_df with the cumulative sum for the group
+            base_df.loc[base_df[group_by_col] == group_id, count_col] = (
+                cumulative_sum
+            )
+
+            # Reset count to 0 where the column value is False
+            base_df.loc[
+                (base_df[col] == False) & (base_df[group_by_col] == group_id),
+                count_col,
+            ] = 0
+
+    return base_df
+
+
+def update_fractal_cycle_id(kwargs, df, bb_cycle_col, end_condition_col):
+    cycle_start_condition = {
+        MarketDirection.LONG: (
+            (df["market_direction"] == MarketDirection.LONG)
+            & (
+                df[f"P_1_FRACTAL_CONFIRMED_LONG_{kwargs.get('fractal_sd')}"]
+                == True
+            )
+            & (
+                df[
+                    f"count_P_1_FRACTAL_CONFIRMED_LONG_{kwargs.get('fractal_sd')}"
+                ]
+                > kwargs.get("fractal_cycle_start")
+            )
+            & (df[bb_cycle_col] > 2)
+        ),
+        MarketDirection.SHORT: (
+            (df["market_direction"] == MarketDirection.SHORT)
+            & (
+                df[f"P_1_FRACTAL_CONFIRMED_SHORT_{kwargs.get('fractal_sd')}"]
+                == True
+            )
+            & (
+                df[
+                    f"count_P_1_FRACTAL_CONFIRMED_SHORT_{kwargs.get('fractal_sd')}"
+                ]
+                > kwargs.get("fractal_cycle_start")
+            )
+            & (df[bb_cycle_col] > 2)
+        ),
+    }
+
+    # adjust max to min
+    end_condition = (
+        df[end_condition_col] < df[FirstCycleColumns.CLOSE_TO_CLOSE.value]
+    )
+
+    cycle_end_condition = {
+        MarketDirection.LONG: end_condition,
+        MarketDirection.SHORT: end_condition,
+    }
+
+    update_cycle_number_by_condition(
+        df,
+        None,
+        cycle_start_condition,
+        cycle_end_condition,
+        id_column_name=SecondCycleIDColumns.FRACTAL_CYCLE_ID.value,
+        counter_starter=0,
+        group_by_col=bb_cycle_col,
+        group_start=1,
+    )
 
 
 def get_fractal_dataframes(
@@ -888,6 +1152,20 @@ def check_cycle_entry_condition(row: pd.Series, state: dict) -> bool:
     return False, None
 
 
+def is_tp_exit(row, exit_state):
+    is_tp_exit = False
+    if (
+        row[TargetProfitColumns.TP_END.value]
+        == "YES"
+        # and exit_state.get("previous_tp", None) == "NO"
+    ):
+        is_tp_exit = True
+
+    # exit_state["previous_tp"] = row[TargetProfitColumns.TP_END.value]
+
+    return is_tp_exit
+
+
 def check_cycle_exit_signals(row, exit_state, entry_state):
     market_direction = row["exit_market_direction"]
     if (
@@ -903,6 +1181,9 @@ def check_cycle_exit_signals(row, exit_state, entry_state):
         is_fractal_exit = is_cycle_exit_fractal(
             row, market_direction, exit_state
         )
+
+    if Trade.calculate_tp:
+        tp_exit = is_tp_exit(row, exit_state)
 
     # reset entry id if the signal changes
     # if market_direction:
@@ -923,8 +1204,19 @@ def check_cycle_exit_signals(row, exit_state, entry_state):
         Trade.reset_trade_entry_id_counter()
         return True, TradeExitType.CYCLE_CHANGE
 
+    is_exit, exit_type = False, None
+    if Trade.check_exit_fractal and Trade.calculate_tp:
+        if is_fractal_exit:
+            is_exit, exit_type = is_fractal_exit, TradeExitType.FRACTAL
+        if tp_exit:
+            is_exit, exit_type = tp_exit, TradeExitType.TP
+        return is_exit, exit_type
+
     if Trade.check_exit_fractal:
         return is_fractal_exit, TradeExitType.FRACTAL
+
+    if Trade.calculate_tp:
+        return tp_exit, TradeExitType.TP
 
     return False, None
 
@@ -991,6 +1283,16 @@ def process_cycle(validated_data, strategy_pair, instrument):
         cycle_cols=cycle_cols,
     )
 
+    update_target_profit_analysis(
+        cycle_base_df,
+        validated_data.get("tp_percentage"),
+        validated_data.get("tp_method"),
+        cycle_col_name=cycle_cols[CycleType.MTM_CYCLE][0],
+        close_col_name=cycle_cols[CycleType.FIRST_CYCLE][0].replace(
+            "cycle_no", "close_to"
+        ),
+    )
+
     # update trade cycle columns
     Trade.cycle_columns = cycle_cols
 
@@ -1018,6 +1320,7 @@ def process_cycle(validated_data, strategy_pair, instrument):
         "group_id",
         *signal_columns,
         *cycle_cols[Trade.cycle_to_consider],
+        TargetProfitColumns.TP_END.value,
     ]
 
     merged_df = pd.merge_asof(
