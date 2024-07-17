@@ -20,6 +20,9 @@ class VolitileInputs(BaseModel):
 
     analyze: str
 
+    capital_upper_threshold: float
+    capital_lower_threshold: float
+
     @field_validator("hv_tag")
     def validate_hv_tag(cls, v, values):
         if v < 0:

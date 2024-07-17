@@ -17,6 +17,12 @@ def make_positive(value):
     return value
 
 
+def make_negative(value):
+    if value > 0:
+        return value * -1
+    return value
+
+
 def make_round(value):
     return round(value, 2)
 
@@ -60,3 +66,18 @@ def write_dataframe_to_csv(dataframe, folder_name, file_name):
     path = os.path.join(folder_name, file_name)
     os.makedirs(folder_name, exist_ok=True)
     dataframe.to_csv(path, index=True)
+
+
+def make_positive_series(series: pd.Series) -> pd.Series:
+    """
+    Ensure all values in the series are positive.
+    If a value is negative, it is converted to positive.
+    """
+    return series.abs()
+
+
+def make_round_series(series: pd.Series, decimals: int = 2) -> pd.Series:
+    """
+    Round all values in the series to the specified number of decimal places.
+    """
+    return series.round(decimals)

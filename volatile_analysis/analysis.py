@@ -2,7 +2,10 @@ from functools import reduce
 import operator
 import pandas as pd
 from source.utils import make_round
-from volatile_analysis.constants import AnalysisConstant, VolatileTag
+from volatile_analysis.constants import (
+    AnalysisConstant,
+    VolatileTag,
+)
 
 
 def cumulative_stddev(df, col, period):
