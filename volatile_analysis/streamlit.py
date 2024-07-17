@@ -57,6 +57,16 @@ def main():
     analyze = st.selectbox("Analyze", option, index=0)
     streamlit_inputs["analyze"] = analyze
 
+    capital_lower_threshold = st.number_input(
+        "Capital Lower Threshold", value=-0.1, step=0.1
+    )
+    streamlit_inputs["capital_lower_threshold"] = capital_lower_threshold
+
+    capital_upper_threshold = st.number_input(
+        "Capital Upper Threshold", value=0.2, step=0.1
+    )
+    streamlit_inputs["capital_upper_threshold"] = capital_upper_threshold
+
     required_fileds = [sum_window_size, avg_window_size, lv_tag, hv_tag]
     if all(required_fileds):
 

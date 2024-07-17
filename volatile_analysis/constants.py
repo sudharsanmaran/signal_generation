@@ -32,3 +32,23 @@ class AnalysisColumn(Enum):
     MIN_TO_MAX_DURATION = "min_to_max_duration"
     MIN_TO_MAX_TO_CLOSE = "min_to_max_to_close"
     CTC = "ctc"
+    CAPITAL = "capital"
+    CAPITAL_O_S = "capital_o/s"
+    CYCLE_CAPITAL_MIN = "cycle_capital_min"
+    CYCLE_CAPITAL_MAX = "cycle_capital_max"
+    CYCLE_CAPITAL_CLOSE = "cycle_capital_close"
+    CYCLE_CAPITAL_TO_CLOSE = "Cycle Capital To Close"
+    POSITIVE_NEGATIVE = "positive_negative"
+    CYCLE_CAPITAL_POS_NEG_MAX = "Cycle Capital Positive Negative_Max"
+    PROBABILITY = "Probability"
+    CYCLE_CAPITAL_DD = "Cycle Capital DD"
+    RISK_REWARD_MAX = "Risk Reward_Max"
+    RISK_REWARD_CTC = "Risk Reward_CTC"
+    MIN_MAX_TO_CLOSE = "Min / Max to close ratio"
+
+
+class PosNegConstant(Enum):
+    POSITIVE = "Positive"
+    NEGATIVE = "Negative"
+    POSITIVE_MINUS = "Positive (< Upper Threshold)"
+    NEGATIVE_PLUS = "Negative (> Lower Threshold)"
