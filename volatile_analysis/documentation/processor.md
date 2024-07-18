@@ -23,13 +23,30 @@ This module provides a comprehensive suite of functions for analyzing and proces
 
 #### 4. `analyse_volatile`
 
-- **Description**: Analyzes the volatile data by grouping it based on cycle IDs and performing various statistical calculations.
+- **Description**:The `analyse_volatile` function performs a detailed analysis on grouped data within a DataFrame to calculate various volatility metrics, including cycle duration, maximum and minimum values, and risk-reward ratios. It updates the DataFrame with the computed metrics for each group.
+
 - **Parameters**:
-  - `df`: DataFrame to be analyzed.
-  - `group_by_col`: Column name to group by.
-  - `tagcol`: Column name of the volatile tag.
-  - `include_next_first_row`: Boolean indicating whether to include the first row of the next group.
-  - `analyze`: Specific tag to analyze.
+
+  - **df (pd.DataFrame)**: The DataFrame containing the data to be analyzed.
+  - **group_by_col (str)**: The column name used to group the DataFrame.
+  - **validate_data (dict)**: A dictionary containing validation thresholds for capital analysis.
+  - **tagcol (str)**: The column name used to filter the groups for analysis based on their tags. Defaults to `AnalysisConstant.VOLATILE_TAG.value`.
+  - **include_next_first_row (bool)**: A flag indicating whether to include the first row of the next group in the analysis. Defaults to `False`.
+  - **analyze (str)**: A tag value to filter which groups to analyze. Defaults to `VolatileTag.ALL.value`.
+
+- **Internal Functions**
+
+  - **process_group(group_id, group_data)**: Processes each group to compute and update volatility metrics.
+  - **update_capital_and_capital_o_s(df, group_data)**: Updates the capital and capital on start (CAPITAL_O_S) columns for the given group.
+  - **get_adjusted_group_data(group_id, group_data)**: Adjusts the group data by including the first row of the next group if required.
+  - **calculate_max_to_min_to_close(df, last_index, group_data)**: Calculates the maximum-to-minimum-to-close metric for the group.
+  - **calculate_min_to_max_to_close(df, last_index, group_data)**: Calculates the minimum-to-maximum-to-close metric for the group.
+  - **calculate_cycle_capital_to_close(df, last_index)**: Calculates the cycle capital to close metric for the group.
+  - **update_positive_negative_metrics(df, last_index, group_data)**: Updates positive and negative metrics for the group.
+  - **calculate_cycle_capital_pos_neg_max(df, last_index, is_positive=True)**: Calculates the cycle capital positive/negative maximum metric for the group.
+  - **calculate_cycle_capital_dd(df, last_index, is_positive=True)**: Calculates the cycle capital drawdown (DD) metric for the group.
+  - **calculate_min_max_to_close(df, last_index, is_positive=True)**: Calculates the minimum-to-maximum-to-close metric for the group.
+  - **calculate_risk_reward(df, last_index, col)**: Calculates the risk-reward ratio for the group.
 
 #### 5. `get_max_min`
 
