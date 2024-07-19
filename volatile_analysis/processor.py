@@ -16,6 +16,7 @@ from volatile_analysis.analysis import (
     cumulative_stddev,
     cumulutaive_avg_volatility,
     get_group_duration,
+    get_prefix,
     normalize_column,
     trailing_window_avg,
     trailing_window_sum,
@@ -85,9 +86,25 @@ def process_volatile(validated_data):
         include_next_first_row=include_next_first_row,
         analyze=validated_data["analyze"],
     )
-
-    write_dataframe_to_csv(df, VOLATILE_OUTPUT_FOLDER, "volatile_analysis.csv")
+    df = updated_inputs(df, validated_data)
+    prefix = get_prefix(validated_data, df)
+    write_dataframe_to_csv(df, VOLATILE_OUTPUT_FOLDER, f"{prefix}.csv")
     return
+
+
+def updated_inputs(df, validated_data):
+    df.loc[df.index[0], "instrument"] = validated_data["instrument"]
+    df.loc[df.index[0], "start_date"] = validated_data["start_date"]
+    df.loc[df.index[0], "end_date"] = validated_data["end_date"]
+    df.loc[df.index[0], "lv_tag"] = validated_data["lv_tag"]
+    df.loc[df.index[0], "hv_tag"] = validated_data["hv_tag"]
+    df.loc[df.index[0], "capital_upper_threshold"] = validated_data[
+        "capital_upper_threshold"
+    ]
+    df.loc[df.index[0], "capital_lower_threshold"] = validated_data[
+        "capital_lower_threshold"
+    ]
+    return df
 
 
 def update_volatile_cycle_id(validated_data, dfs):

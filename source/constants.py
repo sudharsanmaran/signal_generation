@@ -118,6 +118,9 @@ PA_ANALYSIS_CYCLE_FOLDER = (
 )
 TARGET_PROFIT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{PA}/tp_outputs"
 VOLATILE_OUTPUT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{VA}/volatile_outputs"
+VOLATILE_OUTPUT_SUMMARY_FOLDER = (
+    f"{BASE_OUTPUT_FOLDER}/{VA}/volatile_summary_outputs"
+)
 # Define the percentage of available CPU to be used
 cpu_percent_to_use = 0.8  # You can adjust this percentage as needed
 

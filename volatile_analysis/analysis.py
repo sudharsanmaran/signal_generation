@@ -194,6 +194,36 @@ def get_group_duration(group_data):
     return duration
 
 
+def get_prefix(validated_data, df):
+    """Get the prefix of a dataframe."""
+    time_frame = f"TF{'-'.join(str(period) for period in validated_data['time_frames'])}"
+    std_period = (
+        f"PR{'-'.join(str(period) for period in validated_data['periods'])}"
+    )
+    prefix = f"{time_frame}_{std_period}_{validated_data['instrument']}_{df.index[0]}_{df.index[-1]}"
+    return prefix
+
+
+def get_stdv_period(df):
+    """Get the standard deviation period of a dataframe."""
+    std_period = [col for col in df.columns if "stdv" in col]
+    terms = std_period[0].split("_")
+    return terms[-1]
+
+
+def format_tf(start, end):
+    """Format the time frame of a dataframe."""
+
+    diff = end - start
+    day_timedelta = pd.Timedelta(hours=6, minutes=15)
+    unit = "HR" if diff.seconds < day_timedelta.seconds else "D"
+    if unit == "HR":
+        time_frame = f"{make_round(diff.seconds/3600)}HR"
+    else:
+        time_frame = f"{make_round(diff.seconds/day_timedelta.seconds)}D"
+    return time_frame
+
+
 def close_to_close(data):
     """Calculate the close to close of a list of numbers."""
     pass

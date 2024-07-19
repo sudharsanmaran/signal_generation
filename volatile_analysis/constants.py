@@ -52,3 +52,35 @@ class PosNegConstant(Enum):
     NEGATIVE = "Negative"
     POSITIVE_MINUS = "Positive (< Upper Threshold)"
     NEGATIVE_PLUS = "Negative (> Lower Threshold)"
+    POSITIVE_NEGATIVE = "Positive / Negative"
+    POSITIVE_NEGATIVE_PLUS_MINUS = (
+        "Positive/Negative/(< Upper Threshold)/(> Lower Threshold)"
+    )
+
+
+class SummaryColumn(Enum):
+    STRATEGY_ID = "strategy_id"
+    TIME_FRAME = "time_frame"
+    INSTRUMENT = "instrument"
+    CATEGORY = "category"
+    VOLATILE_TAG = "volatile_tag"
+    VOLATILE_COMBINATIONS = "volatile_combinations"
+    CAPITAL_RANGE = "capital_range"
+    DURATION = "test_duration"
+    DURATION_IN_YEARS = "test_duration_in_years"
+    NO_OF_CYCLES = "no_of_cycles"
+    CYCLE_DURATION = "cycle_duration"
+    CUM_STD = "cumulative_stddev"
+    CLOSE_TO_CLOSE = "close_to_close"
+    CYCLE_CAPITAL_POS_NEG_MAX = "Cycle Capital Positive Negative_Max"
+    MIN_MAX_TO_CLOSE = "Min / Max to close ratio"
+    RISK_REWARD_MAX = "Risk Reward_Max"
+    RISK_REWARD_CTC = "Risk Reward_CTC"
+    ANNUAL_VOLATILITY_1 = "annual_volatility_1"
+
+
+class Operation(Enum):
+    AVG = "avg"
+    SUM = "sum"
+    MEDIAN = "median"
+    WEIGHTED_AVG = "weighted_avg"
