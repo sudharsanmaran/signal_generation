@@ -77,6 +77,8 @@ class SummaryColumn(Enum):
     RISK_REWARD_MAX = "Risk Reward_Max"
     RISK_REWARD_CTC = "Risk Reward_CTC"
     ANNUAL_VOLATILITY_1 = "annual_volatility_1"
+    MAX_TO_MIN_TO_FIRST_CLOSE = "max_to_min_to_first_close"
+    MIN_TO_MAX_TO_FIRST_CLOSE = "min_to_max_to_first_close"
 
 
 class Operation(Enum):

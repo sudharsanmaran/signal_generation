@@ -64,6 +64,26 @@ def get_multi_index():
                 Operation.AVG.value,
             ),
             (
+                SummaryColumn.MAX_TO_MIN_TO_FIRST_CLOSE.value,
+                PosNegConstant.POSITIVE.value,
+                Operation.AVG.value,
+            ),
+            (
+                SummaryColumn.MAX_TO_MIN_TO_FIRST_CLOSE.value,
+                PosNegConstant.NEGATIVE.value,
+                Operation.AVG.value,
+            ),
+            (
+                SummaryColumn.MIN_TO_MAX_TO_FIRST_CLOSE.value,
+                PosNegConstant.POSITIVE.value,
+                Operation.AVG.value,
+            ),
+            (
+                SummaryColumn.MIN_TO_MAX_TO_FIRST_CLOSE.value,
+                PosNegConstant.NEGATIVE.value,
+                Operation.AVG.value,
+            ),
+            (
                 SummaryColumn.CLOSE_TO_CLOSE.value,
                 PosNegConstant.POSITIVE.value,
                 Operation.AVG.value,
@@ -326,6 +346,18 @@ def update_columns(
             Operation.AVG.value,
             Operation.SUM.value,
             Operation.MEDIAN.value,
+        ],
+        (
+            AnalysisColumn.MAX_TO_MIN_TO_CLOSE.value,
+            SummaryColumn.MAX_TO_MIN_TO_FIRST_CLOSE.value,
+        ): [
+            Operation.AVG.value,
+        ],
+        (
+            AnalysisColumn.MIN_TO_MAX_TO_CLOSE.value,
+            SummaryColumn.MIN_TO_MAX_TO_FIRST_CLOSE.value,
+        ): [
+            Operation.AVG.value,
         ],
         (
             AnalysisColumn.CYCLE_CAPITAL_POS_NEG_MAX.value,
