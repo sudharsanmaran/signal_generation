@@ -10,6 +10,7 @@ from volatile_analysis.constants import (
     Operation,
     PosNegConstant,
     SummaryColumn,
+    VolatileTag,
 )
 
 
@@ -493,8 +494,8 @@ def update_weighted_avg(sign, vol_res, df, adj_mask, col1, col2, new_col_name):
 
 def get_masks(df, volatila_tag_col):
     return (
-        df[volatila_tag_col] == "LV",
-        df[volatila_tag_col] == "HV",
+        df[volatila_tag_col] == VolatileTag.LV.value,
+        df[volatila_tag_col] == VolatileTag.HV.value,
         df[AnalysisColumn.POSITIVE_NEGATIVE.value].isin(
             {PosNegConstant.POSITIVE.value, PosNegConstant.NEGATIVE.value}
         ),
