@@ -27,7 +27,9 @@ def main():
             instrument = st.text_input("Instrument", value="BANKNIFTY")
             streamlit_inputs["instrument"] = instrument
 
-            periods = st.multiselect("Periods", options=[20, 40], default=[20])
+            periods = st.multiselect(
+                "Periods", options=[5, 10, 20, 40, 80], default=[20]
+            )
             streamlit_inputs["periods"] = periods
 
             streamlit_inputs["parameter_id"] = {}

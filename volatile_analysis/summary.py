@@ -18,14 +18,17 @@ def process_summaries(files: list[str]):
     dfs = read_files(files)
     result = []
 
+    name = ""
     for df, file in zip(dfs, files):
+        terms = parse_file_terms(file)
+        name += "_".join(terms[:2]) + "_"
         result.extend(process_summary(df, file))
     result_df = pd.DataFrame(result)
 
     result_df.columns = get_multi_index()
 
     write_dataframe_to_csv(
-        result_df, VOLATILE_OUTPUT_SUMMARY_FOLDER, "summary.csv"
+        result_df, VOLATILE_OUTPUT_SUMMARY_FOLDER, f"{name}summary.csv"
     )
     return
 

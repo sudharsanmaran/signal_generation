@@ -42,10 +42,7 @@ def get_files_data(validated_data):
         "l",
         "c",
         "calculate_change_1",
-        *[
-            f"calculate_annualized_volatility_{value}"
-            for _, value in parameter_id.items()
-        ],
+        "calculate_annualized_volatility_1",
         *[
             f"calculate_stdv_{parameter_id}_{period}"
             for period, parameter_id in parameter_id.items()
@@ -506,7 +503,7 @@ def get_base_df(validated_data):
         for period, parameter_id in validated_data["parameter_id"].items():
             update_z_score(
                 df,
-                f"calculate_stdv_{parameter_id}_{period}",
+                f"calculate_avg_volatility_{parameter_id}_{period}",
                 period,
             )
 
