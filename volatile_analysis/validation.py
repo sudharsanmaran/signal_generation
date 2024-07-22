@@ -6,8 +6,8 @@ from pydantic import BaseModel, field_validator
 class VolitileInputs(BaseModel):
     time_frames: List[int]
     instrument: str
-    periods: Dict[int, List[int]]
-    parameter_id: dict[tuple[int], int]
+    periods: List[int]
+    parameter_id: dict[int, int]
 
     start_date: Union[str, datetime]
     end_date: Union[str, datetime]

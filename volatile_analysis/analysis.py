@@ -42,7 +42,7 @@ def z_score(
 def normalize_column(df, col, new_col, threshold=0.5):
     """Normalize the column of a dataframe."""
     df[new_col] = 0
-    df.loc[df[col] > threshold, new_col] = 1
+    df.loc[df[col] < threshold, new_col] = 1
     return df
 
 

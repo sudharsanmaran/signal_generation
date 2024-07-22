@@ -2,8 +2,8 @@ import time
 import dotenv
 import streamlit as st
 
-from new_module.processor import process
-from new_module.validation import validate
+from volume_analysis.processor import process
+from volume_analysis.validation import validate
 
 
 dotenv.load_dotenv(override=True)
