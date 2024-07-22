@@ -1,13 +1,13 @@
 from datetime import datetime
-from typing import List, Union
+from typing import Dict, List, Union
 from pydantic import BaseModel, field_validator
 
 
 class VolitileInputs(BaseModel):
     time_frames: List[int]
     instrument: str
-    periods: List[int]
-    parameter_id: dict[int, int]
+    periods: Dict[int, List[int]]
+    parameter_id: dict[tuple[int], int]
 
     start_date: Union[str, datetime]
     end_date: Union[str, datetime]
