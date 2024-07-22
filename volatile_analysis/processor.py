@@ -222,6 +222,17 @@ def analyse_volatile(
             group_data.iloc[-1]["c"] - group_data.iloc[0]["c"]
         )
 
+        df.loc[last_index, AnalysisColumn.CTC_TO_CLOSE.value] = make_round(
+            (
+                (
+                    group_data.iloc[0]["c"]
+                    - df.loc[last_index, AnalysisColumn.CTC.value]
+                )
+                / group_data.iloc[0]["c"]
+            )
+            * 100
+        )
+
         update_capital_and_capital_o_s(df, group_data)
 
         df.loc[last_index, AnalysisColumn.CYCLE_CAPITAL_MAX.value] = df.loc[
@@ -306,7 +317,6 @@ def analyse_volatile(
                 (
                     df.loc[last_index, AnalysisColumn.MAX_TO_MIN.value]
                     / group_data.iloc[0]["c"]
-                    - 1
                 )
                 * 100
             )
@@ -318,7 +328,6 @@ def analyse_volatile(
                 (
                     df.loc[last_index, AnalysisColumn.MIN_TO_MAX.value]
                     / group_data.iloc[0]["c"]
-                    - 1
                 )
                 * 100
             )

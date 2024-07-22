@@ -32,6 +32,7 @@ class AnalysisColumn(Enum):
     MIN_TO_MAX_DURATION = "min_to_max_duration"
     MIN_TO_MAX_TO_CLOSE = "min_to_max_to_close"
     CTC = "ctc"
+    CTC_TO_CLOSE = "ctc_to_close"
     CAPITAL = "capital"
     CAPITAL_O_S = "capital_o/s"
     CYCLE_CAPITAL_MIN = "cycle_capital_min"
