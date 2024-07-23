@@ -43,14 +43,6 @@ def get_files_data(validated_data):
         "c",
         "calculate_change_1",
         "calculate_annualized_volatility_1",
-        *[
-            f"calculate_stdv_{parameter_id}_{period}"
-            for period, parameter_id in parameter_id.items()
-        ],
-        *[
-            f"calculate_avg_volatility_{parameter_id}_{period}"
-            for period, parameter_id in parameter_id.items()
-        ],
     ]
     index = "dt"
     instrument = validated_data["instrument"]
@@ -63,12 +55,39 @@ def get_files_data(validated_data):
                 f"{time_frame}_{instrument}.csv",
             ),
             "index_col": index,
-            "cols": [index, *cols],
+            "cols": [
+                index,
+                *cols,
+                *get_stdv_cols(
+                    parameter_id,
+                    validated_data["periods"][time_frame],
+                    time_frame,
+                ),
+                *get_avg_volatility_cols(
+                    parameter_id,
+                    validated_data["periods"][time_frame],
+                    time_frame,
+                ),
+            ],
         }
         for time_frame in time_frames
     }
 
     return files_to_read
+
+
+def get_stdv_cols(parameter_id, periods, time_frame):
+    return [
+        f"calculate_stdv_{parameter_id[(time_frame, period)]}_{period}"
+        for period in periods
+    ]
+
+
+def get_avg_volatility_cols(parameter_id, periods, time_frame):
+    return [
+        f"calculate_avg_volatility_{parameter_id[(time_frame, period)]}_{period}"
+        for period in periods
+    ]
 
 
 def process_volatile(validated_data):
@@ -77,7 +96,7 @@ def process_volatile(validated_data):
     df, include_next_first_row = update_volatile_cycle_id(validated_data, dfs)
     df = analyse_volatile(
         df,
-        tagcol=f"{validated_data['time_frames'][0]}_{validated_data['periods'][0]}_{AnalysisConstant.VOLATILE_TAG.value}",
+        tagcol=f"{validated_data['time_frames'][0]}_{validated_data['periods'][validated_data['time_frames'][0]][0]}_{AnalysisConstant.VOLATILE_TAG.value}",
         validate_data=validated_data,
         group_by_col=AnalysisConstant.CYCLE_ID.value,
         include_next_first_row=include_next_first_row,
@@ -109,7 +128,7 @@ def update_volatile_cycle_id(validated_data, dfs):
         return {
             timeframe: [
                 f"{timeframe}_{period}_{AnalysisConstant.VOLATILE_TAG.value}"
-                for period in periods
+                for period in periods[timeframe]
             ]
             for timeframe in timeframes
         }
@@ -180,6 +199,7 @@ def analyse_volatile(
         ):
             return
 
+        first_index = group_data.index[0]
         last_index = group_data.index[-1]
 
         adjusted_group_data = (
@@ -224,13 +244,9 @@ def analyse_volatile(
 
         df.loc[last_index, AnalysisColumn.CTC_TO_CLOSE.value] = make_round(
             (
-                (
-                    group_data.iloc[0]["c"]
-                    - df.loc[last_index, AnalysisColumn.CTC.value]
-                )
+                df.loc[last_index, AnalysisColumn.CTC.value]
                 / group_data.iloc[0]["c"]
             )
-            * 100
         )
 
         update_capital_and_capital_o_s(df, group_data)
@@ -245,7 +261,7 @@ def analyse_volatile(
             group_data.index[-1], AnalysisColumn.CAPITAL_O_S.value
         ]
         df.loc[last_index, AnalysisColumn.CYCLE_CAPITAL_TO_CLOSE.value] = (
-            calculate_cycle_capital_to_close(df, last_index)
+            calculate_cycle_capital_to_close(df, last_index, first_index)
         )
 
         df.loc[last_index, AnalysisColumn.POSITIVE_NEGATIVE.value] = (
@@ -258,7 +274,7 @@ def analyse_volatile(
             )
         )
 
-        update_positive_negative_metrics(df, last_index, group_data)
+        update_positive_negative_metrics(df, last_index, first_index)
 
         df.loc[last_index, AnalysisColumn.RISK_REWARD_MAX.value] = (
             calculate_risk_reward(
@@ -333,30 +349,32 @@ def analyse_volatile(
             )
         )
 
-    def calculate_cycle_capital_to_close(df, last_index):
+    def calculate_cycle_capital_to_close(df, last_index, first_index):
         return make_round(
             (
                 (
                     df.loc[
                         last_index, AnalysisColumn.CYCLE_CAPITAL_CLOSE.value
                     ]
-                    / df.loc[last_index, AnalysisColumn.CAPITAL.value]
+                    / df.loc[first_index, AnalysisColumn.CAPITAL.value]
                 )
                 * 100
             )
             - 100
         )
 
-    def update_positive_negative_metrics(df, last_index, group_data):
+    def update_positive_negative_metrics(df, last_index, first_index):
         if df.loc[last_index, AnalysisColumn.POSITIVE_NEGATIVE.value] in {
             PosNegConstant.POSITIVE.value,
             PosNegConstant.POSITIVE_MINUS.value,
         }:
             df.loc[
                 last_index, AnalysisColumn.CYCLE_CAPITAL_POS_NEG_MAX.value
-            ] = calculate_cycle_capital_pos_neg_max(df, last_index)
+            ] = calculate_cycle_capital_pos_neg_max(
+                df, last_index, first_index
+            )
             df.loc[last_index, AnalysisColumn.CYCLE_CAPITAL_DD.value] = (
-                calculate_cycle_capital_dd(df, last_index)
+                calculate_cycle_capital_dd(df, last_index, first_index)
             )
             df.loc[last_index, AnalysisColumn.MIN_MAX_TO_CLOSE.value] = (
                 calculate_min_max_to_close(df, last_index)
@@ -368,13 +386,17 @@ def analyse_volatile(
             df.loc[
                 last_index, AnalysisColumn.CYCLE_CAPITAL_POS_NEG_MAX.value
             ] = calculate_cycle_capital_pos_neg_max(
-                df, last_index, is_positive=False
+                df, last_index, first_index, is_positive=False
             )
             df.loc[last_index, AnalysisColumn.CYCLE_CAPITAL_DD.value] = (
-                calculate_cycle_capital_dd(df, last_index, is_positive=False)
+                calculate_cycle_capital_dd(
+                    df, last_index, first_index, is_positive=False
+                )
             )
             df.loc[last_index, AnalysisColumn.MIN_MAX_TO_CLOSE.value] = (
-                calculate_min_max_to_close(df, last_index, is_positive=False)
+                calculate_min_max_to_close(
+                    df, last_index, first_index, is_positive=False
+                )
             )
 
         df.loc[last_index, AnalysisColumn.PROBABILITY.value] = (
@@ -384,7 +406,9 @@ def analyse_volatile(
             else 0
         )
 
-    def calculate_cycle_capital_pos_neg_max(df, last_index, is_positive=True):
+    def calculate_cycle_capital_pos_neg_max(
+        df, last_index, first_index, is_positive=True
+    ):
         return make_round(
             (
                 (
@@ -396,14 +420,16 @@ def analyse_volatile(
                             else AnalysisColumn.CYCLE_CAPITAL_MAX.value
                         ),
                     ]
-                    / df.loc[last_index, AnalysisColumn.CAPITAL.value]
+                    / df.loc[first_index, AnalysisColumn.CAPITAL.value]
                 )
                 * 100
             )
             - 100
         )
 
-    def calculate_cycle_capital_dd(df, last_index, is_positive=True):
+    def calculate_cycle_capital_dd(
+        df, last_index, first_index, is_positive=True
+    ):
         return make_round(
             make_negative(
                 (
@@ -416,7 +442,7 @@ def analyse_volatile(
                                 else AnalysisColumn.CYCLE_CAPITAL_MIN.value
                             ),
                         ]
-                        / df.loc[last_index, AnalysisColumn.CAPITAL.value]
+                        / df.loc[first_index, AnalysisColumn.CAPITAL.value]
                     )
                     * 100
                 )
@@ -424,7 +450,9 @@ def analyse_volatile(
             )
         )
 
-    def calculate_min_max_to_close(df, last_index, is_positive=True):
+    def calculate_min_max_to_close(
+        df, last_index, first_index, is_positive=True
+    ):
         return make_round(
             make_positive(
                 (
@@ -437,17 +465,17 @@ def analyse_volatile(
                                 else AnalysisColumn.CYCLE_CAPITAL_MAX.value
                             ),
                         ]
-                        - df.loc[last_index, AnalysisColumn.CAPITAL.value]
+                        - df.loc[first_index, AnalysisColumn.CAPITAL.value]
                     )
                     - (
                         df.loc[
                             last_index,
                             AnalysisColumn.CYCLE_CAPITAL_CLOSE.value,
                         ]
-                        - df.loc[last_index, AnalysisColumn.CAPITAL.value]
+                        - df.loc[first_index, AnalysisColumn.CAPITAL.value]
                     )
                 )
-                / df.loc[last_index, AnalysisColumn.CAPITAL.value]
+                / df.loc[first_index, AnalysisColumn.CAPITAL.value]
             )
         )
 
@@ -509,53 +537,57 @@ def get_base_df(validated_data):
     dfs = read_files(start_date, end_date, files_to_read)
 
     for time_frame, df in dfs.items():
-        for period, parameter_id in validated_data["parameter_id"].items():
+        for period in validated_data["periods"][time_frame]:
             update_z_score(
                 df,
-                f"calculate_avg_volatility_{parameter_id}_{period}",
+                f"calculate_avg_volatility_{validated_data['parameter_id'][(time_frame, period)]}_{period}",
                 period,
+                time_frame,
             )
 
             normalize_column(
                 df,
-                f"{period}_{AnalysisConstant.Z_SCORE.value}",
-                f"{period}_{AnalysisConstant.NORM_Z_SCORE.value}",
+                f"{time_frame}_{period}_{AnalysisConstant.Z_SCORE.value}",
+                f"{time_frame}_{period}_{AnalysisConstant.NORM_Z_SCORE.value}",
                 validated_data["z_score_threshold"],
             )
 
             trailing_window_sum(
                 df,
+                time_frame,
                 validated_data["sum_window_size"],
                 period,
-                col=f"{period}_{AnalysisConstant.NORM_Z_SCORE.value}",
+                col=f"{time_frame}_{period}_{AnalysisConstant.NORM_Z_SCORE.value}",
             )
 
             trailing_window_avg(
                 df,
+                time_frame,
                 validated_data["avg_window_size"],
                 period,
-                col=f"{period}_{AnalysisConstant.TRAIL_WINDOW_SUM.value}",
+                col=f"{time_frame}_{period}_{AnalysisConstant.TRAIL_WINDOW_SUM.value}",
             )
 
             update_volatile_tag(
                 df,
                 validated_data["lv_tag"],
                 validated_data["hv_tag"],
-                col=f"{period}_{AnalysisConstant.TRAIL_WINDOW_AVG.value}",
+                col=f"{time_frame}_{period}_{AnalysisConstant.TRAIL_WINDOW_AVG.value}",
                 new_col=f"{time_frame}_{period}_{AnalysisConstant.VOLATILE_TAG.value}",
             )
 
     return dfs
 
 
-def update_z_score(df, col_name, period):
-    cumulative_stddev(df, col_name, period)
-    cumulutaive_avg_volatility(df, col_name, period)
+def update_z_score(df, col_name, period, time_frame):
+    cumulative_stddev(df, col_name, period, time_frame)
+    cumulutaive_avg_volatility(df, col_name, period, time_frame)
     z_score(
         df,
         col_name,
         period,
-        cum_std_col=f"{period}_{AnalysisConstant.CUM_STD.value}",
-        cum_avg_volatility_col=f"{period}_{AnalysisConstant.CUM_AVG_VOLATILITY.value}",
+        time_frame,
+        cum_std_col=f"{time_frame}_{period}_{AnalysisConstant.CUM_STD.value}",
+        cum_avg_volatility_col=f"{time_frame}_{period}_{AnalysisConstant.CUM_AVG_VOLATILITY.value}",
     )
     return df

@@ -8,19 +8,19 @@ from volatile_analysis.constants import (
 )
 
 
-def cumulative_stddev(df, col, period):
+def cumulative_stddev(df, col, period, time_frame):
     """Calculate the cumulative standard deviation of a list of numbers."""
-    df[f"{period}_{AnalysisConstant.CUM_STD.value}"] = (
+    df[f"{time_frame}_{period}_{AnalysisConstant.CUM_STD.value}"] = (
         df[col].expanding().std()
     )
     return df
 
 
-def cumulutaive_avg_volatility(df, col, period):
+def cumulutaive_avg_volatility(df, col, period, time_frame):
     """Calculate the cumulative average volatility of a list of numbers."""
-    df[f"{period}_{AnalysisConstant.CUM_AVG_VOLATILITY.value}"] = (
-        df[col].expanding().mean()
-    )
+    df[
+        f"{time_frame}_{period}_{AnalysisConstant.CUM_AVG_VOLATILITY.value}"
+    ] = (df[col].expanding().mean())
     return df
 
 
@@ -28,11 +28,12 @@ def z_score(
     df,
     col,
     period,
+    time_frame,
     cum_std_col=AnalysisConstant.CUM_STD.value,
     cum_avg_volatility_col=AnalysisConstant.CUM_AVG_VOLATILITY.value,
 ):
     """Calculate the z score of a list of numbers."""
-    df[f"{period}_{AnalysisConstant.Z_SCORE.value}"] = make_round(
+    df[f"{time_frame}_{period}_{AnalysisConstant.Z_SCORE.value}"] = make_round(
         (df[cum_avg_volatility_col] - df[col]) / df[cum_std_col]
     ).fillna(0)
 
@@ -47,20 +48,28 @@ def normalize_column(df, col, new_col, threshold=0.5):
 
 
 def trailing_window_sum(
-    df, window_size, period, col=AnalysisConstant.NORM_Z_SCORE.value
+    df,
+    time_frame,
+    window_size,
+    period,
+    col=AnalysisConstant.NORM_Z_SCORE.value,
 ):
     """Calculate the trailing window sum of a list of numbers."""
-    df[f"{period}_{AnalysisConstant.TRAIL_WINDOW_SUM.value}"] = (
+    df[f"{time_frame}_{period}_{AnalysisConstant.TRAIL_WINDOW_SUM.value}"] = (
         df[col].rolling(window=window_size).sum()
     )
     return df
 
 
 def trailing_window_avg(
-    df, window_size, period, col=AnalysisConstant.TRAIL_WINDOW_SUM.value
+    df,
+    time_frame,
+    window_size,
+    period,
+    col=AnalysisConstant.TRAIL_WINDOW_SUM.value,
 ):
     """Calculate the trailing window average of a list of numbers."""
-    df[f"{period}_{AnalysisConstant.TRAIL_WINDOW_AVG.value}"] = (
+    df[f"{time_frame}_{period}_{AnalysisConstant.TRAIL_WINDOW_AVG.value}"] = (
         df[col].rolling(window=window_size).mean()
     )
     return df
@@ -196,11 +205,14 @@ def get_group_duration(group_data):
 
 def get_prefix(validated_data, df):
     """Get the prefix of a dataframe."""
-    time_frame = f"TF{'-'.join(str(period) for period in validated_data['time_frames'])}"
-    std_period = (
-        f"PR{'-'.join(str(period) for period in validated_data['periods'])}"
-    )
-    prefix = f"{time_frame}_{std_period}_{validated_data['instrument']}_{df.index[0]}_{df.index[-1]}"
+    pre = ""
+    for tf in validated_data["time_frames"]:
+        pre += f"TF-{tf}_PR"
+        for period in validated_data["periods"][tf]:
+            pre += f"-{period}"
+        pre += "_"
+
+    prefix = f"{pre}{validated_data['instrument']}_{df.index[0]}_{df.index[-1]}"
     return prefix
 
 

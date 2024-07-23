@@ -1,3 +1,4 @@
+from collections import defaultdict
 from pathlib import Path
 import time
 import streamlit as st
@@ -27,23 +28,34 @@ def main():
             instrument = st.text_input("Instrument", value="BANKNIFTY")
             streamlit_inputs["instrument"] = instrument
 
-            periods = st.multiselect(
-                "Periods", options=[5, 10, 20, 40, 80], default=[20]
-            )
-            streamlit_inputs["periods"] = periods
+            periods_map = defaultdict(list)
+            for time_frame in time_frames:
+                selected_period = st.multiselect(
+                    f"Period for tf:{time_frame}",
+                    options=[5, 10, 20, 40, 80],
+                    default=[20],
+                )
+                periods_map[time_frame] = selected_period
+            streamlit_inputs["periods"] = periods_map
 
             streamlit_inputs["parameter_id"] = {}
-            for period in periods:
-                parameter_id = st.number_input(
-                    f"Parameter ID for {period}", value=1, step=1
-                )
-                streamlit_inputs["parameter_id"].update({period: parameter_id})
+            for tf, periods in periods_map.items():
+                for period in periods:
+
+                    parameter_id = st.number_input(
+                        f"Parameter ID for tf:{tf}, period:{period}",
+                        value=1,
+                        step=1,
+                    )
+                    streamlit_inputs["parameter_id"].update(
+                        {(tf, period): parameter_id}
+                    )
 
             set_start_end_datetime(streamlit_inputs, {})
 
             # float for z score input
             z_score_threshold = st.number_input(
-                "Z Score Threshold", value=0.5, step=0.1
+                "Z Score Threshold", value=0.0, step=0.1
             )
             streamlit_inputs["z_score_threshold"] = z_score_threshold
 
