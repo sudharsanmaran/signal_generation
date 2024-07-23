@@ -1,3 +1,4 @@
+import itertools
 import pandas as pd
 from source.constants import (
     VOLATILE_OUTPUT_FOLDER,
@@ -245,9 +246,11 @@ def parse_timeframes_and_periods(terms: list):
 def create_common_props(df: pd.DataFrame, terms: list):
     df_start, df_end = df.index[0], df.index[-1]
     return {
-        SummaryColumn.STRATEGY_ID.value: "_".join(terms[:2]),
-        SummaryColumn.TIME_FRAME.value: terms[0][2:],
-        SummaryColumn.INSTRUMENT.value: terms[2],
+        SummaryColumn.STRATEGY_ID.value: "_".join(terms[:-3]),
+        SummaryColumn.TIME_FRAME.value: tuple(
+            term[-1] for term in terms if "TF" in term
+        ),
+        SummaryColumn.INSTRUMENT.value: terms[-3],
         SummaryColumn.VOLATILE_COMBINATIONS.value: (
             df.iloc[0]["lv_tag"],
             df.iloc[0]["hv_tag"],
@@ -273,12 +276,10 @@ def create_category_result(common_props: dict, idx: int):
 
 
 def create_volatility_result(
-    df: pd.DataFrame, adj_mask: pd.Series, cat_res: dict, volatila_tag_col: str
+    df: pd.DataFrame, adj_mask: pd.Series, cat_res: dict, combination
 ):
     vol_res = {**cat_res}
-    vol_res[SummaryColumn.VOLATILE_TAG.value] = df[adj_mask].iloc[-1][
-        volatila_tag_col
-    ]
+    vol_res[SummaryColumn.VOLATILE_TAG.value] = combination
     vol_res[SummaryColumn.NO_OF_CYCLES.value] = get_no_of_valid_cycles(
         df, adj_mask
     )
@@ -286,23 +287,21 @@ def create_volatility_result(
 
 
 def process_summary(df: pd.DataFrame, file: str):
-    pd.set_option("display.max_rows", None)
 
     terms = parse_file_terms(file)
     tfs, periods = parse_timeframes_and_periods(terms)
     common_props = create_common_props(df, terms)
-    volatila_tag_col = (
-        f"{tfs[0]}_{periods[0]}_{AnalysisConstant.VOLATILE_TAG.value}"
-    )
+    volatila_tag_cols = [
+        col for col in df.columns if AnalysisConstant.VOLATILE_TAG.value in col
+    ]
 
     (
-        lv_mask,
-        hv_mask,
+        volatile_masks,
         pos_neg_mask,
         pos_neg_plus_minus,
         positive_mask,
         negative_mask,
-    ) = get_masks(df, volatila_tag_col)
+    ) = get_masks(df, volatila_tag_cols)
 
     result = []
     for idx, mask in enumerate((pos_neg_mask, pos_neg_plus_minus)):
@@ -310,12 +309,13 @@ def process_summary(df: pd.DataFrame, file: str):
             continue
 
         cat_res = create_category_result(common_props, idx)
-        for adj_mask in (mask & lv_mask, mask & hv_mask):
-            if df[adj_mask].shape[0] < 1:
-                continue
+        for vol_tag_combination, vol_mask in volatile_masks.items():
+            adj_mask = mask & vol_mask
+            # if df[adj_mask].shape[0] < 1:
+            #     continue
 
             vol_res = create_volatility_result(
-                df, adj_mask, cat_res, volatila_tag_col
+                df, adj_mask, cat_res, vol_tag_combination
             )
             update_columns(
                 df,
@@ -496,9 +496,9 @@ def update_weighted_avg(sign, vol_res, df, adj_mask, col1, col2, new_col_name):
 
 
 def get_masks(df, volatila_tag_col):
+    volatile_masks = get_volatile_masks(df, volatila_tag_col)
     return (
-        df[volatila_tag_col] == VolatileTag.LV.value,
-        df[volatila_tag_col] == VolatileTag.HV.value,
+        volatile_masks,
         df[AnalysisColumn.POSITIVE_NEGATIVE.value].isin(
             {PosNegConstant.POSITIVE.value, PosNegConstant.NEGATIVE.value}
         ),
@@ -521,6 +521,22 @@ def get_masks(df, volatila_tag_col):
             }
         ),
     )
+
+
+def get_volatile_masks(df, volatile_tag_cols):
+
+    combinations = list(
+        itertools.product(
+            [VolatileTag.HV.value, VolatileTag.LV.value],
+            repeat=len(volatile_tag_cols),
+        )
+    )
+
+    masks = {}
+    for combination in combinations:
+        mask = (df[volatile_tag_cols] == combination).all(axis=1)
+        masks[combination] = mask
+    return masks
 
 
 def get_no_of_valid_cycles(df, adj_mask):
