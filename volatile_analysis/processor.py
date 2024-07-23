@@ -134,9 +134,9 @@ def update_volatile_cycle_id(validated_data, dfs):
         }
 
     def process_single_dataframe(df, periods, timeframes):
-        if len(periods) == 1:
-            period = periods[0]
-            timeframe = timeframes[0]
+        timeframe = timeframes[0]
+        if len(periods[timeframe]) == 1:
+            period = periods[timeframe][0]
             col = f"{timeframe}_{period}_{AnalysisConstant.VOLATILE_TAG.value}"
             update_cycle_id(
                 df, col=col, new_col=AnalysisConstant.CYCLE_ID.value
@@ -536,6 +536,13 @@ def get_base_df(validated_data):
 
     dfs = read_files(start_date, end_date, files_to_read)
 
+    def adjust_date(date):
+        date += pd.Timedelta(days=90)
+        if date.weekday() >= 5:  # 5 and 6 correspond to Saturday and Sunday
+            date += pd.Timedelta(days=(7 - date.weekday()))
+        return date.normalize()
+
+    updated_dfs = {}
     for time_frame, df in dfs.items():
         for period in validated_data["periods"][time_frame]:
             update_z_score(
@@ -544,6 +551,22 @@ def get_base_df(validated_data):
                 period,
                 time_frame,
             )
+
+            # skip 90 days after first ocuurence of z_score. from start of 91 day
+            z_score_start = df.loc[
+                df[f"{time_frame}_{period}_{AnalysisConstant.Z_SCORE.value}"]
+                != 0
+            ].head(1)
+
+            adjusted_date = adjust_date(z_score_start.index[0])
+
+            if adjusted_date not in df.index:
+                # Find the next available date
+                adjusted_date = df.index[
+                    df.index.get_indexer([adjusted_date], method="bfill")
+                ][0]
+
+            df = df.loc[adjusted_date:]
 
             normalize_column(
                 df,
@@ -576,7 +599,9 @@ def get_base_df(validated_data):
                 new_col=f"{time_frame}_{period}_{AnalysisConstant.VOLATILE_TAG.value}",
             )
 
-    return dfs
+            updated_dfs[time_frame] = df
+
+    return updated_dfs
 
 
 def update_z_score(df, col_name, period, time_frame):
