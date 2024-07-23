@@ -377,7 +377,7 @@ def analyse_volatile(
                 calculate_cycle_capital_dd(df, last_index, first_index)
             )
             df.loc[last_index, AnalysisColumn.MIN_MAX_TO_CLOSE.value] = (
-                calculate_min_max_to_close(df, last_index)
+                calculate_min_max_to_close(df, last_index, first_index)
             )
         elif df.loc[last_index, AnalysisColumn.POSITIVE_NEGATIVE.value] in {
             PosNegConstant.NEGATIVE.value,

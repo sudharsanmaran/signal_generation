@@ -119,12 +119,12 @@ def update_cycle_id_multi_tag(
     """Update the cycle id of a dataframe."""
 
     # make condition
-    start_condition = reduce(
-        operator.and_, (df[cols[0]] == df[col] for col in cols[1:])
-    )
+    start_condition = df[cols].notna().all(axis=1)
 
+    shifted_df = df.shift(1)
     end_condition = reduce(
-        operator.or_, (df[cols[0]] != df[col] for col in cols[1:])
+        operator.or_,
+        (df[col] != shifted_df[col] for col in cols),
     )
 
     df_indices = df.index
@@ -212,7 +212,9 @@ def get_prefix(validated_data, df):
             pre += f"-{period}"
         pre += "_"
 
-    prefix = f"{pre}{validated_data['instrument']}_{df.index[0]}_{df.index[-1]}"
+    prefix = (
+        f"{pre}{validated_data['instrument']}_{df.index[0]}_{df.index[-1]}"
+    )
     return prefix
 
 
