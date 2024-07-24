@@ -147,8 +147,10 @@ def updated_cycle_id_by_start_end(
             counter += 1
             end_idx = end_indices[end_indices > start_idx].min()
             if not pd.isna(end_idx):
-                in_cycle.loc[start_idx:end_idx] = True
-                cycle_counter.loc[start_idx:end_idx] = counter
+                start_pos = df.index.get_loc(start_idx)
+                end_pos = df.index.get_loc(end_idx)
+                in_cycle.iloc[start_pos:end_pos] = True
+                cycle_counter.iloc[start_pos:end_pos] = counter
             else:
                 in_cycle.loc[start_idx:] = True
                 cycle_counter.loc[start_idx:] = counter

@@ -147,7 +147,7 @@ def update_volatile_cycle_id(validated_data, dfs):
             update_cycle_id_multi_tag(
                 df, cols=cols, new_col=AnalysisConstant.CYCLE_ID.value
             )
-            return df, False
+            return df, True
 
     def merge_dataframes(dfs, cols):
         iter_dfs = iter(dfs.items())
@@ -167,7 +167,7 @@ def update_volatile_cycle_id(validated_data, dfs):
         update_cycle_id_multi_tag(
             merged_df, cols=flat_cols, new_col=AnalysisConstant.CYCLE_ID.value
         )
-        return merged_df, False
+        return merged_df, True
 
     if len(dfs) == 1:
         timeframe = validated_data["time_frames"]
