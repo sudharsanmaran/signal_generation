@@ -188,6 +188,7 @@ def analyse_volatile(
     tagcol=None,
     include_next_first_row=False,
     analyze=VolatileTag.ALL.value,
+    prefix="",
 ):
     def process_group(group_id, group_data):
         if group_id < 1:
@@ -208,113 +209,149 @@ def analyse_volatile(
             else group_data
         )
 
-        df.loc[last_index, AnalysisColumn.CYCLE_DURATION.value] = (
+        df.loc[last_index, prefix + AnalysisColumn.CYCLE_DURATION.value] = (
             get_group_duration(adjusted_group_data)
         )
 
         max, min = get_max_min(adjusted_group_data)
-        df.loc[last_index, AnalysisColumn.CYCLE_MAX_1.value] = max["h"]
-        df.loc[last_index, AnalysisColumn.CYCLE_MIN_1.value] = min["l"]
-        df.loc[last_index, AnalysisColumn.MAX_TO_MIN.value] = make_round(
-            make_positive(max["h"] - min["l"])
+        df.loc[last_index, prefix + AnalysisColumn.CYCLE_MAX_1.value] = max[
+            "h"
+        ]
+        df.loc[last_index, prefix + AnalysisColumn.CYCLE_MIN_1.value] = min[
+            "l"
+        ]
+        df.loc[last_index, prefix + AnalysisColumn.MAX_TO_MIN.value] = (
+            make_round(make_positive(max["h"] - min["l"]))
         )
-        df.loc[last_index, AnalysisColumn.MAX_TO_MIN_DURATION.value] = (
-            min.name - max.name
-        )
-        df.loc[last_index, AnalysisColumn.MAX_TO_MIN_TO_CLOSE.value] = (
-            calculate_max_to_min_to_close(df, last_index, group_data)
-        )
+        df.loc[
+            last_index, prefix + AnalysisColumn.MAX_TO_MIN_DURATION.value
+        ] = (min.name - max.name)
+        df.loc[
+            last_index, prefix + AnalysisColumn.MAX_TO_MIN_TO_CLOSE.value
+        ] = calculate_max_to_min_to_close(df, last_index, group_data, prefix)
 
         max2, min2 = get_min_max(adjusted_group_data)
-        df.loc[last_index, AnalysisColumn.CYCLE_MAX_2.value] = max2["h"]
-        df.loc[last_index, AnalysisColumn.CYCLE_MIN_2.value] = min2["l"]
-        df.loc[last_index, AnalysisColumn.MIN_TO_MAX.value] = make_round(
-            make_positive(max2["h"] - min2["l"])
+        df.loc[last_index, prefix + AnalysisColumn.CYCLE_MAX_2.value] = max2[
+            "h"
+        ]
+        df.loc[last_index, prefix + AnalysisColumn.CYCLE_MIN_2.value] = min2[
+            "l"
+        ]
+        df.loc[last_index, prefix + AnalysisColumn.MIN_TO_MAX.value] = (
+            make_round(make_positive(max2["h"] - min2["l"]))
         )
-        df.loc[last_index, AnalysisColumn.MIN_TO_MAX_DURATION.value] = (
-            max2.name - min2.name
-        )
-        df.loc[last_index, AnalysisColumn.MIN_TO_MAX_TO_CLOSE.value] = (
-            calculate_min_to_max_to_close(df, last_index, group_data)
-        )
+        df.loc[
+            last_index, prefix + AnalysisColumn.MIN_TO_MAX_DURATION.value
+        ] = (max2.name - min2.name)
+        df.loc[
+            last_index, prefix + AnalysisColumn.MIN_TO_MAX_TO_CLOSE.value
+        ] = calculate_min_to_max_to_close(df, last_index, group_data, prefix)
 
-        df.loc[last_index, AnalysisColumn.CTC.value] = make_round(
+        df.loc[last_index, prefix + AnalysisColumn.CTC.value] = make_round(
             group_data.iloc[-1]["c"] - group_data.iloc[0]["c"]
         )
 
-        df.loc[last_index, AnalysisColumn.CTC_TO_CLOSE.value] = make_round(
-            (
-                df.loc[last_index, AnalysisColumn.CTC.value]
-                / group_data.iloc[0]["c"]
+        df.loc[last_index, prefix + AnalysisColumn.CTC_TO_CLOSE.value] = (
+            make_round(
+                (
+                    df.loc[last_index, prefix + AnalysisColumn.CTC.value]
+                    / group_data.iloc[0]["c"]
+                )
             )
         )
 
-        update_capital_and_capital_o_s(df, group_data)
+        update_capital_and_capital_o_s(df, group_data, prefix)
 
-        df.loc[last_index, AnalysisColumn.CYCLE_CAPITAL_MAX.value] = df.loc[
-            group_data.index, AnalysisColumn.CAPITAL_O_S.value
-        ].max()
-        df.loc[last_index, AnalysisColumn.CYCLE_CAPITAL_MIN.value] = df.loc[
-            group_data.index, AnalysisColumn.CAPITAL_O_S.value
-        ].min()
-        df.loc[last_index, AnalysisColumn.CYCLE_CAPITAL_CLOSE.value] = df.loc[
-            group_data.index[-1], AnalysisColumn.CAPITAL_O_S.value
+        df.loc[last_index, prefix + AnalysisColumn.CYCLE_CAPITAL_MAX.value] = (
+            df.loc[
+                group_data.index, prefix + AnalysisColumn.CAPITAL_O_S.value
+            ].max()
+        )
+        df.loc[last_index, prefix + AnalysisColumn.CYCLE_CAPITAL_MIN.value] = (
+            df.loc[
+                group_data.index, prefix + AnalysisColumn.CAPITAL_O_S.value
+            ].min()
+        )
+        df.loc[
+            last_index, prefix + AnalysisColumn.CYCLE_CAPITAL_CLOSE.value
+        ] = df.loc[
+            group_data.index[-1], prefix + AnalysisColumn.CAPITAL_O_S.value
         ]
-        df.loc[last_index, AnalysisColumn.CYCLE_CAPITAL_TO_CLOSE.value] = (
-            calculate_cycle_capital_to_close(df, last_index, first_index)
+        df.loc[
+            last_index, prefix + AnalysisColumn.CYCLE_CAPITAL_TO_CLOSE.value
+        ] = calculate_cycle_capital_to_close(
+            df, last_index, first_index, prefix
         )
 
-        df.loc[last_index, AnalysisColumn.POSITIVE_NEGATIVE.value] = (
+        df.loc[last_index, prefix + AnalysisColumn.POSITIVE_NEGATIVE.value] = (
             get_direction(
                 df.loc[
-                    last_index, AnalysisColumn.CYCLE_CAPITAL_TO_CLOSE.value
+                    last_index,
+                    prefix + AnalysisColumn.CYCLE_CAPITAL_TO_CLOSE.value,
                 ],
                 validate_data["capital_upper_threshold"],
                 validate_data["capital_lower_threshold"],
             )
         )
 
-        update_positive_negative_metrics(df, last_index, first_index)
+        update_positive_negative_metrics(df, last_index, first_index, prefix)
 
-        df.loc[last_index, AnalysisColumn.RISK_REWARD_MAX.value] = (
+        df.loc[last_index, prefix + AnalysisColumn.RISK_REWARD_MAX.value] = (
             calculate_risk_reward(
-                df, last_index, AnalysisColumn.CYCLE_CAPITAL_POS_NEG_MAX.value
+                df,
+                last_index,
+                prefix + AnalysisColumn.CYCLE_CAPITAL_POS_NEG_MAX.value,
+                prefix,
             )
         )
-        df.loc[last_index, AnalysisColumn.RISK_REWARD_CTC.value] = (
+        df.loc[last_index, prefix + AnalysisColumn.RISK_REWARD_CTC.value] = (
             calculate_risk_reward(
-                df, last_index, AnalysisColumn.CYCLE_CAPITAL_TO_CLOSE.value
+                df,
+                last_index,
+                prefix + AnalysisColumn.CYCLE_CAPITAL_TO_CLOSE.value,
+                prefix,
             )
         )
 
-    def update_capital_and_capital_o_s(df, group_data):
+    def update_capital_and_capital_o_s(df, group_data, prefix):
 
-        df.loc[group_data.index[0], AnalysisColumn.CAPITAL.value] = 100
-        df.loc[group_data.index[0], AnalysisColumn.CAPITAL_O_S.value] = df.loc[
-            group_data.index[0], AnalysisColumn.CAPITAL.value
+        df.loc[group_data.index[0], prefix + AnalysisColumn.CAPITAL.value] = (
+            100
+        )
+        df.loc[
+            group_data.index[0], prefix + AnalysisColumn.CAPITAL_O_S.value
+        ] = df.loc[
+            group_data.index[0], prefix + AnalysisColumn.CAPITAL.value
         ] + (
-            df.loc[group_data.index[0], AnalysisColumn.CAPITAL.value]
+            df.loc[group_data.index[0], prefix + AnalysisColumn.CAPITAL.value]
             * group_data.loc[group_data.index[0], "calculate_change_1"]
         )
 
         for i in range(1, len(group_data)):
-            df.loc[group_data.index[i], AnalysisColumn.CAPITAL.value] = df.loc[
-                group_data.index[i - 1], AnalysisColumn.CAPITAL_O_S.value
+            df.loc[
+                group_data.index[i], prefix + AnalysisColumn.CAPITAL.value
+            ] = df.loc[
+                group_data.index[i - 1],
+                prefix + AnalysisColumn.CAPITAL_O_S.value,
             ]
 
             df.loc[
-                group_data.index[i], AnalysisColumn.CAPITAL_O_S.value
-            ] = df.loc[group_data.index[i], AnalysisColumn.CAPITAL.value] + (
-                df.loc[group_data.index[i], AnalysisColumn.CAPITAL.value]
+                group_data.index[i], prefix + AnalysisColumn.CAPITAL_O_S.value
+            ] = df.loc[
+                group_data.index[i], prefix + AnalysisColumn.CAPITAL.value
+            ] + (
+                df.loc[
+                    group_data.index[i], prefix + AnalysisColumn.CAPITAL.value
+                ]
                 * group_data.loc[group_data.index[i], "calculate_change_1"]
             )
 
-        df[AnalysisColumn.CAPITAL.value] = make_round_series(
-            df[AnalysisColumn.CAPITAL.value]
+        df[prefix + AnalysisColumn.CAPITAL.value] = make_round_series(
+            df[prefix + AnalysisColumn.CAPITAL.value]
         )
 
-        df[AnalysisColumn.CAPITAL_O_S.value] = make_round_series(
-            df[AnalysisColumn.CAPITAL_O_S.value]
+        df[prefix + AnalysisColumn.CAPITAL_O_S.value] = make_round_series(
+            df[prefix + AnalysisColumn.CAPITAL_O_S.value]
         )
 
     def get_adjusted_group_data(group_id, group_data):
@@ -327,87 +364,106 @@ def analyse_volatile(
             else group_data
         )
 
-    def calculate_max_to_min_to_close(df, last_index, group_data):
+    def calculate_max_to_min_to_close(df, last_index, group_data, prefix):
         return make_round(
             make_positive(
                 (
-                    df.loc[last_index, AnalysisColumn.MAX_TO_MIN.value]
+                    df.loc[
+                        last_index, prefix + AnalysisColumn.MAX_TO_MIN.value
+                    ]
                     / group_data.iloc[0]["c"]
                 )
                 * 100
             )
         )
 
-    def calculate_min_to_max_to_close(df, last_index, group_data):
+    def calculate_min_to_max_to_close(df, last_index, group_data, prefix):
         return make_round(
             make_positive(
                 (
-                    df.loc[last_index, AnalysisColumn.MIN_TO_MAX.value]
+                    df.loc[
+                        last_index, prefix + AnalysisColumn.MIN_TO_MAX.value
+                    ]
                     / group_data.iloc[0]["c"]
                 )
                 * 100
             )
         )
 
-    def calculate_cycle_capital_to_close(df, last_index, first_index):
+    def calculate_cycle_capital_to_close(df, last_index, first_index, prefix):
         return make_round(
             (
                 (
                     df.loc[
-                        last_index, AnalysisColumn.CYCLE_CAPITAL_CLOSE.value
+                        last_index,
+                        prefix + AnalysisColumn.CYCLE_CAPITAL_CLOSE.value,
                     ]
-                    / df.loc[first_index, AnalysisColumn.CAPITAL.value]
+                    / df.loc[
+                        first_index, prefix + AnalysisColumn.CAPITAL.value
+                    ]
                 )
                 * 100
             )
             - 100
         )
 
-    def update_positive_negative_metrics(df, last_index, first_index):
-        if df.loc[last_index, AnalysisColumn.POSITIVE_NEGATIVE.value] in {
+    def update_positive_negative_metrics(df, last_index, first_index, prefix):
+        if df.loc[
+            last_index, prefix + AnalysisColumn.POSITIVE_NEGATIVE.value
+        ] in {
             PosNegConstant.POSITIVE.value,
             PosNegConstant.POSITIVE_MINUS.value,
         }:
             df.loc[
-                last_index, AnalysisColumn.CYCLE_CAPITAL_POS_NEG_MAX.value
+                last_index,
+                prefix + AnalysisColumn.CYCLE_CAPITAL_POS_NEG_MAX.value,
             ] = calculate_cycle_capital_pos_neg_max(
-                df, last_index, first_index
+                df, last_index, first_index, prefix=prefix
             )
-            df.loc[last_index, AnalysisColumn.CYCLE_CAPITAL_DD.value] = (
-                calculate_cycle_capital_dd(df, last_index, first_index)
+            df.loc[
+                last_index, prefix + AnalysisColumn.CYCLE_CAPITAL_DD.value
+            ] = calculate_cycle_capital_dd(
+                df, last_index, first_index, prefix=prefix
             )
-            df.loc[last_index, AnalysisColumn.MIN_MAX_TO_CLOSE.value] = (
-                calculate_min_max_to_close(df, last_index, first_index)
+            df.loc[
+                last_index, prefix + AnalysisColumn.MIN_MAX_TO_CLOSE.value
+            ] = calculate_min_max_to_close(
+                df, last_index, first_index, prefix=prefix
             )
-        elif df.loc[last_index, AnalysisColumn.POSITIVE_NEGATIVE.value] in {
+        elif df.loc[
+            last_index, prefix + AnalysisColumn.POSITIVE_NEGATIVE.value
+        ] in {
             PosNegConstant.NEGATIVE.value,
             PosNegConstant.NEGATIVE_PLUS.value,
         }:
             df.loc[
-                last_index, AnalysisColumn.CYCLE_CAPITAL_POS_NEG_MAX.value
+                last_index,
+                prefix + AnalysisColumn.CYCLE_CAPITAL_POS_NEG_MAX.value,
             ] = calculate_cycle_capital_pos_neg_max(
-                df, last_index, first_index, is_positive=False
+                df, last_index, first_index, is_positive=False, prefix=prefix
             )
-            df.loc[last_index, AnalysisColumn.CYCLE_CAPITAL_DD.value] = (
-                calculate_cycle_capital_dd(
-                    df, last_index, first_index, is_positive=False
-                )
+            df.loc[
+                last_index, prefix + AnalysisColumn.CYCLE_CAPITAL_DD.value
+            ] = calculate_cycle_capital_dd(
+                df, last_index, first_index, is_positive=False, prefix=prefix
             )
-            df.loc[last_index, AnalysisColumn.MIN_MAX_TO_CLOSE.value] = (
-                calculate_min_max_to_close(
-                    df, last_index, first_index, is_positive=False
-                )
+            df.loc[
+                last_index, prefix + AnalysisColumn.MIN_MAX_TO_CLOSE.value
+            ] = calculate_min_max_to_close(
+                df, last_index, first_index, is_positive=False, prefix=prefix
             )
 
-        df.loc[last_index, AnalysisColumn.PROBABILITY.value] = (
+        df.loc[last_index, prefix + AnalysisColumn.PROBABILITY.value] = (
             1
-            if df.loc[last_index, AnalysisColumn.POSITIVE_NEGATIVE.value]
+            if df.loc[
+                last_index, prefix + AnalysisColumn.POSITIVE_NEGATIVE.value
+            ]
             in {PosNegConstant.NEGATIVE.value, PosNegConstant.POSITIVE.value}
             else 0
         )
 
     def calculate_cycle_capital_pos_neg_max(
-        df, last_index, first_index, is_positive=True
+        df, last_index, first_index, is_positive=True, prefix=""
     ):
         return make_round(
             (
@@ -415,12 +471,15 @@ def analyse_volatile(
                     df.loc[
                         last_index,
                         (
-                            AnalysisColumn.CYCLE_CAPITAL_MIN.value
+                            prefix + AnalysisColumn.CYCLE_CAPITAL_MIN.value
                             if not is_positive
-                            else AnalysisColumn.CYCLE_CAPITAL_MAX.value
+                            else prefix
+                            + AnalysisColumn.CYCLE_CAPITAL_MAX.value
                         ),
                     ]
-                    / df.loc[first_index, AnalysisColumn.CAPITAL.value]
+                    / df.loc[
+                        first_index, prefix + AnalysisColumn.CAPITAL.value
+                    ]
                 )
                 * 100
             )
@@ -428,7 +487,7 @@ def analyse_volatile(
         )
 
     def calculate_cycle_capital_dd(
-        df, last_index, first_index, is_positive=True
+        df, last_index, first_index, is_positive=True, prefix=""
     ):
         return make_round(
             make_negative(
@@ -437,12 +496,15 @@ def analyse_volatile(
                         df.loc[
                             last_index,
                             (
-                                AnalysisColumn.CYCLE_CAPITAL_MAX.value
+                                prefix + AnalysisColumn.CYCLE_CAPITAL_MAX.value
                                 if not is_positive
-                                else AnalysisColumn.CYCLE_CAPITAL_MIN.value
+                                else prefix
+                                + AnalysisColumn.CYCLE_CAPITAL_MIN.value
                             ),
                         ]
-                        / df.loc[first_index, AnalysisColumn.CAPITAL.value]
+                        / df.loc[
+                            first_index, prefix + AnalysisColumn.CAPITAL.value
+                        ]
                     )
                     * 100
                 )
@@ -451,7 +513,7 @@ def analyse_volatile(
         )
 
     def calculate_min_max_to_close(
-        df, last_index, first_index, is_positive=True
+        df, last_index, first_index, is_positive=True, prefix=""
     ):
         return make_round(
             make_positive(
@@ -460,30 +522,37 @@ def analyse_volatile(
                         df.loc[
                             last_index,
                             (
-                                AnalysisColumn.CYCLE_CAPITAL_MIN.value
+                                prefix + AnalysisColumn.CYCLE_CAPITAL_MIN.value
                                 if not is_positive
-                                else AnalysisColumn.CYCLE_CAPITAL_MAX.value
+                                else prefix
+                                + AnalysisColumn.CYCLE_CAPITAL_MAX.value
                             ),
                         ]
-                        - df.loc[first_index, AnalysisColumn.CAPITAL.value]
+                        - df.loc[
+                            first_index, prefix + AnalysisColumn.CAPITAL.value
+                        ]
                     )
                     - (
                         df.loc[
                             last_index,
-                            AnalysisColumn.CYCLE_CAPITAL_CLOSE.value,
+                            prefix + AnalysisColumn.CYCLE_CAPITAL_CLOSE.value,
                         ]
-                        - df.loc[first_index, AnalysisColumn.CAPITAL.value]
+                        - df.loc[
+                            first_index, prefix + AnalysisColumn.CAPITAL.value
+                        ]
                     )
                 )
-                / df.loc[first_index, AnalysisColumn.CAPITAL.value]
+                / df.loc[first_index, prefix + AnalysisColumn.CAPITAL.value]
             )
         )
 
-    def calculate_risk_reward(df, last_index, col):
+    def calculate_risk_reward(df, last_index, col, prefix):
         return make_round(
             make_positive(
                 df.loc[last_index, col]
-                / df.loc[last_index, AnalysisColumn.CYCLE_CAPITAL_DD.value]
+                / df.loc[
+                    last_index, prefix + AnalysisColumn.CYCLE_CAPITAL_DD.value
+                ]
             )
         )
 

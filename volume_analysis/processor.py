@@ -9,7 +9,7 @@ from volatile_analysis.processor import analyse_volatile
 
 
 AVG_ZSCORE_SUM_THRESHOLD = "avg_zscore_sum_threshold"
-FINAL_DB_PATH = os.getenv("FINAL_DB_PATH")
+FINAL_DB_PATH = os.getenv("VOLUME_DB_PATH")
 CYCLE_DURATION = "cycle_duration"
 WEIGHTED_AVERAGE_PRICE = "Weighted Average Price"
 CUM_AVG_WEIGHTED_AVERAGE_PRICE = "Cum Avg Weighted Average Price"
@@ -113,7 +113,8 @@ def process(validated_data: dict):
         df,
         validate_data=validated_data,
         group_by_col=CYCLE_ID,
-        include_next_first_row=False,
+        include_next_first_row=True,
+        prefix="1",
     )
 
     df[CUM_AVG_WEIGHTED_AVERAGE_PRICE] = (
@@ -125,46 +126,48 @@ def process(validated_data: dict):
     )
 
     update_sub_cycle_id(df, validated_data)
+    analyse_volatile(
+        df,
+        validate_data=validated_data,
+        group_by_col="sub_cycle_id",
+        include_next_first_row=True,
+        prefix="2",
+    )
 
     write_dataframe_to_csv(df, VOLUME_OUTPUT_FOLDER, "output.csv")
 
 
 def update_sub_cycle_id(df, validated_data):
-    lower_threshold = validated_data["sub_cycle_lower_threshold"]
-    upper_threshold = validated_data["sub_cycle_upper_threshold"]
     interval = validated_data["sub_cycle_interval"]
     for group_id, group_data in df.groupby(CYCLE_ID):
         if group_id > 0:
             pass
 
-        group_index = group_data.index
-
-        start_condition = (
-            group_data[CUM_AVG_WEIGHTED_AVERAGE_PRICE_TO_C] < lower_threshold
-        )
-        end_condition = (
-            group_data[CUM_AVG_WEIGHTED_AVERAGE_PRICE_TO_C] > upper_threshold
-        )
-
+        lower_threshold = validated_data["sub_cycle_lower_threshold"]
+        upper_threshold = validated_data["sub_cycle_upper_threshold"]
         # itter over the group data to get the start and end index
-        start_index, end_index = [], []
-        for row in group_data.iterrows():
-            if row[CUM_AVG_WEIGHTED_AVERAGE_PRICE_TO_C] < lower_threshold:
-                start_index.append(row.index)
+        start_index, end_index, possible_start_index = [], [], []
+        for idx, row in enumerate(group_data.iterrows()):
+            index, value = row
+            if value[CUM_AVG_WEIGHTED_AVERAGE_PRICE_TO_C] < lower_threshold:
+                possible_start_index.append(idx)
 
-            if row[CUM_AVG_WEIGHTED_AVERAGE_PRICE_TO_C] > upper_threshold:
-                end_index.append(row.index)
+            if (
+                len(possible_start_index) > len(end_index)
+                and value[CUM_AVG_WEIGHTED_AVERAGE_PRICE_TO_C]
+                > upper_threshold
+            ):
+                start_index.append(possible_start_index[0])
+                possible_start_index.clear()
+                end_index.append(idx)
                 lower_threshold += interval
                 upper_threshold += interval
 
-        # start_index = group_index[start_condition]
-        # end_index = group_index[end_condition]
-
         if len(end_index) == 0:
-            end_index.append(group_index[-1])
+            end_index.append(len(group_data) - 1)
 
-        start_index = group_index[start_index]
-        end_index = group_index[end_index]
+        start_index = group_data.index[start_index]
+        end_index = group_data.index[end_index]
 
         updated_cycle_id_by_start_end(
             start_index, end_index, df, "sub_cycle_id"
