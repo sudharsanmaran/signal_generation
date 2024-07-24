@@ -3,7 +3,8 @@ import os
 import pandas as pd
 
 from source.constants import VOLUME_OUTPUT_FOLDER
-from source.utils import write_dataframe_to_csv
+from source.utils import make_round, write_dataframe_to_csv
+from volatile_analysis.analysis import updated_cycle_id_by_start_end
 from volatile_analysis.processor import analyse_volatile
 
 
@@ -11,6 +12,8 @@ AVG_ZSCORE_SUM_THRESHOLD = "avg_zscore_sum_threshold"
 FINAL_DB_PATH = os.getenv("FINAL_DB_PATH")
 CYCLE_DURATION = "cycle_duration"
 WEIGHTED_AVERAGE_PRICE = "Weighted Average Price"
+CUM_AVG_WEIGHTED_AVERAGE_PRICE = "Cum Avg Weighted Average Price"
+CUM_AVG_WEIGHTED_AVERAGE_PRICE_TO_C = "Cum Avg Weighted Avg Price to C"
 RANK_ON_Z_SCORE = "Rank on Z Score"
 CALCULATE_AVG_ZSCORE_SUMS = "calculate_avg_zscore_sums_1_5"
 C = "c"
@@ -112,7 +115,60 @@ def process(validated_data: dict):
         group_by_col=CYCLE_ID,
         include_next_first_row=False,
     )
+
+    df[CUM_AVG_WEIGHTED_AVERAGE_PRICE] = (
+        df[WEIGHTED_AVERAGE_PRICE].expanding().mean()
+    )
+
+    df[CUM_AVG_WEIGHTED_AVERAGE_PRICE_TO_C] = make_round(
+        (df[CUM_AVG_WEIGHTED_AVERAGE_PRICE] / df[C] - 1) * 100
+    )
+
+    update_sub_cycle_id(df, validated_data)
+
     write_dataframe_to_csv(df, VOLUME_OUTPUT_FOLDER, "output.csv")
+
+
+def update_sub_cycle_id(df, validated_data):
+    lower_threshold = validated_data["sub_cycle_lower_threshold"]
+    upper_threshold = validated_data["sub_cycle_upper_threshold"]
+    interval = validated_data["sub_cycle_interval"]
+    for group_id, group_data in df.groupby(CYCLE_ID):
+        if group_id > 0:
+            pass
+
+        group_index = group_data.index
+
+        start_condition = (
+            group_data[CUM_AVG_WEIGHTED_AVERAGE_PRICE_TO_C] < lower_threshold
+        )
+        end_condition = (
+            group_data[CUM_AVG_WEIGHTED_AVERAGE_PRICE_TO_C] > upper_threshold
+        )
+
+        # itter over the group data to get the start and end index
+        start_index, end_index = [], []
+        for row in group_data.iterrows():
+            if row[CUM_AVG_WEIGHTED_AVERAGE_PRICE_TO_C] < lower_threshold:
+                start_index.append(row.index)
+
+            if row[CUM_AVG_WEIGHTED_AVERAGE_PRICE_TO_C] > upper_threshold:
+                end_index.append(row.index)
+                lower_threshold += interval
+                upper_threshold += interval
+
+        # start_index = group_index[start_condition]
+        # end_index = group_index[end_condition]
+
+        if len(end_index) == 0:
+            end_index.append(group_index[-1])
+
+        start_index = group_index[start_index]
+        end_index = group_index[end_index]
+
+        updated_cycle_id_by_start_end(
+            start_index, end_index, df, "sub_cycle_id"
+        )
 
 
 def update_cycle_id(validated_data, df, filtered_df):
@@ -135,10 +191,8 @@ def update_cycle_id(validated_data, df, filtered_df):
     )
 
     def adjust_to_business_day(date):
-        if date.weekday() >= 5:  # If it's Saturday (5) or Sunday (6)
-            date += pd.offsets.BDay(
-                7 - date.weekday()
-            )  # Add days to next Monday
+        if date.weekday() >= 5:
+            date += pd.offsets.BDay(7 - date.weekday())
         return date
 
     shifted_dates = shifted_dates.apply(adjust_to_business_day)

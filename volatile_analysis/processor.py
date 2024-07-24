@@ -556,7 +556,7 @@ def get_base_df(validated_data):
                 time_frame,
             )
 
-            # skip 90 days after first ocuurence of z_score. from start of 91 day
+            # skip 90 days after first ocuurence of z_score.
             z_score_start = df.loc[
                 df[f"{time_frame}_{period}_{AnalysisConstant.Z_SCORE.value}"]
                 != 0

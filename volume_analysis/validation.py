@@ -9,6 +9,10 @@ class Inputs(BaseModel):
     capital_upper_threshold: float
     capital_lower_threshold: float
 
+    sub_cycle_lower_threshold: float
+    sub_cycle_upper_threshold: float
+    sub_cycle_interval: int
+
 
 def validate(inputs):
     try:

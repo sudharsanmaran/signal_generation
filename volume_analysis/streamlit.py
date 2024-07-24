@@ -10,7 +10,7 @@ dotenv.load_dotenv(override=True)
 
 
 def main():
-    st.title("Final Module")
+    st.title("Volume Analysis")
     streamlit_inputs = {}
 
     avg_zscore_sum_threshold = st.number_input(
@@ -33,17 +33,30 @@ def main():
     )
     streamlit_inputs["capital_upper_threshold"] = capital_upper_threshold
 
+    sub_cycle_lower_threshold = st.number_input(
+        "Sub Cycle Lower Threshold", value=1.0, step=0.1
+    )
+    streamlit_inputs["sub_cycle_lower_threshold"] = sub_cycle_lower_threshold
+
+    sub_cycle_upper_threshold = st.number_input(
+        "Sub Cycle Upper Threshold", value=10.0, step=0.1
+    )
+    streamlit_inputs["sub_cycle_upper_threshold"] = sub_cycle_upper_threshold
+
+    sub_cycle_interval = st.number_input("Sub Cycle Interval", value=2, step=1)
+    streamlit_inputs["sub_cycle_interval"] = sub_cycle_interval
+
     if st.button("Submit"):
         validated_input = validate(streamlit_inputs)
         if validated_input:
-            try:
-                start = time.time()
-                process(validated_input)
-                st.success(
-                    f"Data processed successfully, time taken: {time.time()-start}"
-                )
-            except Exception as e:
-                st.error(f"Error: {e}")
+            # try:
+            start = time.time()
+            process(validated_input)
+            st.success(
+                f"Data processed successfully, time taken: {time.time()-start}"
+            )
+        # except Exception as e:
+        #     st.error(f"Error: {e}")
 
 
 if __name__ == "__main__":
