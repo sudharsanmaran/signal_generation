@@ -96,10 +96,10 @@ def process_volatile(validated_data):
     df, include_next_first_row = update_volatile_cycle_id(validated_data, dfs)
     df = analyse_volatile(
         df,
-        tagcol=f"{validated_data['time_frames'][0]}_{validated_data['periods'][validated_data['time_frames'][0]][0]}_{AnalysisConstant.VOLATILE_TAG.value}",
         validate_data=validated_data,
         group_by_col=AnalysisConstant.CYCLE_ID.value,
         include_next_first_row=include_next_first_row,
+        tagcol=f"{validated_data['time_frames'][0]}_{validated_data['periods'][validated_data['time_frames'][0]][0]}_{AnalysisConstant.VOLATILE_TAG.value}",
         analyze=validated_data["analyze"],
     )
     df = updated_inputs(df, validated_data)
@@ -185,7 +185,7 @@ def analyse_volatile(
     df,
     group_by_col,
     validate_data,
-    tagcol=AnalysisConstant.VOLATILE_TAG.value,
+    tagcol=None,
     include_next_first_row=False,
     analyze=VolatileTag.ALL.value,
 ):
@@ -193,7 +193,7 @@ def analyse_volatile(
         if group_id < 1:
             return
 
-        if (
+        if tagcol and (
             analyze != VolatileTag.ALL.value
             and group_data[tagcol].iloc[0] != analyze
         ):
@@ -510,15 +510,19 @@ def get_direction(value, upper_threshold, lower_threshold):
 
 
 def get_max_min(group_data):
-    max_id = group_data["h"].idxmax()
-    min_id = group_data[max_id:]["l"].idxmin()
-    return group_data.loc[max_id], group_data.loc[min_id]
+    max_idx = group_data["h"].idxmax()
+    max_pos = group_data.index.get_loc(max_idx)
+    subsequent_data = group_data.iloc[max_pos:]
+    min_idx = subsequent_data["l"].idxmin()
+    return group_data.loc[max_idx], subsequent_data.loc[min_idx]
 
 
 def get_min_max(group_data):
     min_id = group_data["l"].idxmin()
-    max_id = group_data[min_id:]["h"].idxmax()
-    return group_data.loc[max_id], group_data.loc[min_id]
+    min_pos = group_data.index.get_loc(min_id)
+    subsequent_data = group_data.iloc[min_pos:]
+    max_id = subsequent_data["h"].idxmax()
+    return subsequent_data.loc[max_id], group_data.loc[min_id]
 
 
 def get_next_group_first_row(group_id, df, group_by_col):

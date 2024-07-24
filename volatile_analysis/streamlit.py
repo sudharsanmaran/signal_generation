@@ -106,14 +106,14 @@ def main():
                         streamlit_inputs, key=validate_inputs
                     )
                     if validated_input:
-                        try:
+                        # try:
                             start = time.time()
                             process_volatile(validated_data=validated_input)
                             st.success(
                                 f"Data processed successfully, time taken: {time.time()-start}"
                             )
-                        except Exception as e:
-                            st.write(f"Error: {e}")
+                        # except Exception as e:
+                        #     st.write(f"Error: {e}")
             else:
                 st.warning("Please fill all the required fields")
 

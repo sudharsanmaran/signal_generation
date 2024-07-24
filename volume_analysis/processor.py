@@ -2,8 +2,23 @@ import os
 
 import pandas as pd
 
+from source.constants import VOLUME_OUTPUT_FOLDER
+from source.utils import write_dataframe_to_csv
+from volatile_analysis.processor import analyse_volatile
 
-cycle_id = 1
+
+AVG_ZSCORE_SUM_THRESHOLD = "avg_zscore_sum_threshold"
+FINAL_DB_PATH = os.getenv("FINAL_DB_PATH")
+CYCLE_DURATION = "cycle_duration"
+WEIGHTED_AVERAGE_PRICE = "Weighted Average Price"
+RANK_ON_Z_SCORE = "Rank on Z Score"
+CALCULATE_AVG_ZSCORE_SUMS = "calculate_avg_zscore_sums_1_5"
+C = "c"
+DT = "dt"
+COUNT = "Count"
+DURATION = "duration"
+CYCLE_ID = "cycle_id"
+FILTERED_V = "filtered_v"
 
 
 def read_file(file_path: str) -> dict:
@@ -26,22 +41,21 @@ def read_file(file_path: str) -> dict:
 
 def process(validated_data: dict):
     # Load data
-    file_path = os.getenv("FINAL_DB_PATH")
-    df = read_file(file_path)
+    df = read_file(FINAL_DB_PATH)
 
     pd.set_option("display.max_rows", None)
 
     # Filter values based on threshold
-    df["filtered_v"] = df["v"].where(
-        df["calculate_avg_zscore_sums_1_5"]
-        > validated_data["avg_zscore_sum_threshold"]
+    df[FILTERED_V] = df["v"].where(
+        df[CALCULATE_AVG_ZSCORE_SUMS]
+        > validated_data[AVG_ZSCORE_SUM_THRESHOLD]
     )
 
     # Create markers for groupings
     df["marker"] = (
-        df["filtered_v"].notna() != df["filtered_v"].shift().notna()
+        df[FILTERED_V].notna() != df[FILTERED_V].shift().notna()
     ).cumsum()
-    df["marker"] = df["filtered_v"].notna() * df["marker"]
+    df["marker"] = df[FILTERED_V].notna() * df["marker"]
 
     # Calculate average Z score and ranking
     cumulative_group_data = pd.DataFrame()
@@ -51,70 +65,73 @@ def process(validated_data: dict):
     for group_id, group_data in df.groupby("marker"):
         if group_id > 0:
             df.at[group_data.index[0], "Average Z score"] = group_data[
-                "calculate_avg_zscore_sums_1_5"
+                CALCULATE_AVG_ZSCORE_SUMS
             ].mean()
-
             cumulative_group_data = pd.concat(
                 [cumulative_group_data, group_data]
             )
             cumulative_group_data[f"{group_id}_rank"] = df[
                 "Average Z score"
             ].rank(method="min", ascending=False)
-
             n_cum_df = cumulative_group_data[
                 cumulative_group_data[f"{group_id}_rank"].notna()
             ]
             rank.append(n_cum_df[f"{group_id}_rank"].iloc[-1])
             rank_index.append(n_cum_df.index[-1])
 
-    df.loc[rank_index, "Rank on Z Score"] = rank
+    df.loc[rank_index, RANK_ON_Z_SCORE] = rank
 
     # Calculate Weighted Average Price
     for group_id, group_data in df.groupby("marker"):
         if group_id > 0:
-            group_data["temp"] = group_data["c"] * group_data["filtered_v"]
+            group_data["temp"] = group_data[C] * group_data[FILTERED_V]
             weighted_avg_price = (
-                group_data["temp"].sum() / group_data["filtered_v"].sum()
+                group_data["temp"].sum() / group_data[FILTERED_V].sum()
             )
-            df.at[group_data.index[0], "Weighted Average Price"] = (
+            df.at[group_data.index[0], WEIGHTED_AVERAGE_PRICE] = (
                 weighted_avg_price
             )
 
     # Calculate Count and Duration
-    df["Count"] = df["Weighted Average Price"].notna().cumsum()
-    df.loc[df["Weighted Average Price"].isna(), "Count"] = pd.NA
+    df[COUNT] = df[WEIGHTED_AVERAGE_PRICE].notna().cumsum()
+    df.loc[df[WEIGHTED_AVERAGE_PRICE].isna(), COUNT] = pd.NA
 
-    filtered_df = df[df["Count"].notna()]
-    filtered_df["duration"] = filtered_df["dt"].diff().dt.days
+    filtered_df = df[df[COUNT].notna()]
+    filtered_df[DURATION] = filtered_df[DT].diff().dt.days
 
-    df["duration"] = filtered_df["duration"]
+    df[DURATION] = filtered_df[DURATION]
 
     # Identify cycles
     update_cycle_id(validated_data, df, filtered_df)
 
-    a = 20
+    df["calculate_change_1"] = df[C].pct_change()
+
+    analyse_volatile(
+        df,
+        validate_data=validated_data,
+        group_by_col=CYCLE_ID,
+        include_next_first_row=False,
+    )
+    write_dataframe_to_csv(df, VOLUME_OUTPUT_FOLDER, "output.csv")
 
 
 def update_cycle_id(validated_data, df, filtered_df):
-    filtered_df = filtered_df[filtered_df["duration"].notna()]
-    filtered_df["cycle_id"] = (
-        filtered_df["duration"]
-        .le(validated_data["cycle_duration"])
-        .astype(int)
+    filtered_df = filtered_df[filtered_df[DURATION].notna()]
+    filtered_df[CYCLE_ID] = (
+        filtered_df[DURATION].le(validated_data[CYCLE_DURATION]).astype(int)
     )
 
-    filtered_df["cycle_id"].fillna(0, inplace=True)
-    filtered_df["cycle_increment_marker"] = filtered_df["cycle_id"] == 0
+    filtered_df[CYCLE_ID].fillna(0, inplace=True)
+    filtered_df["cycle_increment_marker"] = filtered_df[CYCLE_ID] == 0
 
     df["cycle_increment_marker"] = filtered_df["cycle_increment_marker"]
 
     indices_list = filtered_df[
-        (filtered_df["cycle_id"] > 0)
-        & (filtered_df["cycle_id"].shift(-1) == 0)
+        (filtered_df[CYCLE_ID] > 0) & (filtered_df[CYCLE_ID].shift(-1) == 0)
     ].index
 
     shifted_dates = pd.Series(
-        df.loc[indices_list, "dt"] + pd.Timedelta(days=100)
+        df.loc[indices_list, DT] + pd.Timedelta(days=100)
     )
 
     def adjust_to_business_day(date):
@@ -125,10 +142,10 @@ def update_cycle_id(validated_data, df, filtered_df):
         return date
 
     shifted_dates = shifted_dates.apply(adjust_to_business_day)
-    target_indices = df[df["dt"].isin(shifted_dates)].index
+    target_indices = df[df[DT].isin(shifted_dates)].index
 
     df.loc[target_indices, "cycle_increment_marker"] = True
     # cycle start at count 2
-    df.loc[df["Count"] == 2, "cycle_increment_marker"] = True
-    df["cycle_id"] = df["cycle_increment_marker"].cumsum()
-    df["cycle_id"].ffill(inplace=True)
+    df.loc[df[COUNT] == 2, "cycle_increment_marker"] = True
+    df[CYCLE_ID] = df["cycle_increment_marker"].cumsum()
+    df[CYCLE_ID].ffill(inplace=True)

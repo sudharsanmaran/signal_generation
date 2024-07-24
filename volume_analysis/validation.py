@@ -6,6 +6,9 @@ class Inputs(BaseModel):
     cycle_duration: int
     cycle_skip_count: int
 
+    capital_upper_threshold: float
+    capital_lower_threshold: float
+
 
 def validate(inputs):
     try:
