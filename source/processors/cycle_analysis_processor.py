@@ -91,7 +91,13 @@ def get_next_cycle_first_row(
 
 
 def update_max_to_min(**kwargs):
-    required_keys = ["max_key", "min_key", "max_to_min_key", "cycle_analysis"]
+    required_keys = [
+        "max_key",
+        "min_key",
+        "max_to_min_key",
+        "cycle_analysis",
+        "is_last_cycle",
+    ]
     if not all(key in kwargs for key in required_keys):
         raise ValueError(
             f"Required keys are missing in the kwargs: {required_keys}"
@@ -267,6 +273,7 @@ def update_MTM_CTC_cols(df, validated_data):
                     min_key=min_key,
                     max_key=max_key,
                     max_to_min_key=max_to_min_key,
+                    is_last_cycle=False,
                 )
 
                 # close to close

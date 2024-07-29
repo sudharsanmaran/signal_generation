@@ -371,6 +371,7 @@ def update_secondary_cycle_analytics(
                             avg_min_key=avg_min_key,
                             avg_max_key=avg_max_key,
                             points_frm_avg_till_max_to_min_key=points_frm_avg_till_max_to_min_key,
+                            is_last_cycle=is_last_cycle,
                         )
 
                 for key in updated_positive_negative_keys:
@@ -654,6 +655,7 @@ def update_pnts_frm_avg_till_max_to_min(**kwargs):
         "market_direction",
         "cycle_analysis",
         "points_frm_avg_till_max_to_min_key",
+        "is_last_cycle",
     ]
 
     if not all(key in kwargs for key in required_keys):
@@ -670,6 +672,7 @@ def update_pnts_frm_avg_till_max_to_min(**kwargs):
     points_frm_avg_till_max_to_min_key = kwargs[
         "points_frm_avg_till_max_to_min_key"
     ]
+    is_last_cycle = kwargs.get("is_last_cycle", False)
 
     value = pd.NA
     if cycle_analysis[max_key] is None or cycle_analysis[min_key] is None:
@@ -686,6 +689,8 @@ def update_pnts_frm_avg_till_max_to_min(**kwargs):
             cycle_analysis[avg_max_key] - cycle_analysis[min_key]
         )
 
+    if is_last_cycle:
+        value *= -1
     cycle_analysis[points_frm_avg_till_max_to_min_key] = value
 
 
@@ -832,6 +837,7 @@ def analyze_cycles(df, time_frame, kwargs):
                     min_key=min_key,
                     max_key=max_key,
                     max_to_min_key=max_to_min_key,
+                    is_last_cycle=False,
                 )
 
                 avg_min_key = FirstCycleColumns.AVERAGE_TILL_MIN.value
@@ -857,6 +863,7 @@ def analyze_cycles(df, time_frame, kwargs):
                     avg_min_key=avg_min_key,
                     avg_max_key=avg_max_key,
                     points_frm_avg_till_max_to_min_key=points_frm_avg_till_max_to_min_key,
+                    is_last_cycle=False,
                 )
 
                 # close to close
