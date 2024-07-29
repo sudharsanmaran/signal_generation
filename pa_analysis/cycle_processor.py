@@ -1063,12 +1063,14 @@ def analyze_cycles(df, time_frame, kwargs):
     update_trail_date_close(df, time_frame, trail_dates)
     update_trail_return(df, trail_dates)
 
-    update_cumulative_standard_dev(
-        df, key=f"{FirstCycleColumns.TRAILLING_365_DAYS.value}_return"
-    )
-    update_cumulative_avg(
-        df, cols=[f"{FirstCycleColumns.TRAILLING_365_DAYS.value}_return"]
-    )
+    key = f"{FirstCycleColumns.TRAILLING_365_DAYS.value}_return"
+    filtered_df = df.loc[df[key].notnull()]
+    update_cumulative_standard_dev(filtered_df, key=key)
+    df[f"Cumulative Std Dev {key}"] = filtered_df[f"Cumulative Std Dev {key}"]
+    update_cumulative_avg(filtered_df, cols=[key])
+    df[f"{FirstCycleColumns.CUM_AVG.value}_{key}"] = filtered_df[
+        f"{FirstCycleColumns.CUM_AVG.value}_{key}"
+    ]
 
     calculate_z_score(df)
 
@@ -1104,12 +1106,7 @@ def update_trail_return(df, trail_dates):
             (df["Close"] / df[f"{key}_Close"] - 1) * 100
         )
 
-        # replace inf to zero
-        df[f"{key}_return"].replace(
-            [float("inf"), float("-inf")], 0, inplace=True
-        )
-
-        remove_cols(df, cols=[f"{key}_Close"])
+        # remove_cols(df, cols=[f"{key}_Close"])
 
 
 def prev_weekday(datetime):
@@ -1129,27 +1126,41 @@ def update_trail_date_close(df, time_frame, trail_dates):
     df_copy.set_index("dt", inplace=True)
 
     for key, value in trail_dates.items():
-        update_trailling_date(
+        update_trailing_date(
             df_copy, key, value + timedelta(minutes=int(time_frame))
         )
 
         df_copy[f"{key}_Close"] = df_copy[key].map(df_copy["Close"])
 
-        df_copy[f"{key}_Close"].fillna(0, inplace=True)
+        # df_copy[f"{key}_Close"].fillna(0, inplace=True)
 
         df[f"{key}_date"] = df_copy[key].values
 
         df[f"{key}_Close"] = df_copy[f"{key}_Close"].values
 
 
-def update_trailling_date(df_copy, col_name, time_delta):
+def update_trailing_date(df_copy, col_name, time_delta):
+    # Calculate the new date by subtracting time_delta from the index
     df_copy[col_name] = df_copy.index - time_delta
 
-    df_copy[col_name] = df_copy[col_name].apply(prev_weekday)
+    # Find the previous index that is present in the DataFrame
+    def find_previous_index(date):
+        # Get all available indices that are before the given date
+        valid_indices = df_copy.index[df_copy.index <= date]
+        if valid_indices.empty:
+            return pd.NaT
+        else:
+            return valid_indices[-1]
 
-    valid_dates = df_copy[col_name].isin(df_copy.index)
+    # Apply the function to find the previous present index
+    df_copy[col_name] = df_copy[col_name].apply(find_previous_index)
 
-    df_copy.loc[~valid_dates, col_name] = pd.NaT
+    # Any date that is not in the index will be converted to NaT
+    df_copy[col_name] = df_copy[col_name].where(
+        df_copy[col_name].isin(df_copy.index), pd.NaT
+    )
+
+    return df_copy
 
 
 def update_rolling_averages(df, time_frame, rolling_avg):
