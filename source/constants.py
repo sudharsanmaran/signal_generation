@@ -249,3 +249,12 @@ class CycleType(Enum):
     MTM_CYCLE = "MTM Cycle"
     CTC_CYCLE = "CTC Cycle"
     PREVIOUS_CYCLE = "Previous Cycle"
+
+
+class GroupAnalytics(Enum):
+    MIN = "GROUP_MIN"
+    MAX = "GROUP_MAX"
+    NEXT_CLOSE = "GROUP_NEXT_CLOSE"
+    CLOSE_TO_MIN_MAX = "GROUP_CLOSE_TO_MIN_MAX"
+    POINTS = "GROUP_POINTS"
+    DURATION = "GROUP_DURATION"

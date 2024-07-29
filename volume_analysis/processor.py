@@ -118,6 +118,21 @@ def process(validated_data: dict):
 
     df["calculate_change_1"] = df[C].pct_change()
 
+    for group_id, group_data in df.groupby(CYCLE_ID):
+
+        df.loc[group_data.index, CUM_AVG_WEIGHTED_AVERAGE_PRICE] = (
+            group_data[WEIGHTED_AVERAGE_PRICE].expanding().mean()
+        )
+
+    df[CUM_AVG_WEIGHTED_AVERAGE_PRICE_TO_C] = make_round(
+        (df[C] / df[CUM_AVG_WEIGHTED_AVERAGE_PRICE] - 1) * 100
+    )
+
+    df = update_sub_cycle_id(df, validated_data)
+
+    # make dt as index
+    df.set_index(DT, inplace=True)
+
     analyse_volatile(
         df,
         validate_data=validated_data,
@@ -126,15 +141,6 @@ def process(validated_data: dict):
         prefix="1",
     )
 
-    df[CUM_AVG_WEIGHTED_AVERAGE_PRICE] = (
-        df[WEIGHTED_AVERAGE_PRICE].expanding().mean()
-    )
-
-    df[CUM_AVG_WEIGHTED_AVERAGE_PRICE_TO_C] = make_round(
-        (df[CUM_AVG_WEIGHTED_AVERAGE_PRICE] / df[C] - 1) * 100
-    )
-
-    update_sub_cycle_id(df, validated_data)
     analyse_volatile(
         df,
         validate_data=validated_data,
@@ -178,7 +184,7 @@ def update_sub_cycle_id(df, validated_data):
         start_index = group_data.index[start_index]
         end_index = group_data.index[end_index]
 
-        updated_cycle_id_by_start_end(
+        return updated_cycle_id_by_start_end(
             start_index, end_index, df, "sub_cycle_id"
         )
 

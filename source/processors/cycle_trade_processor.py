@@ -11,6 +11,7 @@ from source.constants import (
     BB_Band_Columns,
     CycleType,
     FirstCycleColumns,
+    GroupAnalytics,
     MarketDirection,
     SecondCycleIDColumns,
     TargetProfitColumns,
@@ -722,6 +723,7 @@ def get_cycle_base_df(**kwargs):
     for key, df in close_time_frames_1_dfs.items():
         df = update_cycle_columns(df, base_df, start_datetime, kwargs)
         update_signal_start_price(df)
+        update_group_analytics(df)
         merged_df = merge_dataframes(df, bb_time_frames_1_dfs, tf_bb_cols)
         close_time_frames_1_dfs[key] = merged_df
 
@@ -779,6 +781,54 @@ def get_cycle_base_df(**kwargs):
             df_to_analyze[tf] = df
 
     return df_to_analyze
+
+
+def update_group_analytics(df):
+    for key, group in df.groupby("group_id"):
+        direction = group["market_direction"].iloc[0]
+
+        if direction == MarketDirection.UNKNOWN:
+            continue
+
+        # Prepare the initial values
+        if direction == MarketDirection.LONG:
+            max_idx = group["High"].idxmax()
+
+            close_to_min_max = group.loc[max_idx, "Low"]
+
+            next_idx = max_idx + 1
+        elif direction == MarketDirection.SHORT:
+            min_idx = group["Low"].idxmin()
+            close_to_min_max = group.loc[min_idx, "Low"]
+
+            next_idx = min_idx + 1
+        else:
+            continue
+
+        # Validate the next index and compute next_close
+        if next_idx in group.index:
+            next_close = group.loc[next_idx, "Close"]
+        else:
+            print("Next close not found for group id:", key)
+            continue
+
+        # Calculate values
+        df.loc[group.index[-1], GroupAnalytics.CLOSE_TO_MIN_MAX.value] = (
+            close_to_min_max
+        )
+        df.loc[group.index[-1], GroupAnalytics.NEXT_CLOSE.value] = next_close
+        df.loc[group.index[-1], GroupAnalytics.CLOSE_TO_MIN_MAX.value] = (
+            next_close / close_to_min_max - 1
+        ) * 100
+        df.loc[group.index[-1], GroupAnalytics.POINTS.value] = make_round(
+            next_close - close_to_min_max
+        )
+        df.loc[group.index[-1], GroupAnalytics.DURATION.value] = (
+            group.loc[group.index[-1], "dt"]
+            - group.loc[
+                max_idx if direction == MarketDirection.LONG else min_idx, "dt"
+            ]
+        )
 
 
 def update_fractal_counter(
