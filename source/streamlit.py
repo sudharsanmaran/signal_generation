@@ -881,7 +881,7 @@ def main():
 
 
 def add_tp_fields(streamlit_inputs, required_fields):
-    if streamlit_inputs["calculate_tp"]:
+    if streamlit_inputs.get("calculate_tp"):
         required_fields.extend(
             [
                 streamlit_inputs["tp_method"],

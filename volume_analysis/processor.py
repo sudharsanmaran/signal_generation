@@ -37,7 +37,16 @@ def read_file(file_path: str) -> dict:
         "calculate_sum_zscores_1_5",
         "calculate_avg_zscore_sums_1_5",
     ]
-    df = pd.read_csv(file_path, usecols=columns_to_read)
+    df = pd.read_csv(
+        file_path,
+        usecols=columns_to_read,
+        dtype={
+            "calculate_volume_stdv_1": float,
+            "calculate_avg_volume_1": float,
+            "calculate_sum_zscores_1_5": float,
+            "calculate_avg_zscore_sums_1_5": float,
+        },
+    )
     df["dt"] = pd.to_datetime(df["dt"])
     return df
 
@@ -67,7 +76,7 @@ def process(validated_data: dict):
 
     for group_id, group_data in df.groupby("marker"):
         if group_id > 0:
-            df.at[group_data.index[0], "Average Z score"] = group_data[
+            df.at[group_data.index[-1], "Average Z score"] = group_data[
                 CALCULATE_AVG_ZSCORE_SUMS
             ].mean()
             cumulative_group_data = pd.concat(
@@ -91,7 +100,7 @@ def process(validated_data: dict):
             weighted_avg_price = (
                 group_data["temp"].sum() / group_data[FILTERED_V].sum()
             )
-            df.at[group_data.index[0], WEIGHTED_AVERAGE_PRICE] = (
+            df.at[group_data.index[-1], WEIGHTED_AVERAGE_PRICE] = (
                 weighted_avg_price
             )
 
@@ -190,16 +199,37 @@ def update_cycle_id(validated_data, df, filtered_df):
     ].index
 
     shifted_dates = pd.Series(
-        df.loc[indices_list, DT] + pd.Timedelta(days=100)
+        df.loc[indices_list, DT]
+        + pd.Timedelta(days=validated_data["cycle_duration"])
     )
 
     def adjust_to_business_day(date):
         if date.weekday() >= 5:
-            date += pd.offsets.BDay(7 - date.weekday())
+            date += pd.offsets.BDay(6 - date.weekday())
         return date
 
     shifted_dates = shifted_dates.apply(adjust_to_business_day)
-    target_indices = df[df[DT].isin(shifted_dates)].index
+
+    # Create a list to store target indices
+    target_indices = []
+
+    # Iterate over shifted_dates to find exact matches or the closest next date
+    for target_date in shifted_dates:
+        # Check for exact match
+        exact_match = df[df["dt"] == target_date].index
+        if not exact_match.empty:
+            target_indices.extend(exact_match)
+        else:
+            # Find the closest future date
+            future_dates = df[df["dt"] > target_date]
+            if not future_dates.empty:
+                closest_index = future_dates.index[0]
+                target_indices.append(closest_index)
+
+    if len(target_indices) != len(indices_list):
+        raise ValueError(
+            "Number of target indices and indices list are not equal"
+        )
 
     df.loc[target_indices, "cycle_increment_marker"] = True
     # cycle start at count 2
