@@ -525,14 +525,14 @@ def update_cycle_count_2_L_H(df, col, bb_2_cols=None):
 
     cycle_start_condition = {
         MarketDirection.LONG: (
-            (df[f"close_to_{col}"] == "YES")
-            & (df["market_direction"] == MarketDirection.LONG)
+            # (df[f"close_to_{col}"] == "YES")
+            (df["market_direction"] == MarketDirection.LONG)
             & (df[f"close_to_{lower_col}"] == "YES")
             & bb_2_start_condition
         ),
         MarketDirection.SHORT: (
-            (df[f"close_to_{col}"] == "NO")
-            & (df["market_direction"] == MarketDirection.SHORT)
+            # (df[f"close_to_{col}"] == "NO")
+            (df["market_direction"] == MarketDirection.SHORT)
             & (df[f"close_to_{upper_col}"] == "NO")
             & bb_2_start_condition
         ),
@@ -570,13 +570,13 @@ def update_cycle_count_1_L_H(df, col):
 
     cycle_start_condition = {
         MarketDirection.LONG: (
-            (df[f"close_to_{col}"] == "YES")
-            & (df["market_direction"] == MarketDirection.LONG)
+            # (df[f"close_to_{col}"] == "YES")
+            (df["market_direction"] == MarketDirection.LONG)
             & (df[f"close_to_{lower_col}"] == "YES")
         ),
         MarketDirection.SHORT: (
-            (df[f"close_to_{col}"] == "NO")
-            & (df["market_direction"] == MarketDirection.SHORT)
+            # (df[f"close_to_{col}"] == "NO")
+            (df["market_direction"] == MarketDirection.SHORT)
             & (df[f"close_to_{upper_col}"] == "NO")
         ),
     }
