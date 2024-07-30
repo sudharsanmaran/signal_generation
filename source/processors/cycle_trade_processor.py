@@ -792,9 +792,11 @@ def update_group_analytics(df):
 
         # Prepare the initial values
         if direction == MarketDirection.LONG:
-            min_max = group["High"].max()
+            min_max_idx = group["High"].idxmax()
+            min_max = group.loc[min_max_idx, "High"]
         elif direction == MarketDirection.SHORT:
-            min_max = group["Low"].min()
+            min_max_idx = group["Low"].idxmin()
+            min_max = group.loc[min_max_idx, "Low"]
         else:
             continue
 
@@ -819,7 +821,7 @@ def update_group_analytics(df):
             group.index[-1], GroupAnalytics.CLOSE_TO_MIN_MAX_POINTS.value
         ] = make_round(close - min_max)
         df.loc[group.index[-1], GroupAnalytics.DURATION.value] = (
-            group.loc[group.index[-1], "dt"] - df.loc[next_idx, "dt"]
+            df.loc[next_idx, "dt"] - group.loc[min_max_idx, "dt"]
         )
 
 
