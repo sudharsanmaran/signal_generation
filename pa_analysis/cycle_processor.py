@@ -1044,26 +1044,26 @@ def analyze_cycles(df, time_frame, kwargs):
     }
     update_rolling_averages(df, time_frame, rolling_avg)
 
-    trail_dates = {
-        FirstCycleColumns.TRAILLING_30_DAYS.value: timedelta(days=30),
-        FirstCycleColumns.TRAILLING_90_DAYS.value: timedelta(days=90),
-        FirstCycleColumns.TRAILLING_180_DAYS.value: timedelta(days=180),
-        FirstCycleColumns.TRAILLING_270_DAYS.value: timedelta(days=270),
-        FirstCycleColumns.TRAILLING_365_DAYS.value: timedelta(days=365),
-    }
-    update_trail_date_close(df, time_frame, trail_dates)
-    update_trail_return(df, trail_dates)
+    # trail_dates = {
+    #     FirstCycleColumns.TRAILLING_30_DAYS.value: timedelta(days=30),
+    #     FirstCycleColumns.TRAILLING_90_DAYS.value: timedelta(days=90),
+    #     FirstCycleColumns.TRAILLING_180_DAYS.value: timedelta(days=180),
+    #     FirstCycleColumns.TRAILLING_270_DAYS.value: timedelta(days=270),
+    #     FirstCycleColumns.TRAILLING_365_DAYS.value: timedelta(days=365),
+    # }
+    # update_trail_date_close(df, time_frame, trail_dates)
+    # update_trail_return(df, trail_dates)
 
-    key = f"{FirstCycleColumns.TRAILLING_365_DAYS.value}_return"
-    filtered_df = df.loc[df[key].notnull()]
-    update_cumulative_standard_dev(filtered_df, key=key)
-    df[f"Cumulative Std Dev {key}"] = filtered_df[f"Cumulative Std Dev {key}"]
-    update_cumulative_avg(filtered_df, cols=[key])
-    df[f"{FirstCycleColumns.CUM_AVG.value}_{key}"] = filtered_df[
-        f"{FirstCycleColumns.CUM_AVG.value}_{key}"
-    ]
+    # key = f"{FirstCycleColumns.TRAILLING_365_DAYS.value}_return"
+    # filtered_df = df.loc[df[key].notnull()]
+    # update_cumulative_standard_dev(filtered_df, key=key)
+    # df[f"Cumulative Std Dev {key}"] = filtered_df[f"Cumulative Std Dev {key}"]
+    # update_cumulative_avg(filtered_df, cols=[key])
+    # df[f"{FirstCycleColumns.CUM_AVG.value}_{key}"] = filtered_df[
+    #     f"{FirstCycleColumns.CUM_AVG.value}_{key}"
+    # ]
 
-    calculate_z_score(df)
+    # calculate_z_score(df)
 
     return results
 
