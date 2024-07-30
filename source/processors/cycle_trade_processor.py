@@ -932,7 +932,7 @@ def update_fractal_cycle_id(kwargs, df, bb_cycle_col, end_condition_col):
                 ]
                 > kwargs.get("fractal_cycle_start")
             )
-            & (df[bb_cycle_col] > 2)
+            & (df[bb_cycle_col] > 1)
         ),
         MarketDirection.SHORT: (
             (df["market_direction"] == MarketDirection.SHORT)
