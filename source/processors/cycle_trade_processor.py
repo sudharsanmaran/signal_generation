@@ -868,8 +868,8 @@ def update_fractal_counter_1(
 
         # Iterate over each group
         for group_id, group in base_df.groupby(group_by_col):
-
-            if group_id < 2:
+            grp_id, bb_cycle, fractal_cycle = group_id
+            if bb_cycle < 1 or fractal_cycle < 1:
                 continue
 
             # Calculate the boolean mask for the condition
@@ -895,15 +895,13 @@ def update_fractal_counter_1(
             cumulative_sum = np.cumsum(cumsum_array)
 
             # Update the base_df with the cumulative sum for the group
-            base_df.loc[base_df[group_by_col] == group_id, count_col] = (
-                cumulative_sum
-            )
+            base_df.loc[group.index, count_col] = cumulative_sum
 
-            # Reset count to 0 where the column value is False
-            base_df.loc[
-                (base_df[col] == False) & (base_df[group_by_col] == group_id),
-                count_col,
-            ] = 0
+        # Reset count to 0 where the column value is False
+        base_df.loc[
+            base_df[col] == False,
+            count_col,
+        ] = 0
 
     return base_df
 
@@ -936,13 +934,13 @@ def update_fractal_cycle_id(kwargs, df, bb_cycle_col, end_condition_col):
                 ]
                 > kwargs.get("fractal_cycle_start")
             )
-            & (df[bb_cycle_col] > 2)
+            & (df[bb_cycle_col] > 1)
         ),
     }
 
     # adjust max to min
     end_condition = (
-        df[end_condition_col] < df[FirstCycleColumns.CLOSE_TO_CLOSE.value]
+        df[end_condition_col] < df[FirstCycleColumns.MAX_TO_MIN.value]
     )
 
     cycle_end_condition = {

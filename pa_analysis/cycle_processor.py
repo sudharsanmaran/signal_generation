@@ -105,7 +105,11 @@ def process_cycles(**kwargs):
             update_fractal_counter_1(
                 df,
                 fractal_count_columns,
-                group_by_col=bb_cycle_column,
+                group_by_col=[
+                    "group_id",
+                    bb_cycle_column,
+                    SecondCycleIDColumns.FRACTAL_CYCLE_ID.value,
+                ],
                 condition=df[SecondCycleIDColumns.FRACTAL_CYCLE_ID.value] > 0,
                 skip_count=kwargs["fractal_count_skip"],
             )
