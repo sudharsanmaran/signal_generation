@@ -145,6 +145,7 @@ def process_cycles(**kwargs):
             prefix="MTM",
             cycle_count_col=SecondCycleIDColumns.MTM_CYCLE_ID.value,
             analytics_needed=[
+                FirstCycleColumns.CYCLE_DURATION.value,
                 FirstCycleColumns.CYCLE_MAX.value,
                 FirstCycleColumns.CYCLE_MIN.value,
                 FirstCycleColumns.POINTS_FROM_MAX.value,
@@ -304,6 +305,9 @@ def update_secondary_cycle_analytics(
                 for key in analytics_dict:
                     # keys
                     key = f"{prefix}_{key}"
+                    cycle_duration_key = (
+                        f"{prefix}_{FirstCycleColumns.CYCLE_DURATION.value}"
+                    )
                     signal_start_duration_key = f"{prefix}_{FirstCycleColumns.DURATION_SIGNAL_START_TO_CYCLE_START.value}"
                     min_key = f"{prefix}_{FirstCycleColumns.CYCLE_MIN.value}"
                     max_key = f"{prefix}_{FirstCycleColumns.CYCLE_MAX.value}"
@@ -347,6 +351,7 @@ def update_secondary_cycle_analytics(
                             avg_max_key=avg_max_key,
                             points_frm_avg_till_max_to_min_key=points_frm_avg_till_max_to_min_key,
                             is_last_cycle=is_last_cycle,
+                            cycle_duration_key=cycle_duration_key,
                         )
 
                 for key in updated_positive_negative_keys:
