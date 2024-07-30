@@ -312,7 +312,7 @@ def get_fractal_count_columns(fractal_sd):
 
 def update_cycle_columns(df, base_df, start_datetime, kwargs):
     # update direction
-    # base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
+    base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
     df = df.reset_index().rename(columns={"index": "dt"})
     signal_columns = [f"TAG_{id}" for id in kwargs.get("portfolio_ids")]
     cols = [
@@ -320,11 +320,6 @@ def update_cycle_columns(df, base_df, start_datetime, kwargs):
         "market_direction",
         *signal_columns,
     ]
-    if kwargs.get("fractal_cycle"):
-        cols.extend(kwargs.get("fractal_cycle_columns"))
-
-    if kwargs.get("fractal_count"):
-        cols.extend(kwargs.get("fractal_count_columns"))
 
     merged_df = pd.merge_asof(
         df,
@@ -635,9 +630,6 @@ def update_cycle_count_1(merged_df, col):
 
 def merge_fractal_data(base_df, fractal_df, fractal_count_df):
 
-    if base_df is not None:
-        base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
-
     # Reset index and rename for merging
     if fractal_df is not None:
         fractal_df = fractal_df.reset_index().rename(columns={"index": "dt"})
@@ -645,10 +637,10 @@ def merge_fractal_data(base_df, fractal_df, fractal_count_df):
         base_df = pd.merge_asof(
             base_df,
             fractal_df,
-            left_on="TIMESTAMP",
+            left_on="dt",
             right_on="dt",
             direction="backward",
-        ).drop(columns=["dt"])
+        )
 
     if fractal_count_df is not None:
         fractal_count_df = fractal_count_df.reset_index().rename(
@@ -659,10 +651,10 @@ def merge_fractal_data(base_df, fractal_df, fractal_count_df):
         base_df = pd.merge_asof(
             base_df,
             fractal_count_df,
-            left_on="TIMESTAMP",
+            left_on="dt",
             right_on="dt",
             direction="backward",
-        ).drop(columns=["dt"])
+        )
 
     return base_df
 
@@ -716,12 +708,10 @@ def get_cycle_base_df(**kwargs):
         if type == "fractal_count":
             fractal_count_df = df
 
-    base_df = merge_fractal_data(base_df, fractal_df, fractal_count_df)
-
     # merge bb1 the dataframes
-
     for key, df in close_time_frames_1_dfs.items():
         df = update_cycle_columns(df, base_df, start_datetime, kwargs)
+        df = merge_fractal_data(df, fractal_df, fractal_count_df)
         update_signal_start_price(df)
         update_group_analytics(df)
         merged_df = merge_dataframes(df, bb_time_frames_1_dfs, tf_bb_cols)
