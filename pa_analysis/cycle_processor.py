@@ -194,30 +194,24 @@ def process_cycles(**kwargs):
 def update_max_to_min_percent(df, kwargs):
     adj_close_max_to_min(df, kwargs)
 
-    df[MTMCrossedCycleColumns.IS_MTM_CROSS_PNT_3.value] = "NO"
-    df[MTMCrossedCycleColumns.IS_MTM_CROSS_PNT_5.value] = "NO"
-    df[MTMCrossedCycleColumns.IS_MTM_CROSS_PNT_75.value] = "NO"
-    df[MTMCrossedCycleColumns.IS_MTM_CROSS_1.value] = "NO"
+    columns = {
+        MTMCrossedCycleColumns.IS_MTM_CROSS_PNT_5.value: 0.5,
+        MTMCrossedCycleColumns.IS_MTM_CROSS_1.value: 1,
+        MTMCrossedCycleColumns.IS_MTM_CROSS_2.value: 2,
+        MTMCrossedCycleColumns.IS_MTM_CROSS_3.value: 3,
+        MTMCrossedCycleColumns.IS_MTM_CROSS_4.value: 4,
+        MTMCrossedCycleColumns.IS_MTM_CROSS_5.value: 5,
+        MTMCrossedCycleColumns.IS_MTM_CROSS_6.value: 6,
+        MTMCrossedCycleColumns.IS_MTM_CROSS_7.value: 7,
+        MTMCrossedCycleColumns.IS_MTM_CROSS_8.value: 8,
+    }
 
-    df.loc[
-        df[FirstCycleColumns.MAX_TO_MIN.value] > df["Close"] * (0.3 / 100),
-        MTMCrossedCycleColumns.IS_MTM_CROSS_PNT_3.value,
-    ] = "YES"
-
-    df.loc[
-        df[FirstCycleColumns.MAX_TO_MIN.value] > df["Close"] * (0.5 / 100),
-        MTMCrossedCycleColumns.IS_MTM_CROSS_PNT_5.value,
-    ] = "YES"
-
-    df.loc[
-        df[FirstCycleColumns.MAX_TO_MIN.value] > df["Close"] * (0.75 / 100),
-        MTMCrossedCycleColumns.IS_MTM_CROSS_PNT_75.value,
-    ] = "YES"
-
-    df.loc[
-        df[FirstCycleColumns.MAX_TO_MIN.value] > df["Close"] * (1 / 100),
-        MTMCrossedCycleColumns.IS_MTM_CROSS_1.value,
-    ] = "YES"
+    for col, val in columns.items():
+        df[col] = "NO"
+        df.loc[
+            df[FirstCycleColumns.MAX_TO_MIN.value] > df["Close"] * (val / 100),
+            col,
+        ] = "YES"
 
 
 def update_secondary_cycle_analytics(
