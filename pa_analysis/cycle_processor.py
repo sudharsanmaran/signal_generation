@@ -245,25 +245,6 @@ def update_secondary_cycle_analytics(
     }
     analytics_dict.update(positive_negative_dict)
 
-    # Add cycle-specific keys to the default update keys
-    # if cycle_count_col == SecondCycleIDColumns.MTM_CYCLE_ID.value:
-    #     default_update_keys.update(
-    #         {
-    #             f"{FirstCycleColumns.AVERAGE_TILL_MAX.value}": [],
-    #             f"{FirstCycleColumns.AVERAGE_TILL_MIN.value}": [],
-    #             f"{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}": [],
-    #             f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{FirstCycleColumns.POINTS_FROM_MAX.value}": [],
-    #             f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}": [],
-    #         }
-    #     )
-
-    # if cycle_count_col == SecondCycleIDColumns.CTC_CYCLE_ID.value:
-    #     default_update_keys.update(
-    #         {
-    #             f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}": [],
-    #         }
-    #     )
-
     # Define the mapping of keys to their respective update functions
     update_functions = {
         f"{FirstCycleColumns.DURATION_SIGNAL_START_TO_CYCLE_START.value}": update_signal_start_duration,

@@ -1,4 +1,5 @@
 import csv
+from datetime import timedelta
 import os
 import pandas as pd
 
@@ -28,14 +29,16 @@ def make_round(value):
 
 
 def format_duration(seconds):
-    days = seconds / (3600 * 24)
-    if days >= 1:
-        return f"{make_round(days)} days"
-    hours = seconds / 3600
-    if hours >= 1:
-        return f"{make_round(hours)} hours"
-    minutes = seconds / 60
-    return f"{make_round(minutes)} minutes"
+    return str(timedelta(seconds=seconds))
+
+    # days = seconds / (3600 * 24)
+    # if days >= 1:
+    #     return f"{make_round(days)} days"
+    # hours = seconds / 3600
+    # if hours >= 1:
+    #     return f"{make_round(hours)} hours"
+    # minutes = seconds / 60
+    # return f"{make_round(minutes)} minutes"
 
 
 def write_dict_to_csv(

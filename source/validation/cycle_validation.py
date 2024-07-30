@@ -107,10 +107,10 @@ class CycleInputs(
                 raise ValueError(
                     "Fractal Count SD, Fractal Count TF and Fractal Count Skip are required"
                 )
-            if not values.data["fractal_cycle"]:
-                raise ValueError(
-                    "Fractal Cycle should be enabled to calculate Fractal Count"
-                )
+            # if not values.data["fractal_cycle"]:
+            #     raise ValueError(
+            #         "Fractal Cycle should be enabled to calculate Fractal Count"
+            #     )
         return v
 
 
