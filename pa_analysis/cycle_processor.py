@@ -1012,9 +1012,14 @@ def update_positive_negative(**kwargs):
     columns = kwargs["columns"]
 
     for col in columns:
-        cycle_analysis[
-            f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{col}"
-        ] = (1 if cycle_analysis[col] > 0 else 0)
+        if pd.isna(cycle_analysis[col]):
+            cycle_analysis[
+                f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{col}"
+            ] = pd.NA
+        else:
+            cycle_analysis[
+                f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{col}"
+            ] = (1 if cycle_analysis[col] > 0 else 0)
 
 
 def update_cycle_duration(**kwargs):
@@ -1144,7 +1149,7 @@ def update_move_percent(**kwargs):
 def update_duration_above_BB(
     kwargs, market_direction, cycle_col, cycle_analysis, cycle_data
 ):
-    # upadte duration first yes to first yes to no change
+    # update duration first yes to first yes to no change
     # Determine the first_yes_index and first_yes_change_condition based on market direction
 
     if market_direction == MarketDirection.LONG or not kwargs.get(

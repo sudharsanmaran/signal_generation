@@ -497,7 +497,7 @@ def update_cycle_number_by_condition(
                 current_cycle += 1
                 end_idx = end_indices[end_indices > start_idx].min()
                 if not pd.isna(end_idx):
-                    in_cycle.loc[start_idx:end_idx] = True
+                    in_cycle.loc[start_idx : end_idx - 1] = True
                     cycle_counter.loc[start_idx:end_idx] = current_cycle
                 else:
                     in_cycle.loc[start_idx:] = True
@@ -533,7 +533,7 @@ def update_cycle_count_2_L_H(df, col, bb_2_cols=None):
         MarketDirection.SHORT: (
             # (df[f"close_to_{col}"] == "NO")
             (df["market_direction"] == MarketDirection.SHORT)
-            & (df[f"close_to_{upper_col}"] == "NO")
+            & (df[f"close_to_{upper_col}"] == "YES")
             & bb_2_start_condition
         ),
     }
@@ -577,7 +577,7 @@ def update_cycle_count_1_L_H(df, col):
         MarketDirection.SHORT: (
             # (df[f"close_to_{col}"] == "NO")
             (df["market_direction"] == MarketDirection.SHORT)
-            & (df[f"close_to_{upper_col}"] == "NO")
+            & (df[f"close_to_{upper_col}"] == "YES")
         ),
     }
 
