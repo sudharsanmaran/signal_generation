@@ -25,7 +25,10 @@ def make_negative(value):
 
 
 def make_round(value):
-    return round(value, 2)
+    try:
+        return round(value, 2)
+    except Exception:
+        return value
 
 
 def format_duration(seconds):

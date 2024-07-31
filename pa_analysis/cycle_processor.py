@@ -1,4 +1,6 @@
+from collections import defaultdict
 from datetime import timedelta
+from functools import partial
 from typing import List
 import pandas as pd
 from pandas.tseries.offsets import BDay
@@ -124,10 +126,17 @@ def process_cycles(**kwargs):
                 prefix="FRACTAL",
                 cycle_count_col=SecondCycleIDColumns.FRACTAL_CYCLE_ID.value,
                 analytics_needed=[
+                    FirstCycleColumns.CYCLE_DURATION.value,
                     FirstCycleColumns.CYCLE_MAX.value,
                     FirstCycleColumns.CYCLE_MIN.value,
                     FirstCycleColumns.POINTS_FROM_MAX.value,
                     FirstCycleColumns.CLOSE_TO_CLOSE.value,
+                    FirstCycleColumns.AVERAGE_TILL_MAX.value,
+                    FirstCycleColumns.AVERAGE_TILL_MIN.value,
+                    FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value,
+                    FirstCycleColumns.POINTS_FROM_MAX_TO_CLOSE_PERCENT.value,
+                    FirstCycleColumns.CLOSE_TO_CLOSE_TO_CLOSE_PERCENT.value,
+                    FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN_TO_CLOSE_PERCENT.value,
                 ],
             )
 
@@ -157,6 +166,9 @@ def process_cycles(**kwargs):
                 FirstCycleColumns.AVERAGE_TILL_MAX.value,
                 FirstCycleColumns.AVERAGE_TILL_MIN.value,
                 FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value,
+                FirstCycleColumns.POINTS_FROM_MAX_TO_CLOSE_PERCENT.value,
+                FirstCycleColumns.CLOSE_TO_CLOSE_TO_CLOSE_PERCENT.value,
+                FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN_TO_CLOSE_PERCENT.value,
             ],
             positive_negative_keys=[
                 FirstCycleColumns.POINTS_FROM_MAX.value,
@@ -221,7 +233,7 @@ def update_max_to_min_percent(df, kwargs):
 
 def update_secondary_cycle_analytics(
     df,
-    results,
+    results: List,
     time_frame,
     prefix="CTC",
     cycle_count_col=SecondCycleIDColumns.CTC_CYCLE_ID.value,
@@ -232,33 +244,39 @@ def update_secondary_cycle_analytics(
     groups = list(df.groupby("group_id"))
     cycle_columns = [col for col in df.columns if cycle_count_col in col]
 
-    analytics_dict = {f"{prefix}_{key}": [] for key in analytics_needed}
-    analytics_dict["index"] = []
-
-    updated_positive_negative_keys = {
-        f"{prefix}_{key}": [] for key in positive_negative_keys
-    }
-    positive_negative_dict = {
-        f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{key}": []
-        for key in updated_positive_negative_keys
-    }
-    analytics_dict.update(positive_negative_dict)
-
+    # todo
+    #  1. use partial to pass the required arguments to the update functions
     # Define the mapping of keys to their respective update functions
     update_functions = {
-        f"{FirstCycleColumns.DURATION_SIGNAL_START_TO_CYCLE_START.value}": update_signal_start_duration,
-        f"{FirstCycleColumns.CYCLE_DURATION.value}": update_cycle_duration,
-        f"{FirstCycleColumns.MOVE.value}": update_move,
-        f"{FirstCycleColumns.MOVE_PERCENT.value}": update_move_percent,
-        f"{FirstCycleColumns.CYCLE_MAX.value}": update_cycle_min_max,
-        f"{FirstCycleColumns.CYCLE_MIN.value}": update_cycle_min_max,
-        f"{FirstCycleColumns.POINTS_FROM_MAX.value}": update_max_to_min,
-        f"{FirstCycleColumns.CLOSE_TO_CLOSE.value}": update_close_to_close,
-        f"{FirstCycleColumns.AVERAGE_TILL_MAX.value}": update_avg_till_min_max,
-        f"{FirstCycleColumns.AVERAGE_TILL_MIN.value}": update_avg_till_min_max,
-        f"{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}": update_pnts_frm_avg_till_max_to_min,
+        FirstCycleColumns.DURATION_SIGNAL_START_TO_CYCLE_START.value: update_signal_start_duration,
+        FirstCycleColumns.CYCLE_DURATION.value: update_cycle_duration,
+        FirstCycleColumns.MOVE.value: update_move,
+        FirstCycleColumns.MOVE_PERCENT.value: update_move_percent,
+        FirstCycleColumns.CYCLE_MAX.value: update_cycle_min_max,
+        FirstCycleColumns.CYCLE_MIN.value: update_cycle_min_max,
+        FirstCycleColumns.POINTS_FROM_MAX.value: update_max_to_min,
+        FirstCycleColumns.CLOSE_TO_CLOSE.value: update_close_to_close,
+        FirstCycleColumns.AVERAGE_TILL_MAX.value: update_avg_till_min_max,
+        FirstCycleColumns.AVERAGE_TILL_MIN.value: update_avg_till_min_max,
+        FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value: update_pnts_frm_avg_till_max_to_min,
+        FirstCycleColumns.POINTS_FROM_MAX_TO_CLOSE_PERCENT.value: partial(
+            update_percent_with_grp_start_close,
+            percent_col=f"{prefix}_{FirstCycleColumns.POINTS_FROM_MAX.value}",
+            percent_key=FirstCycleColumns.POINTS_FROM_MAX_TO_CLOSE_PERCENT.value,
+        ),
+        FirstCycleColumns.CLOSE_TO_CLOSE_TO_CLOSE_PERCENT.value: partial(
+            update_percent_with_grp_start_close,
+            percent_col=f"{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}",
+            percent_key=FirstCycleColumns.CLOSE_TO_CLOSE_TO_CLOSE_PERCENT.value,
+        ),
+        FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN_TO_CLOSE_PERCENT.value: partial(
+            update_percent_with_grp_start_close,
+            percent_col=f"{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}",
+            percent_key=FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN_TO_CLOSE_PERCENT.value,
+        ),
     }
 
+    analytics_dict = defaultdict(list)
     for cycle_col in cycle_columns:
 
         for group_idx, (group_id, group_data) in enumerate(groups):
@@ -306,7 +324,7 @@ def update_secondary_cycle_analytics(
                 analytics_dict["index"].append(cycle_data.index[-1])
 
                 # Dynamically call update functions based on the keys in the updates dictionary
-                for key in analytics_dict:
+                for key in analytics_needed:
                     # keys
                     key = f"{prefix}_{key}"
                     cycle_duration_key = (
@@ -329,6 +347,7 @@ def update_secondary_cycle_analytics(
                     )
 
                     points_frm_avg_till_max_to_min_key = f"{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}"
+
                     # get the update function
                     func = update_functions.get(key.split("_")[-1], None)
 
@@ -356,9 +375,15 @@ def update_secondary_cycle_analytics(
                             points_frm_avg_till_max_to_min_key=points_frm_avg_till_max_to_min_key,
                             is_last_cycle=is_last_cycle,
                             cycle_duration_key=cycle_duration_key,
+                            group_start_close=group_start_row["Close"],
+                        )
+                    else:
+                        raise NotImplementedError(
+                            f"Function for key {key} not implemented"
                         )
 
-                for key in updated_positive_negative_keys:
+                for key in positive_negative_keys:
+                    key = f"{prefix}_{key}"
                     update_positive_negative(
                         cycle_analysis=cycle_analysis,
                         columns=[key],
@@ -388,231 +413,6 @@ def update_secondary_cycle_analytics(
     cols = [
         "signal_start_price",
         # "adjusted_close",
-    ]
-    remove_cols(df, cols=cols)
-
-    write_dataframe_to_csv(
-        df,
-        PA_ANALYSIS_CYCLE_FOLDER,
-        f"base_df_tf_{time_frame}.csv",
-    )
-    return results
-
-
-def update_second_cycle_analytics(
-    df,
-    results,
-    time_frame,
-    prefix="CTC",
-    cycle_count_col=SecondCycleIDColumns.CTC_CYCLE_ID.value,
-    updates={},
-):
-    groups = list(df.groupby("group_id"))
-
-    cycle_columns = [col for col in df.columns if cycle_count_col in col]
-    for idx, cycle_col in enumerate(cycle_columns):
-        idx += 1
-        updates = (
-            {
-                "index": [],
-                f"{idx}_{prefix}_{FirstCycleColumns.DURATION_SIGNAL_START_TO_CYCLE_START.value}": [],
-                f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_DURATION.value}": [],
-                f"{idx}_{prefix}_{FirstCycleColumns.MOVE.value}": [],
-                f"{idx}_{prefix}_{FirstCycleColumns.MOVE_PERCENT.value}": [],
-                f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MAX.value}": [],
-                f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MIN.value}": [],
-                f"{idx}_{prefix}_{FirstCycleColumns.POINTS_FROM_MAX.value}": [],
-                f"{idx}_{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}": [],
-            }
-            if not updates
-            else updates
-        )
-
-        if cycle_count_col == SecondCycleIDColumns.MTM_CYCLE_ID.value:
-            updates.update(
-                {
-                    f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MAX.value}": [],
-                    f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MIN.value}": [],
-                    f"{idx}_{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}": [],
-                    f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{idx}_{prefix}_{FirstCycleColumns.POINTS_FROM_MAX.value}": [],
-                    f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{idx}_{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}": [],
-                }
-            )
-
-        if cycle_count_col == SecondCycleIDColumns.CTC_CYCLE_ID.value:
-            updates.update(
-                {
-                    f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{idx}_{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}": [],
-                }
-            )
-
-        for group_idx, (group_id, group_data) in enumerate(groups):
-
-            group_start_row = group_data.iloc[0]
-            market_direction = group_start_row["market_direction"]
-            unique_cycles = group_data.loc[
-                group_data[cycle_col] > 0, cycle_col
-            ].unique()
-            for cycle in unique_cycles:
-                cycle_analysis = {}
-                cycle_data = group_data[group_data[cycle_col] == cycle]
-
-                next_cycle_first_row = get_next_cycle_first_row(
-                    group_data,
-                    cycle,
-                    cycle_col,
-                    groups,
-                    group_idx,
-                    cycle_start=0,
-                )
-
-                if not cycle_data.empty and next_cycle_first_row is not None:
-                    # Create a new DataFrame with the current cycle's data and the next cycle's first row
-                    adjusted_cycle_data = pd.concat(
-                        [cycle_data, next_cycle_first_row.to_frame().T]
-                    )
-                else:
-                    adjusted_cycle_data = cycle_data
-
-                # for difference in cycle min and max calculation
-                is_last_cycle = False
-                if cycle_count_col == SecondCycleIDColumns.CTC_CYCLE_ID.value:
-                    is_last_cycle = False
-                elif (
-                    cycle_count_col == SecondCycleIDColumns.MTM_CYCLE_ID.value
-                ):
-                    is_last_cycle = cycle == unique_cycles[-1]
-
-                min_idx, max_idx, cycle_min, cycle_max = get_min_max_idx(
-                    adjusted_cycle_data,
-                    group_start_row,
-                    group_id,
-                    cycle,
-                    is_last_cycle,
-                )
-
-                updates["index"].append(cycle_data.index[-1])
-
-                update_signal_start_duration(
-                    group_start_row,
-                    cycle_analysis,
-                    cycle_data,
-                    signal_start_duration_key=f"{idx}_{prefix}_{FirstCycleColumns.DURATION_SIGNAL_START_TO_CYCLE_START.value}",
-                )
-
-                update_cycle_duration(
-                    cycle_analysis,
-                    cycle_data,
-                    cycle_duration_key=f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_DURATION.value}",
-                )
-
-                update_move_and_move_percent(
-                    group_start_row,
-                    cycle_analysis,
-                    cycle_data,
-                    move_key=f"{idx}_{prefix}_{FirstCycleColumns.MOVE.value}",
-                    move_percent_key=f"{idx}_{prefix}_{FirstCycleColumns.MOVE_PERCENT.value}",
-                )
-
-                min_key = f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MIN.value}"
-                max_key = f"{idx}_{prefix}_{FirstCycleColumns.CYCLE_MAX.value}"
-                max_to_min_key = (
-                    f"{idx}_{prefix}_{FirstCycleColumns.POINTS_FROM_MAX.value}"
-                )
-                update_cycle_min_max(
-                    cycle_analysis,
-                    adjusted_cycle_data,
-                    min_idx,
-                    max_idx,
-                    cycle_min,
-                    cycle_max,
-                    min_key=min_key,
-                    max_key=max_key,
-                )
-
-                update_max_to_min(
-                    cycle_analysis,
-                    min_key=min_key,
-                    max_key=max_key,
-                    max_to_min_key=max_to_min_key,
-                    is_last_cycle=is_last_cycle,
-                )
-
-                if cycle_count_col == SecondCycleIDColumns.MTM_CYCLE_ID.value:
-
-                    avg_min_key = f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MIN.value}"
-                    avg_max_key = f"{idx}_{prefix}_{FirstCycleColumns.AVERAGE_TILL_MAX.value}"
-                    update_avg_till_min_max(
-                        market_direction,
-                        cycle_analysis,
-                        adjusted_cycle_data,
-                        min_idx,
-                        max_idx,
-                        avg_min_key,
-                        avg_max_key,
-                    )
-
-                    points_frm_avg_till_max_to_min_key = f"{idx}_{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}"
-                    update_pnts_frm_avg_till_max_to_min(
-                        market_direction,
-                        cycle_analysis,
-                        max_key=max_key,
-                        min_key=min_key,
-                        avg_min_key=avg_min_key,
-                        avg_max_key=avg_max_key,
-                        points_frm_avg_till_max_to_min_key=points_frm_avg_till_max_to_min_key,
-                    )
-
-                update_close_to_close(
-                    market_direction,
-                    cycle_analysis,
-                    close_to_close_key=f"{idx}_{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}",
-                    last_close=adjusted_cycle_data.iloc[-1]["Close"],
-                    first_close=adjusted_cycle_data.iloc[0]["Close"],
-                )
-
-                if cycle_count_col == SecondCycleIDColumns.MTM_CYCLE_ID.value:
-                    update_positive_negative(
-                        cycle_analysis=cycle_analysis,
-                        columns=[
-                            f"{idx}_{prefix}_{FirstCycleColumns.POINTS_FROM_MAX.value}",
-                            f"{idx}_{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}",
-                        ],
-                    )
-
-                if cycle_count_col == SecondCycleIDColumns.CTC_CYCLE_ID.value:
-                    update_positive_negative(
-                        cycle_analysis=cycle_analysis,
-                        columns=[
-                            f"{idx}_{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}",
-                        ],
-                    )
-
-                results.append(cycle_analysis)
-
-                for key, value in cycle_analysis.items():
-                    updates[key].append(value)
-
-        for col, values in updates.items():
-            if col != "index" and values:
-                try:
-                    df.loc[updates["index"], col] = values
-                except Exception:
-                    pass
-
-    if cycle_count_col == SecondCycleIDColumns.CTC_CYCLE_ID.value:
-        update_cumulative_avg(
-            df,
-            cols=[
-                f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{1}_{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}"
-            ],
-        )
-
-    # remove unnesasory columns
-    cols = [
-        "adjusted_close_for_max_to_min",
-        "signal_start_price",
-        # "adjusted_colse",
     ]
     remove_cols(df, cols=cols)
 
@@ -718,17 +518,8 @@ def analyze_cycles(df, time_frame, kwargs):
     groups = list(df.groupby("group_id"))
 
     results = []
-    updates = {col.value: [] for col in FirstCycleColumns}
-    updates.update(
-        {
-            "index": [],
-            "group_id": [],
-            f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}": [],
-            f"{FirstCycleColumns.PERCENT.value}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}": [],
-            f"{FirstCycleColumns.PERCENT.value}_{FirstCycleColumns.MAX_TO_MIN.value}": [],
-            # "period_band": [], "cycle_no": []
-        }
-    )
+    updates = defaultdict(list)
+
     for group_idx, (group_id, group_data) in enumerate(groups):
         # Identify cycle columns dynamically
 
@@ -864,13 +655,19 @@ def analyze_cycles(df, time_frame, kwargs):
                     columns=[FirstCycleColumns.CLOSE_TO_CLOSE.value],
                 )
 
-                cols = [
-                    FirstCycleColumns.CLOSE_TO_CLOSE.value,
-                    FirstCycleColumns.MAX_TO_MIN.value,
-                ]
                 group_start_close = group_start_row["Close"]
                 update_percent_with_grp_start_close(
-                    cycle_analysis, cols, group_start_close
+                    cycle_analysis=cycle_analysis,
+                    percent_col=FirstCycleColumns.CLOSE_TO_CLOSE.value,
+                    percent_key=FirstCycleColumns.CLOSE_TO_CLOSE_TO_CLOSE_PERCENT.value,
+                    group_start_close=group_start_close,
+                )
+
+                update_percent_with_grp_start_close(
+                    cycle_analysis=cycle_analysis,
+                    percent_col=FirstCycleColumns.MAX_TO_MIN.value,
+                    percent_key=FirstCycleColumns.MAX_TO_MIN_TO_CLOSE_PERCENT.value,
+                    group_start_close=group_start_close,
                 )
 
                 # cycle_analysis[FirstCycleColumns.DURATION_TO_MAX.value] = (
@@ -1068,13 +865,26 @@ def analyze_cycles(df, time_frame, kwargs):
     return results
 
 
-def update_percent_with_grp_start_close(
-    cycle_analysis, cols, group_start_close
-):
-    for col in cols:
-        cycle_analysis[f"{FirstCycleColumns.PERCENT.value}_{col}"] = (
-            make_round((cycle_analysis[col] / group_start_close) * 100)
+def update_percent_with_grp_start_close(**kwargs):
+    required_keys = [
+        "cycle_analysis",
+        "group_start_close",
+        "percent_col",
+        "percent_key",
+    ]
+    if not all([key in kwargs for key in required_keys]):
+        raise ValueError(
+            f"Required keys missing. Required keys are {required_keys}"
         )
+
+    cycle_analysis = kwargs["cycle_analysis"]
+    group_start_close = kwargs["group_start_close"]
+    percent_col = kwargs["percent_col"]
+    percent_key = kwargs["percent_key"]
+
+    cycle_analysis[percent_key] = make_round(
+        (cycle_analysis[percent_col] / group_start_close) * 100
+    )
 
 
 def calculate_z_score(df):

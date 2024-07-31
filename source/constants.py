@@ -192,8 +192,11 @@ class FirstCycleColumns(Enum):
         "Duration Signal Start to Cycle Start"
     )
     CYCLE_DURATION = "Cycle Duration"
+    DURATION_BETWEEN_MAX_MIN = "Duration Between Max Min"
+
     MOVE = "Move"
     MOVE_PERCENT = "Move Percent"
+
     CYCLE_MAX = "Cycle Max"
     CYCLE_MIN = "Cycle Min"
     MAX_TO_MIN = "Max to Min"
@@ -201,18 +204,28 @@ class FirstCycleColumns(Enum):
     AVERAGE_TILL_MAX = "Average Till Max"
     AVERAGE_TILL_MIN = "Average Till Min"
     POINTS_FRM_AVG_TILL_MAX_TO_MIN = "Points from Avg till Max to Min"
+
     CLOSE_TO_CLOSE = "Close to Close"
     POSITIVE_NEGATIVE = "Positive / Negative"
+
     CUM_AVG = "Cumulative Avg"
     ROLLING_AVG_3 = "Rolling Avg 3 Months"
     ROLLING_AVG_6 = "Rolling Avg 6 Months"
+
     TRAILLING_30_DAYS = "Trailing 30 Days"
     TRAILLING_90_DAYS = "Trailing 90 Days"
     TRAILLING_180_DAYS = "Trailing 180 Days"
     TRAILLING_270_DAYS = "Trailing 270 Days"
     TRAILLING_365_DAYS = "Trailing 365 Days"
+
     Z_SCORE = "Z Score"
-    PERCENT = "Percent"
+
+    MAX_TO_MIN_TO_CLOSE_PERCENT = "Max to Min to Close Percent"
+    POINTS_FROM_MAX_TO_CLOSE_PERCENT = "Points from Max to Close Percent"
+    CLOSE_TO_CLOSE_TO_CLOSE_PERCENT = "Close to Close to Close Percent"
+    POINTS_FRM_AVG_TILL_MAX_TO_MIN_TO_CLOSE_PERCENT = (
+        "Points from Avg till Max to Min to Close Percent"
+    )
 
     # DURATION_TO_MAX = "Duration to Max"
     # DURATION_ABOVE_BB = "Duration Above BB"
@@ -224,7 +237,6 @@ class FirstCycleColumns(Enum):
     # POINTS_FRM_AVG_TILL_MIN_TO_MAX = "Points from Avg till Min to Max"
     # SIGNAL_START_TO_MINIMUM_POINTS = "Signal Start to Minimum Points"
     # SIGNAL_START_TO_MINIMUM_PERCENT = "Signal Start to Minimum Percent"
-    # DURATION_BETWEEN_MAX_MIN = "Duration Between Max Min"
     # AVG_OF_MAX_TO_AVG_OF_MIN = "Avg of Max to Avg of Min"
 
 
