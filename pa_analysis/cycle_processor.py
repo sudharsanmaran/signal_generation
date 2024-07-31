@@ -121,7 +121,7 @@ def process_cycles(**kwargs):
 
             update_secondary_cycle_analytics(
                 df,
-                results=[],
+                results,
                 time_frame=time_frame,
                 prefix="FRACTAL",
                 cycle_count_col=SecondCycleIDColumns.FRACTAL_CYCLE_ID.value,
