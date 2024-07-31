@@ -127,6 +127,7 @@ def process_cycles(**kwargs):
                 cycle_count_col=SecondCycleIDColumns.FRACTAL_CYCLE_ID.value,
                 analytics_needed=[
                     FirstCycleColumns.CYCLE_DURATION.value,
+                    FirstCycleColumns.DURATION_BETWEEN_MAX_MIN.value,
                     FirstCycleColumns.CYCLE_MAX.value,
                     FirstCycleColumns.CYCLE_MIN.value,
                     FirstCycleColumns.POINTS_FROM_MAX.value,
@@ -159,6 +160,7 @@ def process_cycles(**kwargs):
             cycle_count_col=SecondCycleIDColumns.MTM_CYCLE_ID.value,
             analytics_needed=[
                 FirstCycleColumns.CYCLE_DURATION.value,
+                FirstCycleColumns.DURATION_BETWEEN_MAX_MIN.value,
                 FirstCycleColumns.CYCLE_MAX.value,
                 FirstCycleColumns.CYCLE_MIN.value,
                 FirstCycleColumns.POINTS_FROM_MAX.value,
@@ -250,6 +252,10 @@ def update_secondary_cycle_analytics(
     update_functions = {
         FirstCycleColumns.DURATION_SIGNAL_START_TO_CYCLE_START.value: update_signal_start_duration,
         FirstCycleColumns.CYCLE_DURATION.value: update_cycle_duration,
+        FirstCycleColumns.DURATION_BETWEEN_MAX_MIN.value: partial(
+            update_max_to_min_duration,
+            max_to_min_duration_key=f"{prefix}_{FirstCycleColumns.DURATION_BETWEEN_MAX_MIN.value}",
+        ),
         FirstCycleColumns.MOVE.value: update_move,
         FirstCycleColumns.MOVE_PERCENT.value: update_move_percent,
         FirstCycleColumns.CYCLE_MAX.value: update_cycle_min_max,
@@ -1013,25 +1019,64 @@ def update_positive_negative(**kwargs):
 
 def update_cycle_duration(**kwargs):
 
-    required_keys = ["cycle_analysis", "cycle_data", "cycle_duration_key"]
+    required_keys = [
+        "cycle_analysis",
+        "adjusted_cycle_data",
+        "cycle_duration_key",
+    ]
     if not all([key in kwargs for key in required_keys]):
         raise ValueError(f"Missing required keys: {required_keys}")
 
     cycle_analysis = kwargs["cycle_analysis"]
-    cycle_data = kwargs["cycle_data"]
+    adjusted_cycle_data = kwargs["adjusted_cycle_data"]
     cycle_duration_key = kwargs["cycle_duration_key"]
 
     cycle_analysis[cycle_duration_key] = format_duration(
         make_round(
             (
-                cycle_data.iloc[-1]["dt"] - cycle_data.iloc[0]["dt"]
+                adjusted_cycle_data.iloc[-1]["dt"]
+                - adjusted_cycle_data.iloc[0]["dt"]
             ).total_seconds()
         )
     )
 
 
+def update_max_to_min_duration(**kwargs):
+
+    required_keys = [
+        "cycle_analysis",
+        "adjusted_cycle_data",
+        "max_idx",
+        "min_idx",
+        "max_to_min_duration_key",
+    ]
+    if not all([key in kwargs for key in required_keys]):
+        raise ValueError(f"Missing required keys: {required_keys}")
+
+    cycle_analysis = kwargs["cycle_analysis"]
+    adjusted_cycle_data = kwargs["adjusted_cycle_data"]
+    max_idx = kwargs["max_idx"]
+    min_idx = kwargs["min_idx"]
+    max_to_min_duration_key = kwargs["max_to_min_duration_key"]
+
+    try:
+        cycle_analysis[max_to_min_duration_key] = format_duration(
+            make_positive(
+                make_round(
+                    (
+                        (
+                            adjusted_cycle_data.loc[max_idx, "dt"]
+                            - adjusted_cycle_data.loc[min_idx, "dt"]
+                        ).total_seconds()
+                    )
+                )
+            )
+        )
+    except KeyError:
+        cycle_analysis[max_to_min_duration_key] = pd.NA
+
+
 def update_signal_start_duration(**kwargs):
-    # group_start_row, cycle_analysis, cycle_data, key
     required_keys = [
         "group_start_row",
         "cycle_analysis",
