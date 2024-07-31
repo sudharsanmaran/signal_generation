@@ -147,9 +147,25 @@ def get_bb_cols(periods, sds, col_type="MEAN"):
 
 def formulate_files_to_read(kwargs):
     instrument = kwargs.get("instrument")
+    kwargs["name"] += instrument
     close_time_frames_1 = kwargs.get("close_time_frames_1")
+    kwargs["name"] += (
+        f'_closeTF_{"-".join(map(lambda x : str(x),close_time_frames_1))}'
+        if close_time_frames_1
+        else ""
+    )
     bb_time_frames_1 = kwargs.get("bb_time_frames_1")
+    kwargs["name"] += (
+        f'_bb1TF_{"-".join(map(lambda x : str(x),bb_time_frames_1))}'
+        if bb_time_frames_1
+        else ""
+    )
     bb_time_frames_2 = kwargs.get("bb_time_frames_2")
+    kwargs["name"] += (
+        f'_bb2TF_{"-".join(map(lambda x : str(x),bb_time_frames_2))}'
+        if bb_time_frames_2
+        else ""
+    )
 
     # Combine time frames while keeping track of their origin
     close_time_frames_with_origin = [(tf, 1) for tf in close_time_frames_1]
@@ -234,6 +250,9 @@ def formulate_files_to_read(kwargs):
     # fractalcyle file
 
     if kwargs.get("fractal_cycle"):
+        kwargs[
+            "name"
+        ] += f"_fractalTF_{kwargs.get('fractal_tf')}_SD_{kwargs.get('fractal_sd')}"
         fractal_cycle_columns = get_fractal_cycle_columns(
             fractal_sd=kwargs.get("fractal_sd")
         )
@@ -660,6 +679,7 @@ def merge_fractal_data(base_df, fractal_df, fractal_count_df):
 
 
 def get_cycle_base_df(**kwargs):
+    kwargs["name"] = ""
     base_df = kwargs.get("base_df")
     start_datetime, end_datetime = (
         base_df.index[0],
@@ -673,6 +693,7 @@ def get_cycle_base_df(**kwargs):
         fractal_count_columns,
     ) = formulate_files_to_read(kwargs)
 
+    kwargs["name"] += f"_{start_datetime}_{end_datetime}"
     kwargs["fractal_cycle_columns"] = fractal_cycle_columns
     kwargs["fractal_count_columns"] = fractal_count_columns
 
@@ -770,7 +791,7 @@ def get_cycle_base_df(**kwargs):
                     update_cycle_count_1(df, col)
             df_to_analyze[tf] = df
 
-    return df_to_analyze
+    return df_to_analyze, kwargs["name"]
 
 
 def update_group_analytics(df):

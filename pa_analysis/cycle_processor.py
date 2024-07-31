@@ -67,8 +67,9 @@ def update_growth_percent_fractal_count(df, kwargs):
 
 
 def process_cycles(**kwargs):
+
     # get the base df
-    all_df = get_cycle_base_df(**kwargs)
+    all_df, result_file_name = get_cycle_base_df(**kwargs)
 
     # process the data
     for time_frame, df in all_df.items():
@@ -139,6 +140,7 @@ def process_cycles(**kwargs):
                     FirstCycleColumns.CLOSE_TO_CLOSE_TO_CLOSE_PERCENT.value,
                     FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN_TO_CLOSE_PERCENT.value,
                 ],
+                output_file_name=result_file_name,
             )
 
         first_cycle_columns = [col for col in df.columns if "cycle_no_" in col]
@@ -176,6 +178,7 @@ def process_cycles(**kwargs):
                 FirstCycleColumns.POINTS_FROM_MAX.value,
                 FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value,
             ],
+            output_file_name=result_file_name,
         )
 
         # ctc cycle
@@ -199,15 +202,16 @@ def process_cycles(**kwargs):
                 FirstCycleColumns.CLOSE_TO_CLOSE.value,
             ],
             positive_negative_keys=[FirstCycleColumns.CLOSE_TO_CLOSE.value],
+            output_file_name=result_file_name,
         )
 
-        headers = results[0].keys()
-        write_dict_to_csv(
-            results,
-            main_header=headers,
-            output_dir=PA_ANALYSIS_CYCLE_FOLDER,
-            csv_filename=f"result_tf_{time_frame}.csv",
-        )
+        # headers = results[0].keys()
+        # write_dict_to_csv(
+        #     results,
+        #     main_header=headers,
+        #     output_dir=PA_ANALYSIS_CYCLE_FOLDER,
+        #     csv_filename=f"result_tf_{time_frame}.csv",
+        # )
 
 
 def update_max_to_min_percent(df, kwargs):
@@ -241,6 +245,7 @@ def update_secondary_cycle_analytics(
     cycle_count_col=SecondCycleIDColumns.CTC_CYCLE_ID.value,
     analytics_needed: List = [],
     positive_negative_keys: List = [],
+    output_file_name="result.csv",
 ):
 
     groups = list(df.groupby("group_id"))
@@ -425,7 +430,7 @@ def update_secondary_cycle_analytics(
     write_dataframe_to_csv(
         df,
         PA_ANALYSIS_CYCLE_FOLDER,
-        f"base_df_tf_{time_frame}.csv",
+        f"{output_file_name}.csv",
     )
     return results
 
