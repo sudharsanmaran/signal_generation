@@ -580,7 +580,7 @@ def analyze_cycles(df, time_frame, kwargs):
 
                 update_cycle_duration(
                     cycle_analysis=cycle_analysis,
-                    cycle_data=cycle_data,
+                    adjusted_cycle_data=adjusted_cycle_data,
                     cycle_duration_key=FirstCycleColumns.CYCLE_DURATION.value,
                 )
 
