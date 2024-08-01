@@ -24,9 +24,9 @@ def make_negative(value):
     return value
 
 
-def make_round(value):
+def make_round(value, decimal=2):
     try:
-        return round(value, 2)
+        return round(value, decimal)
     except Exception:
         return value
 

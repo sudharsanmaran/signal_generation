@@ -117,6 +117,9 @@ PA_ANALYSIS_FOLDER = f"{BASE_OUTPUT_FOLDER}/{PA}/pa_analysis_outputs"
 PA_ANALYSIS_CYCLE_FOLDER = (
     f"{BASE_OUTPUT_FOLDER}/{PA}/pa_analysis_cycle_outputs"
 )
+PA_ANALYSIS_SUMMARY_FOLDER = (
+    f"{BASE_OUTPUT_FOLDER}/{PA}/pa_analysis_summary_outputs"
+)
 TARGET_PROFIT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{PA}/tp_outputs"
 VOLATILE_OUTPUT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{VA}/volatile_outputs"
 VOLATILE_OUTPUT_SUMMARY_FOLDER = (

@@ -205,6 +205,8 @@ def process_cycles(**kwargs):
             output_file_name=result_file_name,
         )
 
+        return result_file_name
+
         # headers = results[0].keys()
         # write_dict_to_csv(
         #     results,

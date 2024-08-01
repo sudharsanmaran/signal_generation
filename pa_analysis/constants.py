@@ -92,3 +92,35 @@ class MTMCrossedCycleColumns(Enum):
     IS_MTM_CROSS_6 = "IS_MTM Crossed 6"
     IS_MTM_CROSS_7 = "IS_MTM Crossed 7"
     IS_MTM_CROSS_8 = "IS_MTM Crossed 8"
+
+
+class SummaryColumns(Enum):
+    INSTRUMENT = "Instrument"
+    START_DATE = "Start Date"
+    END_DATE = "End Date"
+    DURATION = "Duration"
+    CATEGORY = "Category"
+    PRICE_MOVEMENT = "Price Movement"
+    PRICE_MOVEMENT_PERCENT = "Price Movement Percent"
+    PRICE_MOVEMENT_DURATION = "Price Movement Duration"
+    GROUP_COUNT = "Group Count"
+    WEIGHTED_AVERAGE_SIGNAL_DURATION = (
+        "Weighted Average Signal Duration (in days)"
+    )
+    PROBABILITY = "Probability"
+    NET_POINTS_PER_GROUP = "Net Points (per Group)"
+    NET_POINTS_PERCENT_PER_GROUP = "Net Points Percent (per Group)"
+    RISK_REWARD = "Risk Reward Ratio"
+
+
+class FirstCycleSummaryColumns(Enum):
+    GROUP_COUNT = "Group Count"
+    AVG_NO_OF_CYCLES_PER_GROUP = "Avg No. of Cycles per Group"
+    AVG_CYCLES_DURATION_PER_GROUP = "Avg Cycles Duration per Group"
+    CTC_POINT = "CTC Point"
+    CTC_POINT_PERCENT = "CTC Point Percent"
+    POINTS_FRM_AVG_TILL_MAX_TO_MIN = "Points from Avg till Max to Min"
+    POINTS_FRM_AVG_TILL_MIN_TO_MAX_PERCENT = (
+        "Points from Avg till Min to Max Percent"
+    )
+    POS_NEG_CTC = "Pos Neg CTC"

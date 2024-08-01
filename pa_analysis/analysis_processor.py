@@ -1,8 +1,10 @@
 import os
 
+import pandas as pd
+
 from pa_analysis.constants import OutputHeader, RankingColumns, SignalColumns
 from pa_analysis.cycle_processor import process_cycles
-from source.constants import MarketDirection
+from source.constants import PA_ANALYSIS_FOLDER, MarketDirection
 from source.data_reader import load_strategy_data
 from source.processors.cycle_trade_processor import get_base_df
 
@@ -10,6 +12,7 @@ from source.utils import (
     format_dates,
     make_positive,
     make_round,
+    write_dataframe_to_csv,
     write_dict_to_csv,
 )
 
@@ -117,11 +120,15 @@ def process_strategy(validated_data, strategy_pair, instrument):
     # based on base df need to generate output analytic df
     result_base_df = generate_analytics(base_df)
     if validated_data["calculate_cycles"]:
-        process_cycles(
+        output_file_name = process_cycles(
             **validated_data,
             base_df=base_df,
             instrument=instrument,
         )
+    result_df = pd.DataFrame(result_base_df)
+    write_dataframe_to_csv(
+        result_df, PA_ANALYSIS_FOLDER, f"{output_file_name}.csv"
+    )
     return result_base_df
 
 
