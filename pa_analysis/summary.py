@@ -291,21 +291,71 @@ def update_first_cycle_summary(df, common_props, direction_masks, file):
             .sum()
         )
 
-        update_MTM_crossed_count(df, res, mask)
+        mtm_cols = [col for col in df.columns if "IS_MTM Crossed" in col]
+        update_MTM_crossed_count(df, res, mask, mtm_cols)
 
         result.append(res)
 
     result_df = pd.DataFrame(result)
+    result_df.columns = get_first_cycle_summary_multi_index(mtm_cols)
+
     write_dataframe_to_csv(
         result_df,
         f"{PA_ANALYSIS_SUMMARY_FOLDER}/first_cycle_summary",
-        f"{file}_first_cycle_summary.csv",
+        f"{file[:-4]}_first_cycle_summary.csv",
     )
     return result
 
 
-def update_MTM_crossed_count(df, res, mask):
-    mtm_cols = [col for col in df.columns if "IS_MTM Crossed" in col]
+def get_first_cycle_summary_multi_index(mtm_cols):
+    return pd.MultiIndex.from_tuples(
+        [
+            (SummaryColumns.INSTRUMENT.value, "", ""),
+            ("Period", SummaryColumns.START_DATE.value, ""),
+            ("Period", SummaryColumns.END_DATE.value, ""),
+            ("Period", SummaryColumns.DURATION.value, ""),
+            (SummaryColumns.CATEGORY.value, "", ""),
+            (FirstCycleSummaryColumns.GROUP_COUNT.value, "", ""),
+            (
+                FirstCycleSummaryColumns.AVG_NO_OF_CYCLES_PER_GROUP.value,
+                "",
+                "",
+            ),
+            (
+                FirstCycleSummaryColumns.AVG_CYCLES_DURATION_PER_GROUP.value,
+                "",
+                "",
+            ),
+            (FirstCycleSummaryColumns.CTC_POINT.value, "Sum", ""),
+            (FirstCycleSummaryColumns.CTC_POINT.value, "Average", ""),
+            (FirstCycleSummaryColumns.CTC_POINT_PERCENT.value, "Sum", ""),
+            (FirstCycleSummaryColumns.CTC_POINT_PERCENT.value, "Average", ""),
+            (
+                FirstCycleSummaryColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value,
+                "Sum",
+                "",
+            ),
+            (
+                FirstCycleSummaryColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value,
+                "Average",
+                "",
+            ),
+            (
+                FirstCycleSummaryColumns.POINTS_FRM_AVG_TILL_MIN_TO_MAX_PERCENT.value,
+                "Sum",
+                "",
+            ),
+            (
+                FirstCycleSummaryColumns.POINTS_FRM_AVG_TILL_MIN_TO_MAX_PERCENT.value,
+                "Average",
+                "",
+            ),
+            *[(col, "", "") for col in mtm_cols],
+        ]
+    )
+
+
+def update_MTM_crossed_count(df, res, mask, mtm_cols):
     for col in mtm_cols:
         res[col] = df[mask][df[mask][col] == "YES"][col].count()
     return
@@ -338,26 +388,119 @@ def update_basic_analysis_summary(
             basic_result,
             basic_result_index_map,
         )
-        pos_neg_res = {}
-        for pos_neg, pos_neg_mask in zip(["pos", "neg"], pos_neg_masks):
-            adj_mask = mask & pos_neg_mask
-            pos_neg_res.update(
-                create_pos_neg_result(
-                    df,
-                    adj_mask,
-                    pos_neg,
-                    category,
-                    basic_result,
-                    basic_result_index_map,
-                )
-            )
-        all_res = {**cat_res, **pos_neg_res}
-        result.append(all_res)
+
+        update_group_count(df, pos_neg_masks, mask, cat_res)
+
+        if category == "overall":
+            result.append(cat_res)
+            continue
+
+        update_pos_neg_summary(
+            basic_result, basic_result_index_map, category, cat_res
+        )
+
+        result.append(cat_res)
 
     result_df = pd.DataFrame(result)
+
+    result_df.columns = get_basic_multi_index()
+
     write_dataframe_to_csv(
         result_df,
         f"{PA_ANALYSIS_SUMMARY_FOLDER}/basic_analysis_summary",
-        f"{file}_summary.csv",
+        f"{file[:-4]}_basic_analysis_summary.csv",
     )
     return
+
+
+def get_basic_multi_index():
+    return pd.MultiIndex.from_tuples(
+        [
+            (SummaryColumns.INSTRUMENT.value, "", ""),
+            ("Period", SummaryColumns.START_DATE.value, ""),
+            ("Period", SummaryColumns.END_DATE.value, ""),
+            ("Period", SummaryColumns.DURATION.value, ""),
+            (SummaryColumns.CATEGORY.value, "", ""),
+            (
+                "Price movement and Duration since previous High/ Low",
+                SummaryColumns.PRICE_MOVEMENT.value,
+                "Average",
+            ),
+            (
+                "Price movement and Duration since previous High/ Low",
+                SummaryColumns.PRICE_MOVEMENT.value,
+                "Median",
+            ),
+            (
+                "Price movement and Duration since previous High/ Low",
+                SummaryColumns.PRICE_MOVEMENT_PERCENT.value,
+                "Average",
+            ),
+            (
+                "Price movement and Duration since previous High/ Low",
+                SummaryColumns.PRICE_MOVEMENT_PERCENT.value,
+                "Median",
+            ),
+            (
+                "Price movement and Duration since previous High/ Low",
+                SummaryColumns.PRICE_MOVEMENT_DURATION.value,
+                "Average",
+            ),
+            (
+                "Price movement and Duration since previous High/ Low",
+                SummaryColumns.PRICE_MOVEMENT_DURATION.value,
+                "Median",
+            ),
+            (SummaryColumns.GROUP_COUNT.value, "Positive", ""),
+            (SummaryColumns.GROUP_COUNT.value, "Negative", ""),
+            (SummaryColumns.PROBABILITY.value, "", ""),
+            (SummaryColumns.RISK_REWARD.value, "", ""),
+            (
+                SummaryColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION.value,
+                "Positive",
+                "",
+            ),
+            (
+                SummaryColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION.value,
+                "Negative",
+                "",
+            ),
+            (SummaryColumns.NET_POINTS_PER_GROUP.value, "Positive", ""),
+            (SummaryColumns.NET_POINTS_PER_GROUP.value, "Negative", ""),
+            (
+                SummaryColumns.NET_POINTS_PERCENT_PER_GROUP.value,
+                "Positive",
+                "",
+            ),
+            (
+                SummaryColumns.NET_POINTS_PERCENT_PER_GROUP.value,
+                "Negative",
+                "",
+            ),
+        ]
+    )
+
+
+def update_pos_neg_summary(
+    basic_result, basic_result_index_map, category, cat_res
+):
+    upadte_cols = {
+        SummaryColumns.WEIGHTED_AVERAGE_SIGNAL_DURATION.value: OutputHeader.WEIGHTED_AVERAGE_SIGNAL_DURATION.value,
+        SummaryColumns.NET_POINTS_PER_GROUP.value: OutputHeader.POINTS_PER_SIGNAL.value,
+        SummaryColumns.NET_POINTS_PERCENT_PER_GROUP.value: OutputHeader.POINTS_PER_SIGNAL_PERCENT.value,
+    }
+
+    for key, column in upadte_cols.items():
+        for pos_neg in ["pos", "neg"]:
+
+            cat_res[f"{pos_neg}_{key}"] = basic_result[column].iloc[
+                basic_result_index_map[(category, pos_neg)]
+            ]
+
+
+def update_group_count(df, pos_neg_masks, mask, cat_res):
+    for pos_neg, pos_neg_mask in zip(["pos", "neg"], pos_neg_masks):
+        adj_mask = mask & pos_neg_mask
+        cat_res[f"{pos_neg}_{SummaryColumns.GROUP_COUNT.value}"] = df[
+            adj_mask
+        ]["group_id"].nunique()
