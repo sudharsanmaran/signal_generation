@@ -25,7 +25,7 @@ FILTERED_V = "filtered_v"
 CATEGORY = "category"
 
 
-def read_file(file_path: str) -> dict:
+def read_file(file_path: str, start_date, end_date) -> dict:
     columns_to_read = [
         "dt",
         "o",
@@ -49,12 +49,15 @@ def read_file(file_path: str) -> dict:
         },
     )
     df["dt"] = pd.to_datetime(df["dt"])
+    df = df[(df["dt"] >= start_date) & (df["dt"] <= end_date)]
     return df
 
 
 def process(validated_data: dict):
     # Load data
-    df = read_file(FINAL_DB_PATH)
+    df = read_file(
+        FINAL_DB_PATH, validated_data["start_date"], validated_data["end_date"]
+    )
 
     pd.set_option("display.max_rows", None)
 
@@ -154,7 +157,11 @@ def process(validated_data: dict):
         prefix="2",
     )
 
-    write_dataframe_to_csv(df, VOLUME_OUTPUT_FOLDER, "output.csv")
+    write_dataframe_to_csv(
+        df,
+        VOLUME_OUTPUT_FOLDER,
+        f"ZScore_{validated_data[AVG_ZSCORE_SUM_THRESHOLD]}_cycleDuration_{validated_data[CYCLE_DURATION]}_{df.index[0]}_{df.index[-1]}.csv",
+    )
 
 
 def update_sub_cycle_id(df, validated_data):
