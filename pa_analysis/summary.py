@@ -251,7 +251,7 @@ def update_MTM_cycle_summary(
             MTMCycleSummaryColumns.CTC_POINT.value: f"{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}",
             MTMCycleSummaryColumns.CTC_POINT_PERCENT.value: f"{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE_TO_CLOSE_PERCENT.value}",
         }
-        overall_mask = pd.Series([True] * len(df))
+        overall_mask = pd.Series(True, index=df.index)
         for key, column in update_cols.items():
             for sign, sign_mask in zip(
                 ["overall", "pos", "neg"], [overall_mask, *pos_neg_masks]
@@ -288,6 +288,9 @@ def update_MTM_cycle_summary(
                 )
                 * 100
             )
+        else:
+            res[MTMCycleSummaryColumns.CTC_RISK_REWARD.value] = 0
+            res[MTMCycleSummaryColumns.POINTS_FROM_MAX_RISK_REWARD.value] = 0
 
         update_cols = {
             MTMCycleSummaryColumns.POS_NEG_POINTS_FROM_MAX.value: f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{prefix}_{FirstCycleColumns.POINTS_FROM_MAX.value}",
@@ -295,8 +298,16 @@ def update_MTM_cycle_summary(
         }
         for key, column in update_cols.items():
 
-            cum_avg = df[mask][column].expanding().mean()
+            start_index = df[mask].index[0]
+            adjusted_start_index = start_index + pd.DateOffset(years=1)
+            adjusted_df = df[mask][adjusted_start_index:]
+            if adjusted_df.empty:
+                res[f"overall_{key}"] = 0
+                res[f"max_{key}"] = 0
+                res[f"min_{key}"] = 0
+                continue
 
+            cum_avg = adjusted_df[column].expanding().mean()
             res[f"overall_{key}"] = cum_avg.iloc[-1]
             res[f"max_{key}"] = cum_avg.max()
             res[f"min_{key}"] = cum_avg.min()
@@ -619,6 +630,11 @@ def update_first_cycle_summary(
             adjsted_start_index = start_index + pd.DateOffset(years=1)
             adjusted_df = df[mask][adjsted_start_index:]
             if adjusted_df.empty:
+                res[f"overall_{key}"] = 0
+                res[f"3m_max_{key}"] = 0
+                res[f"3m_min_{key}"] = 0
+                res[f"6m_max_{key}"] = 0
+                res[f"6m_min_{key}"] = 0
                 continue
 
             cum_avg = adjusted_df[column].expanding().mean()
