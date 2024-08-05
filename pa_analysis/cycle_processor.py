@@ -275,17 +275,17 @@ def update_secondary_cycle_analytics(
         FirstCycleColumns.POINTS_FROM_MAX_TO_CLOSE_PERCENT.value: partial(
             update_percent_with_grp_start_close,
             percent_col=f"{prefix}_{FirstCycleColumns.POINTS_FROM_MAX.value}",
-            percent_key=FirstCycleColumns.POINTS_FROM_MAX_TO_CLOSE_PERCENT.value,
+            percent_key=f"{prefix}_{FirstCycleColumns.POINTS_FROM_MAX_TO_CLOSE_PERCENT.value}",
         ),
         FirstCycleColumns.CLOSE_TO_CLOSE_TO_CLOSE_PERCENT.value: partial(
             update_percent_with_grp_start_close,
             percent_col=f"{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}",
-            percent_key=FirstCycleColumns.CLOSE_TO_CLOSE_TO_CLOSE_PERCENT.value,
+            percent_key=f"{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE_TO_CLOSE_PERCENT.value}",
         ),
         FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN_TO_CLOSE_PERCENT.value: partial(
             update_percent_with_grp_start_close,
             percent_col=f"{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}",
-            percent_key=FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN_TO_CLOSE_PERCENT.value,
+            percent_key=f"{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN_TO_CLOSE_PERCENT.value}",
         ),
     }
 
@@ -680,6 +680,13 @@ def analyze_cycles(df, time_frame, kwargs):
                     cycle_analysis=cycle_analysis,
                     percent_col=FirstCycleColumns.MAX_TO_MIN.value,
                     percent_key=FirstCycleColumns.MAX_TO_MIN_TO_CLOSE_PERCENT.value,
+                    group_start_close=group_start_close,
+                )
+
+                update_percent_with_grp_start_close(
+                    cycle_analysis=cycle_analysis,
+                    percent_col=FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value,
+                    percent_key=FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN_TO_CLOSE_PERCENT.value,
                     group_start_close=group_start_close,
                 )
 

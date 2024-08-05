@@ -124,3 +124,18 @@ class FirstCycleSummaryColumns(Enum):
         "Points from Avg till Min to Max Percent"
     )
     POS_NEG_CTC = "Pos Neg CTC"
+
+
+class MTMCycleSummaryColumns(Enum):
+    GROUP_COUNT = "Group Count"
+    AVG_NO_OF_CYCLES_PER_GROUP = "Avg No. of Cycles per Group"
+    AVG_CYCLES_DURATION_PER_GROUP = "Avg Cycles Duration per Group"
+    CTC_POINT = "CTC Point"
+    CTC_POINT_PERCENT = "CTC Point Percent"
+    POINTS_FROM_MAX = "Points from Maximum"
+    POINTS_FROM_MAX_PERCENT = "Points from Maximum Percent"
+    POS_NEG_POINTS_FROM_MAX = "Pos Neg Points from Maximum"
+    POS_NEG_CTC_POINT = "Pos Neg CTC Point"
+    AVG_NO_OF_FRACTAL_PER_CYCLE = "Avg No. of Fractal per Cycle"
+    CTC_RISK_REWARD = "CTC Risk Reward Ratio"
+    POINTS_FROM_MAX_RISK_REWARD = "Points from Maximum Risk Reward Ratio"
