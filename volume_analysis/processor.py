@@ -22,6 +22,7 @@ COUNT = "Count"
 DURATION = "duration"
 CYCLE_ID = "cycle_id"
 FILTERED_V = "filtered_v"
+CATEGORY = "category"
 
 
 def read_file(file_path: str) -> dict:
@@ -103,6 +104,10 @@ def process(validated_data: dict):
             df.at[group_data.index[-1], WEIGHTED_AVERAGE_PRICE] = (
                 weighted_avg_price
             )
+
+    # category
+    df[CATEGORY] = "non-cv"
+    df.loc[df["marker"] > 0, CATEGORY] = "cv"
 
     # Calculate Count and Duration
     df[COUNT] = df[WEIGHTED_AVERAGE_PRICE].notna().cumsum()
