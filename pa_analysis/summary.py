@@ -214,7 +214,7 @@ def process_summary(df: pd.DataFrame, file: str):
 def update_MTM_cycle_summary(
     df, common_props, direction_masks, pos_neg_masks, file
 ):
-    result, prefix = [], "MTM"
+    result, prefix, include_fractal_cols = [], "MTM", True
     for category, mask in zip(["overall", "long", "short"], direction_masks):
         if df[mask].shape[0] < 1:
             continue
@@ -303,6 +303,7 @@ def update_MTM_cycle_summary(
 
         if SecondCycleIDColumns.FRACTAL_CYCLE_ID.value not in df.columns:
             result.append(res)
+            include_fractal_cols = False
             continue
 
         for sign, sign_mask in zip(
@@ -321,7 +322,7 @@ def update_MTM_cycle_summary(
 
         result.append(res)
     result_df = pd.DataFrame(result)
-    result_df.columns = get_MTM_cycle_summary_multi_index()
+    result_df.columns = get_MTM_cycle_summary_multi_index(include_fractal_cols)
 
     write_dataframe_to_csv(
         result_df,
@@ -331,182 +332,187 @@ def update_MTM_cycle_summary(
     return result
 
 
-def get_MTM_cycle_summary_multi_index():
-    return pd.MultiIndex.from_tuples(
-        [
-            (SummaryColumns.INSTRUMENT.value, "", ""),
-            ("Period", SummaryColumns.START_DATE.value, ""),
-            ("Period", SummaryColumns.END_DATE.value, ""),
-            ("Period", SummaryColumns.DURATION.value, ""),
-            (SummaryColumns.CATEGORY.value, "", ""),
-            (MTMCycleSummaryColumns.GROUP_COUNT.value, "", ""),
-            (
-                MTMCycleSummaryColumns.AVG_NO_OF_CYCLES_PER_GROUP.value,
-                "",
-                "",
-            ),
-            (
-                MTMCycleSummaryColumns.AVG_CYCLES_DURATION_PER_GROUP.value,
-                "",
-                "",
-            ),
-            (
-                MTMCycleSummaryColumns.POINTS_FROM_MAX.value,
-                "Overall",
-                "Sum",
-            ),
-            (
-                MTMCycleSummaryColumns.POINTS_FROM_MAX.value,
-                "Overall",
-                "Average",
-            ),
-            (
-                MTMCycleSummaryColumns.POINTS_FROM_MAX.value,
-                "Positive",
-                "Sum",
-            ),
-            (
-                MTMCycleSummaryColumns.POINTS_FROM_MAX.value,
-                "Positive",
-                "Average",
-            ),
-            (
-                MTMCycleSummaryColumns.POINTS_FROM_MAX.value,
-                "Negative",
-                "Sum",
-            ),
-            (
-                MTMCycleSummaryColumns.POINTS_FROM_MAX.value,
-                "Negative",
-                "Average",
-            ),
-            (
-                MTMCycleSummaryColumns.POINTS_FROM_MAX_PERCENT.value,
-                "Overall",
-                "Sum",
-            ),
-            (
-                MTMCycleSummaryColumns.POINTS_FROM_MAX_PERCENT.value,
-                "Overall",
-                "Average",
-            ),
-            (
-                MTMCycleSummaryColumns.POINTS_FROM_MAX_PERCENT.value,
-                "Positive",
-                "Sum",
-            ),
-            (
-                MTMCycleSummaryColumns.POINTS_FROM_MAX_PERCENT.value,
-                "Positive",
-                "Average",
-            ),
-            (
-                MTMCycleSummaryColumns.POINTS_FROM_MAX_PERCENT.value,
-                "Negative",
-                "Sum",
-            ),
-            (
-                MTMCycleSummaryColumns.POINTS_FROM_MAX_PERCENT.value,
-                "Negative",
-                "Average",
-            ),
-            (
-                MTMCycleSummaryColumns.CTC_POINT.value,
-                "Overall",
-                "Sum",
-            ),
-            (
-                MTMCycleSummaryColumns.CTC_POINT.value,
-                "Overall",
-                "Average",
-            ),
-            (
-                MTMCycleSummaryColumns.CTC_POINT.value,
-                "Positive",
-                "Sum",
-            ),
-            (
-                MTMCycleSummaryColumns.CTC_POINT.value,
-                "Positive",
-                "Average",
-            ),
-            (
-                MTMCycleSummaryColumns.CTC_POINT.value,
-                "Negative",
-                "Sum",
-            ),
-            (
-                MTMCycleSummaryColumns.CTC_POINT.value,
-                "Negative",
-                "Average",
-            ),
-            (MTMCycleSummaryColumns.CTC_POINT_PERCENT.value, "Overall", "Sum"),
-            (
-                MTMCycleSummaryColumns.CTC_POINT_PERCENT.value,
-                "Overall",
-                "Average",
-            ),
-            (
-                MTMCycleSummaryColumns.CTC_POINT_PERCENT.value,
-                "Positive",
-                "Sum",
-            ),
-            (
-                MTMCycleSummaryColumns.CTC_POINT_PERCENT.value,
-                "Positive",
-                "Average",
-            ),
-            (
-                MTMCycleSummaryColumns.CTC_POINT_PERCENT.value,
-                "Negative",
-                "Sum",
-            ),
-            (
-                MTMCycleSummaryColumns.CTC_POINT_PERCENT.value,
-                "Negative",
-                "Average",
-            ),
-            (
-                MTMCycleSummaryColumns.CTC_RISK_REWARD.value,
-                "",
-                "",
-            ),
-            (
-                MTMCycleSummaryColumns.POINTS_FROM_MAX_RISK_REWARD.value,
-                "",
-                "",
-            ),
-            (
-                MTMCycleSummaryColumns.POS_NEG_POINTS_FROM_MAX.value,
-                "Overall",
-                "",
-            ),
-            (MTMCycleSummaryColumns.POS_NEG_POINTS_FROM_MAX.value, "Max", ""),
-            (MTMCycleSummaryColumns.POS_NEG_POINTS_FROM_MAX.value, "Min", ""),
-            (
-                MTMCycleSummaryColumns.POS_NEG_CTC_POINT.value,
-                "Overall",
-                "",
-            ),
-            (MTMCycleSummaryColumns.POS_NEG_CTC_POINT.value, "Max", ""),
-            (MTMCycleSummaryColumns.POS_NEG_CTC_POINT.value, "Min", ""),
-            (
-                MTMCycleSummaryColumns.AVG_NO_OF_FRACTAL_PER_CYCLE.value,
-                "Overall",
-                "",
-            ),
-            (
-                MTMCycleSummaryColumns.AVG_NO_OF_FRACTAL_PER_CYCLE.value,
-                "Positive",
-                "",
-            ),
-            (
-                MTMCycleSummaryColumns.AVG_NO_OF_FRACTAL_PER_CYCLE.value,
-                "Negative",
-                "",
-            ),
-        ]
-    )
+def get_MTM_cycle_summary_multi_index(include_fractal_cols):
+    multi_index = [
+        (SummaryColumns.INSTRUMENT.value, "", ""),
+        ("Period", SummaryColumns.START_DATE.value, ""),
+        ("Period", SummaryColumns.END_DATE.value, ""),
+        ("Period", SummaryColumns.DURATION.value, ""),
+        (SummaryColumns.CATEGORY.value, "", ""),
+        (MTMCycleSummaryColumns.GROUP_COUNT.value, "", ""),
+        (
+            MTMCycleSummaryColumns.AVG_NO_OF_CYCLES_PER_GROUP.value,
+            "",
+            "",
+        ),
+        (
+            MTMCycleSummaryColumns.AVG_CYCLES_DURATION_PER_GROUP.value,
+            "",
+            "",
+        ),
+        (
+            MTMCycleSummaryColumns.POINTS_FROM_MAX.value,
+            "Overall",
+            "Sum",
+        ),
+        (
+            MTMCycleSummaryColumns.POINTS_FROM_MAX.value,
+            "Overall",
+            "Average",
+        ),
+        (
+            MTMCycleSummaryColumns.POINTS_FROM_MAX.value,
+            "Positive",
+            "Sum",
+        ),
+        (
+            MTMCycleSummaryColumns.POINTS_FROM_MAX.value,
+            "Positive",
+            "Average",
+        ),
+        (
+            MTMCycleSummaryColumns.POINTS_FROM_MAX.value,
+            "Negative",
+            "Sum",
+        ),
+        (
+            MTMCycleSummaryColumns.POINTS_FROM_MAX.value,
+            "Negative",
+            "Average",
+        ),
+        (
+            MTMCycleSummaryColumns.POINTS_FROM_MAX_PERCENT.value,
+            "Overall",
+            "Sum",
+        ),
+        (
+            MTMCycleSummaryColumns.POINTS_FROM_MAX_PERCENT.value,
+            "Overall",
+            "Average",
+        ),
+        (
+            MTMCycleSummaryColumns.POINTS_FROM_MAX_PERCENT.value,
+            "Positive",
+            "Sum",
+        ),
+        (
+            MTMCycleSummaryColumns.POINTS_FROM_MAX_PERCENT.value,
+            "Positive",
+            "Average",
+        ),
+        (
+            MTMCycleSummaryColumns.POINTS_FROM_MAX_PERCENT.value,
+            "Negative",
+            "Sum",
+        ),
+        (
+            MTMCycleSummaryColumns.POINTS_FROM_MAX_PERCENT.value,
+            "Negative",
+            "Average",
+        ),
+        (
+            MTMCycleSummaryColumns.CTC_POINT.value,
+            "Overall",
+            "Sum",
+        ),
+        (
+            MTMCycleSummaryColumns.CTC_POINT.value,
+            "Overall",
+            "Average",
+        ),
+        (
+            MTMCycleSummaryColumns.CTC_POINT.value,
+            "Positive",
+            "Sum",
+        ),
+        (
+            MTMCycleSummaryColumns.CTC_POINT.value,
+            "Positive",
+            "Average",
+        ),
+        (
+            MTMCycleSummaryColumns.CTC_POINT.value,
+            "Negative",
+            "Sum",
+        ),
+        (
+            MTMCycleSummaryColumns.CTC_POINT.value,
+            "Negative",
+            "Average",
+        ),
+        (MTMCycleSummaryColumns.CTC_POINT_PERCENT.value, "Overall", "Sum"),
+        (
+            MTMCycleSummaryColumns.CTC_POINT_PERCENT.value,
+            "Overall",
+            "Average",
+        ),
+        (
+            MTMCycleSummaryColumns.CTC_POINT_PERCENT.value,
+            "Positive",
+            "Sum",
+        ),
+        (
+            MTMCycleSummaryColumns.CTC_POINT_PERCENT.value,
+            "Positive",
+            "Average",
+        ),
+        (
+            MTMCycleSummaryColumns.CTC_POINT_PERCENT.value,
+            "Negative",
+            "Sum",
+        ),
+        (
+            MTMCycleSummaryColumns.CTC_POINT_PERCENT.value,
+            "Negative",
+            "Average",
+        ),
+        (
+            MTMCycleSummaryColumns.CTC_RISK_REWARD.value,
+            "",
+            "",
+        ),
+        (
+            MTMCycleSummaryColumns.POINTS_FROM_MAX_RISK_REWARD.value,
+            "",
+            "",
+        ),
+        (
+            MTMCycleSummaryColumns.POS_NEG_POINTS_FROM_MAX.value,
+            "Overall",
+            "",
+        ),
+        (MTMCycleSummaryColumns.POS_NEG_POINTS_FROM_MAX.value, "Max", ""),
+        (MTMCycleSummaryColumns.POS_NEG_POINTS_FROM_MAX.value, "Min", ""),
+        (
+            MTMCycleSummaryColumns.POS_NEG_CTC_POINT.value,
+            "Overall",
+            "",
+        ),
+        (MTMCycleSummaryColumns.POS_NEG_CTC_POINT.value, "Max", ""),
+        (MTMCycleSummaryColumns.POS_NEG_CTC_POINT.value, "Min", ""),
+    ]
+    fractal_multi_index = [
+        (
+            MTMCycleSummaryColumns.AVG_NO_OF_FRACTAL_PER_CYCLE.value,
+            "Overall",
+            "",
+        ),
+        (
+            MTMCycleSummaryColumns.AVG_NO_OF_FRACTAL_PER_CYCLE.value,
+            "Positive",
+            "",
+        ),
+        (
+            MTMCycleSummaryColumns.AVG_NO_OF_FRACTAL_PER_CYCLE.value,
+            "Negative",
+            "",
+        ),
+    ]
+
+    if include_fractal_cols:
+        multi_index.extend(fractal_multi_index)
+
+    return pd.MultiIndex.from_tuples([*multi_index])
 
 
 def update_first_cycle_summary(
@@ -606,12 +612,25 @@ def update_first_cycle_summary(
             FirstCycleSummaryColumns.POS_NEG_CTC.value: f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}",
         }
         for key, column in update_cols.items():
+            # skip 1 year data
 
-            cum_avg = df[mask][column].expanding().mean()
+            start_index = df[mask].index[0]
 
+            adjsted_start_index = start_index + pd.DateOffset(years=1)
+            adjusted_df = df[mask][adjsted_start_index:]
+            if adjusted_df.empty:
+                continue
+
+            cum_avg = adjusted_df[column].expanding().mean()
             res[f"overall_{key}"] = cum_avg.iloc[-1]
-            res[f"max_{key}"] = cum_avg.max()
-            res[f"min_{key}"] = cum_avg.min()
+
+            rolling_3m_avg = adjusted_df[column].rolling("90D").mean()
+            res[f"3m_max_{key}"] = rolling_3m_avg.max()
+            res[f"3m_min_{key}"] = rolling_3m_avg.min()
+
+            rolling_6m_avg = adjusted_df[column].rolling("180D").mean()
+            res[f"6m_max_{key}"] = rolling_6m_avg.max()
+            res[f"6m_min_{key}"] = rolling_6m_avg.min()
 
         mtm_cols = [col for col in df.columns if "IS_MTM Crossed" in col]
         update_MTM_crossed_count(df, res, mask, mtm_cols)
@@ -679,13 +698,23 @@ def get_first_cycle_summary_multi_index(mtm_cols):
             ),
             (
                 FirstCycleSummaryColumns.POS_NEG_CTC.value,
+                "6 Months",
                 "Max",
-                "",
             ),
             (
                 FirstCycleSummaryColumns.POS_NEG_CTC.value,
+                "6 Months",
                 "Min",
-                "",
+            ),
+            (
+                FirstCycleSummaryColumns.POS_NEG_CTC.value,
+                "3 Months",
+                "Max",
+            ),
+            (
+                FirstCycleSummaryColumns.POS_NEG_CTC.value,
+                "3 Months",
+                "Min",
             ),
             *[(col, "", "") for col in mtm_cols],
         ]
