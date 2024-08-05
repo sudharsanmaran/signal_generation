@@ -291,7 +291,7 @@ def update_MTM_cycle_summary(
 
         update_cols = {
             MTMCycleSummaryColumns.POS_NEG_POINTS_FROM_MAX.value: f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{prefix}_{FirstCycleColumns.POINTS_FROM_MAX.value}",
-            # MTMCycleSummaryColumns.POS_NEG_CTC_POINT.value: f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}",
+            MTMCycleSummaryColumns.POS_NEG_CTC_POINT.value: f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}",
         }
         for key, column in update_cols.items():
 
@@ -483,6 +483,13 @@ def get_MTM_cycle_summary_multi_index():
             ),
             (MTMCycleSummaryColumns.POS_NEG_POINTS_FROM_MAX.value, "Max", ""),
             (MTMCycleSummaryColumns.POS_NEG_POINTS_FROM_MAX.value, "Min", ""),
+            (
+                MTMCycleSummaryColumns.POS_NEG_CTC_POINT.value,
+                "Overall",
+                "",
+            ),
+            (MTMCycleSummaryColumns.POS_NEG_CTC_POINT.value, "Max", ""),
+            (MTMCycleSummaryColumns.POS_NEG_CTC_POINT.value, "Min", ""),
             (
                 MTMCycleSummaryColumns.AVG_NO_OF_FRACTAL_PER_CYCLE.value,
                 "Overall",

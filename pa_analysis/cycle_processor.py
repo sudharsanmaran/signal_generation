@@ -177,6 +177,7 @@ def process_cycles(**kwargs):
             positive_negative_keys=[
                 FirstCycleColumns.POINTS_FROM_MAX.value,
                 FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value,
+                FirstCycleColumns.CLOSE_TO_CLOSE.value,
             ],
             output_file_name=result_file_name,
         )
