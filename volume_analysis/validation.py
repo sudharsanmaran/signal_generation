@@ -4,6 +4,7 @@ from pydantic import BaseModel, ValidationError, field_validator
 
 
 class Inputs(BaseModel):
+    instrument: str
     avg_zscore_sum_threshold: int
     cycle_duration: int
     cycle_skip_count: int

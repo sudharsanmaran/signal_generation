@@ -14,6 +14,7 @@ CYCLE_DURATION = "cycle_duration"
 WEIGHTED_AVERAGE_PRICE = "Weighted Average Price"
 CUM_AVG_WEIGHTED_AVERAGE_PRICE = "Cum Avg Weighted Average Price"
 CUM_AVG_WEIGHTED_AVERAGE_PRICE_TO_C = "Cum Avg Weighted Avg Price to C"
+AVG_ZSCORE = "Average Z score"
 RANK_ON_Z_SCORE = "Rank on Z Score"
 CALCULATE_AVG_ZSCORE_SUMS = "calculate_avg_zscore_sums_1_5"
 C = "c"
@@ -80,15 +81,15 @@ def process(validated_data: dict):
 
     for group_id, group_data in df.groupby("marker"):
         if group_id > 0:
-            df.at[group_data.index[-1], "Average Z score"] = group_data[
+            df.at[group_data.index[-1], AVG_ZSCORE] = group_data[
                 CALCULATE_AVG_ZSCORE_SUMS
             ].mean()
             cumulative_group_data = pd.concat(
                 [cumulative_group_data, group_data]
             )
-            cumulative_group_data[f"{group_id}_rank"] = df[
-                "Average Z score"
-            ].rank(method="min", ascending=False)
+            cumulative_group_data[f"{group_id}_rank"] = df[AVG_ZSCORE].rank(
+                method="min", ascending=False
+            )
             n_cum_df = cumulative_group_data[
                 cumulative_group_data[f"{group_id}_rank"].notna()
             ]
@@ -108,10 +109,6 @@ def process(validated_data: dict):
                 weighted_avg_price
             )
 
-    # category
-    df[CATEGORY] = "non-cv"
-    df.loc[df["marker"] > 0, CATEGORY] = "cv"
-
     # Calculate Count and Duration
     df[COUNT] = df[WEIGHTED_AVERAGE_PRICE].notna().cumsum()
     df.loc[df[WEIGHTED_AVERAGE_PRICE].isna(), COUNT] = pd.NA
@@ -123,6 +120,11 @@ def process(validated_data: dict):
 
     # Identify cycles
     update_cycle_id(validated_data, df, filtered_df)
+
+    # category
+    df[CATEGORY] = "cv"
+    df.loc[df[CYCLE_ID] % 2 == 0, CATEGORY] = "non-cv"
+    df.loc[df[CYCLE_ID].isna(), CATEGORY] = pd.NA
 
     df["calculate_change_1"] = df[C].pct_change()
 
@@ -160,7 +162,7 @@ def process(validated_data: dict):
     write_dataframe_to_csv(
         df,
         VOLUME_OUTPUT_FOLDER,
-        f"ZScore_{validated_data[AVG_ZSCORE_SUM_THRESHOLD]}_cycleDuration_{validated_data[CYCLE_DURATION]}_{df.index[0]}_{df.index[-1]}.csv",
+        f"{validated_data['instrument']}_ZS_{validated_data[AVG_ZSCORE_SUM_THRESHOLD]}_CD_{validated_data[CYCLE_DURATION]}_{df.index[0]}_{df.index[-1]}.csv",
     )
 
 

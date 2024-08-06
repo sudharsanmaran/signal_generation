@@ -20,6 +20,9 @@ def main():
         "Select Expander", ["Single Analysis", "Summary"]
     )
     if expander_option == "Single Analysis":
+        instrument = st.text_input("Instrument", value="BANKNIFTY")
+        streamlit_inputs["instrument"] = instrument
+
         avg_zscore_sum_threshold = st.number_input(
             "Avg Zscore Sums Threshold", value=1, step=1
         )

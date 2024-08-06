@@ -126,6 +126,10 @@ VOLATILE_OUTPUT_SUMMARY_FOLDER = (
     f"{BASE_OUTPUT_FOLDER}/{VA}/volatile_summary_outputs"
 )
 VOLUME_OUTPUT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{VLOUME}/volume_outputs"
+VOLUME_OUTPUT_SUMMARY_FOLDER = (
+    f"{BASE_OUTPUT_FOLDER}/{VLOUME}/volume_summary_outputs"
+)
+
 # Define the percentage of available CPU to be used
 cpu_percent_to_use = 0.8  # You can adjust this percentage as needed
 
