@@ -6,11 +6,13 @@ from dotenv import load_dotenv
 
 from pa_analysis.analysis_processor import process
 from pa_analysis.summary import process_summaries
-from source.constants import PA_ANALYSIS_CYCLE_FOLDER
+from pa_analysis.utils import categorize_signal
+from source.constants import PA_ANALYSIS_CYCLE_FOLDER, MarketDirection
 from source.streamlit import (
     add_tp_fields,
     check_cycles_inputs,
     format_set_portfolio_ids,
+    get_flag_combinations,
     set_allowed_direction,
     set_cycle_configs,
     set_entry_exit_signals,
@@ -92,12 +94,23 @@ def main():
             possible_flags_per_portfolio = set_portfolio_flags(
                 portfolio_ids, streamlit_inputs, saved_inputs
             )
-            set_entry_exit_signals(
-                streamlit_inputs,
-                saved_inputs,
-                portfolio_ids,
-                possible_flags_per_portfolio,
+            need_categorization = st.checkbox(
+                "Need Categorization", value=False
             )
+            if need_categorization:
+                set_entry_exit_signals_1(
+                    streamlit_inputs,
+                    saved_inputs,
+                    portfolio_ids,
+                    possible_flags_per_portfolio,
+                )
+            else:
+                set_entry_exit_signals(
+                    streamlit_inputs,
+                    saved_inputs,
+                    portfolio_ids,
+                    possible_flags_per_portfolio,
+                )
             strategy_ids_per_portfolio = set_portfolio_strategies(
                 portfolio_ids, streamlit_inputs, saved_inputs
             )
@@ -107,6 +120,59 @@ def main():
                 portfolio_ids,
                 strategy_ids_per_portfolio,
             )
+            need_additional_strategy_file = st.checkbox(
+                "Need Additional Strategy File",
+                value=saved_inputs.get("need_additional_strategy_file", False),
+            )
+            streamlit_inputs["need_additional_strategy_file"] = (
+                need_additional_strategy_file
+            )
+            if need_additional_strategy_file:
+
+                portfolio_id = st.text_input(
+                    "Portfolio ID",
+                    value=saved_inputs.get("portfolio_id", "F13"),
+                )
+                strategy_file = st.text_input(
+                    "Strategy File",
+                    value=saved_inputs.get("strategy_file", "1"),
+                )
+                long_entry_signal = st.text_input(
+                    "Long Entry Signal",
+                    value=saved_inputs.get("long_entry_signal", "GREEN"),
+                )
+
+                short_entry_signal = st.text_input(
+                    "Short Entry Signal",
+                    value=saved_inputs.get("short_entry_signal", "RED"),
+                )
+
+                streamlit_inputs["portfolio_ids"] = (
+                    *streamlit_inputs["portfolio_ids"],
+                    portfolio_id.strip(),
+                )
+                streamlit_inputs["strategy_pairs"] = [
+                    (*pair, int(strategy_file.strip()))
+                    for pair in streamlit_inputs["strategy_pairs"]
+                ]
+
+                streamlit_inputs["long_entry_signals"] = [
+                    (*signal, long_entry_signal.strip())
+                    for signal in streamlit_inputs["long_entry_signals"]
+                ]
+                streamlit_inputs["short_entry_signals"] = [
+                    (*signal, short_entry_signal.strip())
+                    for signal in streamlit_inputs["short_entry_signals"]
+                ]
+                streamlit_inputs["long_exit_signals"] = [
+                    (*signal, short_entry_signal.strip())
+                    for signal in streamlit_inputs["long_exit_signals"]
+                ]
+                streamlit_inputs["short_exit_signals"] = [
+                    (*signal, long_entry_signal.strip())
+                    for signal in streamlit_inputs["short_exit_signals"]
+                ]
+
             set_start_end_datetime(streamlit_inputs, saved_inputs)
             set_cycle_configs(streamlit_inputs, saved_inputs)
 
@@ -173,6 +239,96 @@ def main():
 
         if selected_files and st.button("Submit"):
             process_summaries(selected_files)
+
+
+def set_entry_exit_signals_1(
+    streamlit_inputs, saved_inputs, portfolio_ids, possible_flags_per_portfolio
+):
+    filtered_flag_combinations = get_flag_combinations(
+        portfolio_ids, possible_flags_per_portfolio
+    )
+
+    categories = categorize_signal(filtered_flag_combinations)
+
+    selected_category = st.selectbox(
+        "Select Category",
+        categories.keys(),
+    )
+
+    all_flag_combinations = [*categories[selected_category]]
+
+    if streamlit_inputs["allowed_direction"] in (
+        MarketDirection.LONG.value,
+        MarketDirection.ALL.value,
+    ):
+        long_entry_signals = st.multiselect(
+            "Long Entry Signals",
+            all_flag_combinations,
+            default=saved_inputs.get("long_entry_signals", None),
+        )
+    else:
+        long_entry_signals = []
+
+    if streamlit_inputs["allowed_direction"] in (
+        MarketDirection.SHORT.value,
+        MarketDirection.ALL.value,
+    ):
+        short_entry_signals = st.multiselect(
+            "Short Entry Signals",
+            [
+                combination
+                for combination in all_flag_combinations
+                if combination not in long_entry_signals
+            ],
+            default=saved_inputs.get("short_entry_signals", None),
+        )
+    else:
+        short_entry_signals = []
+
+    if streamlit_inputs["allowed_direction"] in (
+        MarketDirection.LONG.value,
+        MarketDirection.ALL.value,
+    ):
+        long_exit_signals = st.multiselect(
+            "Long Exit Signals",
+            set(filtered_flag_combinations) - set(long_entry_signals),
+            default=set(
+                [
+                    *saved_inputs.get("long_exit_signals", []),
+                    *short_entry_signals,
+                ]
+            ),
+        )
+    else:
+        long_exit_signals = []
+
+    if streamlit_inputs["allowed_direction"] in (
+        MarketDirection.SHORT.value,
+        MarketDirection.ALL.value,
+    ):
+        short_exit_signals = st.multiselect(
+            "Short Exit Signals",
+            set(filtered_flag_combinations)
+            - set(short_entry_signals)
+            - set(long_exit_signals),
+            default=set(
+                [
+                    *saved_inputs.get("short_exit_signals", []),
+                    *long_entry_signals,
+                ]
+            ),
+        )
+    else:
+        short_exit_signals = []
+
+    streamlit_inputs.update(
+        {
+            "long_entry_signals": long_entry_signals,
+            "short_entry_signals": short_entry_signals,
+            "long_exit_signals": long_exit_signals,
+            "short_exit_signals": short_exit_signals,
+        }
+    )
 
 
 if __name__ == "__main__":

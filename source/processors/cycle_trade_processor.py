@@ -337,7 +337,7 @@ def update_cycle_columns(df, base_df, start_datetime, kwargs):
     cols = [
         "TIMESTAMP",
         "market_direction",
-        *signal_columns,
+        # *signal_columns,
     ]
 
     merged_df = pd.merge_asof(
