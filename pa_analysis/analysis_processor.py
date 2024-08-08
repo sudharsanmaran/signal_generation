@@ -129,15 +129,23 @@ def process_strategy(validated_data, strategy_pair, instrument):
             strategy_df, volume_df, left_index=True, right_index=True
         )
 
-        first_occurrence = (
-            strategy_df.loc[
-                strategy_df["category"]
-                == validated_data["volume_tag_to_process"],
-            ]
-            .iloc[0]
-            .name
-        )
-        strategy_df = strategy_df.loc[first_occurrence:]
+        if not strategy_df.loc[
+            strategy_df["category"] == validated_data["volume_tag_to_process"],
+        ].empty:
+
+            first_occurrence = (
+                strategy_df.loc[
+                    strategy_df["category"]
+                    == validated_data["volume_tag_to_process"],
+                ]
+                .iloc[0]
+                .name
+            )
+            strategy_df = strategy_df.loc[first_occurrence:]
+        else:
+            raise ValueError(
+                "No data found for the given volume tag condition"
+            )
 
     if validated_data.get("include_volatile"):
         volatile_df = pd.read_csv(
@@ -162,8 +170,13 @@ def process_strategy(validated_data, strategy_pair, instrument):
                 strategy_df[tag] == validated_data["volatile_tag_to_process"]
             )
 
-        first_occurrence = strategy_df[condition].iloc[0].name
-        strategy_df = strategy_df.loc[first_occurrence:]
+        if not strategy_df[condition].empty:
+            first_occurrence = strategy_df[condition].iloc[0].name
+            strategy_df = strategy_df.loc[first_occurrence:]
+        else:
+            raise ValueError(
+                "No data found for the given volatile tag condition"
+            )
 
     base_df = get_base_df(
         validated_data, strategy_df, strategy_pair_str, instrument
