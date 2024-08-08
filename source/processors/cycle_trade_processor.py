@@ -333,12 +333,16 @@ def update_cycle_columns(df, base_df, start_datetime, kwargs):
     # update direction
     base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
     df = df.reset_index().rename(columns={"index": "dt"})
-    signal_columns = [f"TAG_{id}" for id in kwargs.get("portfolio_ids")]
-    cols = [
-        "TIMESTAMP",
-        "market_direction",
-        # *signal_columns,
-    ]
+
+    cols = ["TIMESTAMP", "market_direction"]
+
+    if kwargs.get("include_volume"):
+        cols.append("category")
+    if kwargs.get("include_volatile"):
+        volatile_cols = [
+            col for col in base_df.columns if "volatile_tag" in col
+        ]
+        cols.extend(volatile_cols)
 
     merged_df = pd.merge_asof(
         df,

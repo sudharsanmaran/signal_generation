@@ -122,8 +122,8 @@ def process(validated_data: dict):
     update_cycle_id(validated_data, df, filtered_df)
 
     # category
-    df[CATEGORY] = "cv"
-    df.loc[df[CYCLE_ID] % 2 == 0, CATEGORY] = "non-cv"
+    df[CATEGORY] = "CV"
+    df.loc[df[CYCLE_ID] % 2 == 0, CATEGORY] = "NCV"
     df.loc[df[CYCLE_ID].isna(), CATEGORY] = pd.NA
 
     df["calculate_change_1"] = df[C].pct_change()
