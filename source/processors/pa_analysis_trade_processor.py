@@ -77,18 +77,10 @@ def process_pa_output(validated_data, *args):
         },
     }
 
-    dfs = read_files(
-        pa_df.index[0],
-        pa_df.index[-1],
-        file_details,
-    )
-
-    merged_df = merge_all_df([pa_df, *dfs.values()])
-
-    cycle_cols = get_cycle_columns(merged_df)
+    cycle_cols = get_cycle_columns(pa_df)
 
     update_target_profit_analysis(
-        merged_df,
+        pa_df,
         validated_data.get("tp_percentage"),
         validated_data.get("tp_method"),
         cycle_col_name=cycle_cols[CycleType.MTM_CYCLE],
@@ -104,13 +96,24 @@ def process_pa_output(validated_data, *args):
         "Close",
         "market_direction",
         "exit_market_direction",
-        f"bb_{validated_data['bb_band_column']}",
         "group_id",
         cycle_cols[validated_data["cycle_to_consider"]],
         TargetProfitColumns.TP_END.value,
     ]
 
-    merged_df = merged_df[cols]
+    merged_df = pa_df[cols]
+
+    dfs = read_files(
+        pa_df.index[0],
+        pa_df.index[-1],
+        file_details,
+    )
+
+    merged_df = merge_all_df([pa_df, *dfs.values()])
+
+    merged_df["previous_cycle_id"] = merged_df[
+        cycle_cols[validated_data["cycle_to_consider"]]
+    ].shift(1)
 
     initialize(validated_data)
 

@@ -1207,7 +1207,7 @@ def check_cycle_entry_condition(row: pd.Series, state: dict) -> bool:
     if not is_trade_start_time_crossed(row):
         return False, None
 
-    market_direction = row["market_direction"]
+    market_direction = eval(row["market_direction"])
 
     if is_initial_cycles(row):
         return False, None
@@ -1257,7 +1257,7 @@ def is_tp_exit(row, exit_state):
 
 
 def check_cycle_exit_signals(row, exit_state, entry_state):
-    market_direction = row["exit_market_direction"]
+    market_direction = eval(row["exit_market_direction"])
     if (
         pd.isna(market_direction)
         or market_direction == MarketDirection.UNKNOWN
