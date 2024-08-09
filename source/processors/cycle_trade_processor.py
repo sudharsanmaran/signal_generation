@@ -8,6 +8,8 @@ import pandas as pd
 
 from source.constants import (
     SG_CYCLE_OUTPUT_FOLDER,
+    VOLATILE_OUTPUT_FOLDER,
+    VOLUME_OUTPUT_FOLDER,
     BB_Band_Columns,
     CycleType,
     FirstCycleColumns,
@@ -334,7 +336,8 @@ def update_cycle_columns(df, base_df, start_datetime, kwargs):
     base_df = base_df.reset_index().rename(columns={"index": "TIMESTAMP"})
     df = df.reset_index().rename(columns={"index": "dt"})
 
-    cols = ["TIMESTAMP", "market_direction"]
+    signal_cols = [col for col in base_df.columns if "TAG" in col]
+    cols = ["TIMESTAMP", "market_direction", *signal_cols]
 
     if kwargs.get("include_volume"):
         cols.append("category")
@@ -1295,6 +1298,69 @@ def check_cycle_exit_signals(row, exit_state, entry_state):
     return False, None
 
 
+def include_volatile_volume_tags(validated_data, strategy_df):
+    if validated_data.get("include_volume"):
+        volume_df = pd.read_csv(
+            f"{VOLUME_OUTPUT_FOLDER}/{validated_data['volume_file']}",
+            usecols=["dt", "category"],
+            index_col="dt",
+            parse_dates=True,
+        )
+        strategy_df = pd.merge(
+            strategy_df, volume_df, left_index=True, right_index=True
+        )
+
+        if not strategy_df.loc[
+            strategy_df["category"] == validated_data["volume_tag_to_process"],
+        ].empty:
+            first_occurrence = (
+                strategy_df.loc[
+                    strategy_df["category"]
+                    == validated_data["volume_tag_to_process"],
+                ]
+                .iloc[0]
+                .name
+            )
+            strategy_df = strategy_df.loc[first_occurrence:]
+        else:
+            raise ValueError(
+                "No data found for the given volume tag condition"
+            )
+
+    if validated_data.get("include_volatile"):
+        volatile_df = pd.read_csv(
+            f"{VOLATILE_OUTPUT_FOLDER}/{validated_data['volatile_file']}",
+            index_col="dt",
+            parse_dates=True,
+        )
+        volatile_tags = [
+            col for col in volatile_df.columns if "volatile_tag" in col
+        ]
+
+        strategy_df = pd.merge(
+            strategy_df,
+            volatile_df[volatile_tags],
+            left_index=True,
+            right_index=True,
+        )
+
+        condition = True
+        for tag in volatile_tags:
+            condition &= (
+                strategy_df[tag] == validated_data["volatile_tag_to_process"]
+            )
+
+        if not strategy_df[condition].empty:
+            first_occurrence = strategy_df[condition].iloc[0].name
+            strategy_df = strategy_df.loc[first_occurrence:]
+        else:
+            raise ValueError(
+                "No data found for the given volatile tag condition"
+            )
+
+    return strategy_df
+
+
 def process_cycle(validated_data, strategy_pair, instrument):
     strategy_pair_str = "_".join(map(lambda x: str(x), strategy_pair))
     portfolio_ids_str = " - ".join(validated_data.get("portfolio_ids"))
@@ -1314,11 +1380,13 @@ def process_cycle(validated_data, strategy_pair, instrument):
         base_path,
     )[0]
 
+    strategy_df = include_volatile_volume_tags(validated_data, strategy_df)
+
     base_df = get_base_df(
         validated_data, strategy_df, strategy_pair_str, instrument
     )
 
-    cycle_base_dfs = get_cycle_base_df(
+    cycle_base_dfs, _ = get_cycle_base_df(
         **validated_data, base_df=base_df, instrument=instrument
     )
 

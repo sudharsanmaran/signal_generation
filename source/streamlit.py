@@ -23,6 +23,7 @@ To document and comment the provided code in the `streamlit.py` file, I will add
 from datetime import datetime
 import json
 import os
+from pathlib import Path
 import time
 from pydantic import ValidationError
 import streamlit as st
@@ -38,6 +39,8 @@ from source.constants import (
     STOCKS_FNO,
     STOCKS_NON_FNO,
     TIMEFRAME_OPTIONS,
+    VOLATILE_OUTPUT_FOLDER,
+    VOLUME_OUTPUT_FOLDER,
     CycleType,
     MarketDirection,
     TradeType,
@@ -517,7 +520,7 @@ def main():
 
     elif expander_option == "Cycle":
         with st.expander("Configuration", expanded=False):
-
+            update_volume_and_volatile_files(streamlit_inputs)
             portfolio_ids_input = set_portfolio_ids(
                 streamlit_inputs, saved_inputs
             )
@@ -1403,14 +1406,53 @@ def set_trade_type(streamlit_inputs, saved_inputs):
     return trade_type, trade_start_time, trade_end_time
 
 
+def update_volume_and_volatile_files(streamlit_inputs):
+    include_volatile = st.checkbox("Include Volatile", value=False)
+    streamlit_inputs["include_volatile"] = include_volatile
+    if include_volatile:
+        folder = Path(VOLATILE_OUTPUT_FOLDER)
+        volatile_files = [f.name for f in folder.iterdir() if f.is_file()]
+
+        selected_volatile_file = st.selectbox(
+            "Select the volatile file",
+            volatile_files,
+            index=0,
+        )
+        volatile_tag_to_process = st.selectbox(
+            "Volatile Tag to Process",
+            ["HV", "LV"],
+            index=0,
+        )
+        streamlit_inputs["volatile_file"] = selected_volatile_file
+        streamlit_inputs["volatile_tag_to_process"] = volatile_tag_to_process
+
+    include_volume = st.checkbox("Include Volume", value=False)
+    streamlit_inputs["include_volume"] = include_volume
+    if include_volume:
+        folder = Path(VOLUME_OUTPUT_FOLDER)
+        volatile_files = [f.name for f in folder.iterdir() if f.is_file()]
+
+        selected_volume_file = st.selectbox(
+            "Select the volume file",
+            volatile_files,
+            index=0,
+        )
+        streamlit_inputs["volume_file"] = selected_volume_file
+
+        volume_tag_to_process = st.selectbox(
+            "Volume Tag to Process", ["CV", "NCV"], index=0
+        )
+        streamlit_inputs["volume_tag_to_process"] = volume_tag_to_process
+
+
 def execute(validated_input, exec_func: callable, module="Trade Management"):
     start = time.time()
-    try:
-        multiple_process(validated_input, exec_func)
-        # exec_func(validated_input, (1, 1, 1), "BANKNIFTY")
-    except Exception as e:
-        st.error(f"Error executing {module}: {e}")
-        return
+    # try:
+    # multiple_process(validated_input, exec_func)
+    exec_func(validated_input, (1, 1), "BANKNIFTY")
+    # except Exception as e:
+    #     st.error(f"Error executing {module}: {e}")
+    #     return
     stop = time.time()
 
     st.success(

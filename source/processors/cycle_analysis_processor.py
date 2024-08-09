@@ -258,10 +258,10 @@ def update_MTM_CTC_cols(df, validated_data):
                 max_key = FirstCycleColumns.CYCLE_MAX.value
                 max_to_min_key = FirstCycleColumns.MAX_TO_MIN.value
                 update_cycle_min_max(
-                    cycle_analysis,
-                    adjusted_cycle_data,
-                    min_idx,
-                    max_idx,
+                    cycle_analysis=cycle_analysis,
+                    adjusted_cycle_data=adjusted_cycle_data,
+                    min_idx=min_idx,
+                    max_idx=max_idx,
                     cycle_min=cycle_min,
                     cycle_max=cycle_max,
                     min_key=min_key,
@@ -269,7 +269,7 @@ def update_MTM_CTC_cols(df, validated_data):
                 )
 
                 update_max_to_min(
-                    cycle_analysis,
+                    cycle_analysis=cycle_analysis,
                     min_key=min_key,
                     max_key=max_key,
                     max_to_min_key=max_to_min_key,
@@ -278,8 +278,8 @@ def update_MTM_CTC_cols(df, validated_data):
 
                 # close to close
                 update_close_to_close(
-                    market_direction,
-                    cycle_analysis,
+                    market_direction=market_direction,
+                    cycle_analysis=cycle_analysis,
                     close_to_close_key=FirstCycleColumns.CLOSE_TO_CLOSE.value,
                     last_close=adjusted_cycle_data.iloc[-1]["Close"],
                     first_close=adjusted_cycle_data.iloc[0]["Close"],

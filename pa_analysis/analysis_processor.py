@@ -11,7 +11,10 @@ from source.constants import (
     MarketDirection,
 )
 from source.data_reader import load_strategy_data
-from source.processors.cycle_trade_processor import get_base_df
+from source.processors.cycle_trade_processor import (
+    get_base_df,
+    include_volatile_volume_tags,
+)
 
 from source.utils import (
     format_dates,
@@ -118,65 +121,7 @@ def process_strategy(validated_data, strategy_pair, instrument):
         base_path,
     )[0]
 
-    if validated_data.get("include_volume"):
-        volume_df = pd.read_csv(
-            f"{VOLUME_OUTPUT_FOLDER}/{validated_data['volume_file']}",
-            usecols=["dt", "category"],
-            index_col="dt",
-            parse_dates=True,
-        )
-        strategy_df = pd.merge(
-            strategy_df, volume_df, left_index=True, right_index=True
-        )
-
-        if not strategy_df.loc[
-            strategy_df["category"] == validated_data["volume_tag_to_process"],
-        ].empty:
-
-            first_occurrence = (
-                strategy_df.loc[
-                    strategy_df["category"]
-                    == validated_data["volume_tag_to_process"],
-                ]
-                .iloc[0]
-                .name
-            )
-            strategy_df = strategy_df.loc[first_occurrence:]
-        else:
-            raise ValueError(
-                "No data found for the given volume tag condition"
-            )
-
-    if validated_data.get("include_volatile"):
-        volatile_df = pd.read_csv(
-            f"{VOLATILE_OUTPUT_FOLDER}/{validated_data['volatile_file']}",
-            index_col="dt",
-            parse_dates=True,
-        )
-        volatile_tags = [
-            col for col in volatile_df.columns if "volatile_tag" in col
-        ]
-
-        strategy_df = pd.merge(
-            strategy_df,
-            volatile_df[volatile_tags],
-            left_index=True,
-            right_index=True,
-        )
-
-        condition = True
-        for tag in volatile_tags:
-            condition &= (
-                strategy_df[tag] == validated_data["volatile_tag_to_process"]
-            )
-
-        if not strategy_df[condition].empty:
-            first_occurrence = strategy_df[condition].iloc[0].name
-            strategy_df = strategy_df.loc[first_occurrence:]
-        else:
-            raise ValueError(
-                "No data found for the given volatile tag condition"
-            )
+    strategy_df = include_volatile_volume_tags(validated_data, strategy_df)
 
     base_df = get_base_df(
         validated_data, strategy_df, strategy_pair_str, instrument

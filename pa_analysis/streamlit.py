@@ -28,6 +28,7 @@ from source.streamlit import (
     load_input_from_json,
     set_start_end_datetime,
     set_strategy_pair,
+    update_volume_and_volatile_files,
 )
 from pa_analysis.validation import validate
 
@@ -88,45 +89,7 @@ def main():
                 st.warning("saved data not found")
 
         st.header("PA Analysis")
-        include_volatile = st.checkbox("Include Volatile", value=False)
-        streamlit_inputs["include_volatile"] = include_volatile
-        if include_volatile:
-            folder = Path(VOLATILE_OUTPUT_FOLDER)
-            volatile_files = [f.name for f in folder.iterdir() if f.is_file()]
-
-            selected_volatile_file = st.selectbox(
-                "Select the volatile file",
-                volatile_files,
-                index=0,
-            )
-            volatile_tag_to_process = st.selectbox(
-                "Volatile Tag to Process",
-                ["HV", "LV"],
-                index=0,
-            )
-            streamlit_inputs["volatile_file"] = selected_volatile_file
-            streamlit_inputs["volatile_tag_to_process"] = (
-                volatile_tag_to_process
-            )
-
-        include_volume = st.checkbox("Include Volume", value=False)
-        streamlit_inputs["include_volume"] = include_volume
-        if include_volume:
-            folder = Path(VOLUME_OUTPUT_FOLDER)
-            volatile_files = [f.name for f in folder.iterdir() if f.is_file()]
-
-            selected_volume_file = st.selectbox(
-                "Select the volume file",
-                volatile_files,
-                index=0,
-            )
-            streamlit_inputs["volume_file"] = selected_volume_file
-
-            volume_tag_to_process = st.selectbox(
-                "Volume Tag to Process", ["CV", "NCV"], index=0
-            )
-            streamlit_inputs["volume_tag_to_process"] = volume_tag_to_process
-
+        update_volume_and_volatile_files(streamlit_inputs)
         portfolio_ids_input = set_portfolio_ids(streamlit_inputs, saved_inputs)
         set_allowed_direction(streamlit_inputs, saved_inputs)
         set_instrument(streamlit_inputs, saved_inputs)
