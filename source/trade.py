@@ -254,9 +254,11 @@ def initialize(validated_input):
         },
     }
     Trade.allowed_direction = validated_input.get("allowed_direction")
-    Trade.signal_columns = [
-        f"TAG_{id}" for id in validated_input.get("portfolio_ids")
-    ]
+    Trade.signal_columns = (
+        [f"TAG_{id}" for id in validated_input.get("portfolio_ids")]
+        if validated_input.get("signal_columns")
+        else None
+    )
 
     fractal_exit_count = validated_input.get("fractal_exit_count")
     Trade.fractal_exit_count = (

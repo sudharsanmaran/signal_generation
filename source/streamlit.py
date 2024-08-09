@@ -33,6 +33,7 @@ from dotenv import load_dotenv
 # Import project-specific modules
 from source.constants import (
     INSTRUMENTS,
+    PA_ANALYSIS_CYCLE_FOLDER,
     PERIOD_OPTIONS,
     POSSIBLE_STRATEGY_IDS,
     SD_OPTIONS,
@@ -46,11 +47,13 @@ from source.constants import (
     TradeType,
 )
 from source.processors.cycle_trade_processor import process_cycle
+from source.processors.pa_analysis_trade_processor import process_pa_output
 from source.processors.signal_trade_processor import (
     multiple_process,
     process_strategy,
 )
 from source.validation.cycle_validation import validate_cycle_input
+from source.validation.pa_output import validate_pa_input
 from source.validation.signal_validations import validate_signal_input
 
 # Load environment variables from a .env file
@@ -304,7 +307,9 @@ def main():
 
     st.header("Signal Generation")
 
-    expander_option = st.selectbox("Select Expander", ["Signal", "Cycle"])
+    expander_option = st.selectbox(
+        "Select Expander", ["Signal", "Cycle", "PA DB"]
+    )
 
     if expander_option == "Signal":
 
@@ -397,42 +402,7 @@ def main():
                     )
 
                     # Bollinger Band Inputs (conditionally displayed)
-                    check_bb_band = st.checkbox(
-                        "Check BB Band",
-                        value=saved_inputs.get("check_bb_band", False),
-                    )
-                    streamlit_inputs["check_bb_band"] = check_bb_band
-                    if check_bb_band:
-                        bb_file_number = st.text_input(
-                            "BB File Number",
-                            value=saved_inputs.get("bb_file_number", "1"),
-                        )
-
-                        options = [2.0, 2.25, 2.5, 2.75, 3.0]
-                        bb_band_sd = st.selectbox(
-                            "BB Band Standard Deviations",
-                            options=options,
-                            index=options.index(
-                                saved_inputs.get("bb_band_sd", 2.0)
-                            ),
-                        )
-
-                        options = ["mean", "upper", "lower"]
-                        bb_band_column = st.selectbox(
-                            "BB Band Column",
-                            options=options,
-                            index=options.index(
-                                saved_inputs.get("bb_band_column", "mean")
-                            ),
-                        )
-
-                        streamlit_inputs.update(
-                            {
-                                "bb_file_number": bb_file_number,
-                                "bb_band_sd": bb_band_sd,
-                                "bb_band_column": bb_band_column,
-                            }
-                        )
+                    update_bb_band_check(streamlit_inputs, saved_inputs)
                 skip_rows = st.checkbox(
                     "Skip Rows", value=saved_inputs.get("skip_rows", False)
                 )
@@ -556,6 +526,28 @@ def main():
                 set_fractal_exit(streamlit_inputs, saved_inputs)
                 st.text("Cycle conditions: ")
                 set_cycle_configs(streamlit_inputs, saved_inputs)
+
+    elif expander_option == "PA DB":
+        folder = Path(PA_ANALYSIS_CYCLE_FOLDER)
+        pa_files = [f.name for f in folder.iterdir() if f.is_file()]
+
+        pa_file = st.selectbox("Select PA File", pa_files, index=0)
+        streamlit_inputs["pa_file"] = pa_file
+        cycle_options = [
+            cycle.value
+            for cycle in CycleType
+            if cycle != CycleType.PREVIOUS_CYCLE
+        ]
+        cycle_to_consider = st.selectbox(
+            "Cycle to Consider",
+            cycle_options,
+        )
+        streamlit_inputs["cycle_to_consider"] = cycle_to_consider
+        st.text("Entry conditions: ")
+        set_fractal_entry(streamlit_inputs, saved_inputs)
+        st.text("Exits conditions: ")
+        set_fractal_exit(streamlit_inputs, saved_inputs)
+        set_target_profit_inputs(streamlit_inputs, saved_inputs)
 
     st.header("Trade Management")
 
@@ -798,71 +790,95 @@ def main():
     )
     streamlit_inputs["trigger_trade_management"] = trigger_trade_management
 
-    required_fields = [
-        streamlit_inputs["portfolio_ids_input"],
-        streamlit_inputs["trade_type"],
-        streamlit_inputs["instruments"],
-        streamlit_inputs["portfolio_ids"],
-        streamlit_inputs["possible_flags_input"],
-        streamlit_inputs["possible_strategies_input"],
-        streamlit_inputs["strategy_pairs"],
-        streamlit_inputs["start_date"],
-        streamlit_inputs["end_date"],
-    ]
-    if expander_option == "Signal":
-        long_fields = [
-            streamlit_inputs["long_entry_signals"],
-            streamlit_inputs["long_exit_signals"],
+    if expander_option == "Signal" or expander_option == "Cycle":
+        required_fields = [
+            streamlit_inputs["portfolio_ids_input"],
+            streamlit_inputs["trade_type"],
+            streamlit_inputs["instruments"],
+            streamlit_inputs["portfolio_ids"],
+            streamlit_inputs["possible_flags_input"],
+            streamlit_inputs["possible_strategies_input"],
+            streamlit_inputs["strategy_pairs"],
+            streamlit_inputs["start_date"],
+            streamlit_inputs["end_date"],
         ]
-        short_fields = [
-            streamlit_inputs["short_entry_signals"],
-            streamlit_inputs["short_exit_signals"],
-        ]
-        required_fields.append(streamlit_inputs["allowed_direction"])
-        if (
-            streamlit_inputs["allowed_direction"]
-            and streamlit_inputs["allowed_direction"]
-            == MarketDirection.LONG.value
-        ):
-            required_fields.extend(long_fields)
-        elif (
-            streamlit_inputs["allowed_direction"]
-            and streamlit_inputs["allowed_direction"]
-            == MarketDirection.SHORT.value
-        ):
-            required_fields.extend(short_fields)
-        elif (
-            streamlit_inputs["allowed_direction"]
-            and streamlit_inputs["allowed_direction"]
-            == MarketDirection.ALL.value
-        ):
+        if expander_option == "Signal":
+            long_fields = [
+                streamlit_inputs["long_entry_signals"],
+                streamlit_inputs["long_exit_signals"],
+            ]
+            short_fields = [
+                streamlit_inputs["short_entry_signals"],
+                streamlit_inputs["short_exit_signals"],
+            ]
+            required_fields.append(streamlit_inputs["allowed_direction"])
+            if (
+                streamlit_inputs["allowed_direction"]
+                and streamlit_inputs["allowed_direction"]
+                == MarketDirection.LONG.value
+            ):
+                required_fields.extend(long_fields)
+            elif (
+                streamlit_inputs["allowed_direction"]
+                and streamlit_inputs["allowed_direction"]
+                == MarketDirection.SHORT.value
+            ):
+                required_fields.extend(short_fields)
+            elif (
+                streamlit_inputs["allowed_direction"]
+                and streamlit_inputs["allowed_direction"]
+                == MarketDirection.ALL.value
+            ):
 
-            required_fields.extend(
-                [
-                    *long_fields,
-                    *short_fields,
-                ]
+                required_fields.extend(
+                    [
+                        *long_fields,
+                        *short_fields,
+                    ]
+                )
+        elif expander_option == "Cycle":
+            cycle_fields = [
+                streamlit_inputs["long_entry_signals"],
+                streamlit_inputs["short_entry_signals"],
+                check_cycles_inputs(streamlit_inputs),
+            ]
+            required_fields.extend(cycle_fields)
+
+            add_tp_fields(streamlit_inputs, required_fields)
+    elif expander_option == "PA DB":
+        required_fields = [
+            streamlit_inputs["pa_file"],
+        ]
+        if streamlit_inputs["check_entry_fractal"]:
+            required_fields.append(
+                streamlit_inputs["entry_fractal_file_number"]
             )
-    elif expander_option == "Cycle":
-        cycle_fields = [
-            streamlit_inputs["long_entry_signals"],
-            streamlit_inputs["short_entry_signals"],
-            check_cycles_inputs(streamlit_inputs),
-        ]
-        required_fields.extend(cycle_fields)
-
-        add_tp_fields(streamlit_inputs, required_fields)
+            if streamlit_inputs["check_bb_band"]:
+                required_fields.append(streamlit_inputs["bb_file_number"])
+        if streamlit_inputs["check_exit_fractal"]:
+            required_fields.append(
+                streamlit_inputs["exit_fractal_file_number"]
+            )
+            required_fields.append(streamlit_inputs["fractal_exit_count"])
 
     all_fields_filled = all(required_fields)
 
     if all_fields_filled:
         if st.button("Submit"):
 
-            validate_func = validate_signal_input
-            exec_func = process_strategy
-            if expander_option == "Cycle":
-                validate_func = validate_cycle_input
-                exec_func = process_cycle
+            processors = {
+                "Signal": process_strategy,
+                "Cycle": process_cycle,
+                "PA DB": process_pa_output,
+            }
+            validators = {
+                "Signal": validate_signal_input,
+                "Cycle": validate_cycle_input,
+                "PA DB": validate_pa_input,
+            }
+
+            exec_func = processors[expander_option]
+            validate_func = validators[expander_option]
 
             validated_input = validate(streamlit_inputs, key=validate_func)
 
@@ -881,6 +897,41 @@ def main():
                 execute(validated_input, exec_func)
     else:
         st.error("Please fill in all the required fields.")
+
+
+def update_bb_band_check(streamlit_inputs, saved_inputs):
+    check_bb_band = st.checkbox(
+        "Check BB Band",
+        value=saved_inputs.get("check_bb_band", False),
+    )
+    streamlit_inputs["check_bb_band"] = check_bb_band
+    if check_bb_band:
+        bb_file_number = st.text_input(
+            "BB File Number",
+            value=saved_inputs.get("bb_file_number", "1"),
+        )
+
+        options = [2.0, 2.25, 2.5, 2.75, 3.0]
+        bb_band_sd = st.selectbox(
+            "BB Band Standard Deviations",
+            options=options,
+            index=options.index(saved_inputs.get("bb_band_sd", 2.0)),
+        )
+
+        options = ["mean", "upper", "lower"]
+        bb_band_column = st.selectbox(
+            "BB Band Column",
+            options=options,
+            index=options.index(saved_inputs.get("bb_band_column", "mean")),
+        )
+
+        streamlit_inputs.update(
+            {
+                "bb_file_number": bb_file_number,
+                "bb_band_sd": bb_band_sd,
+                "bb_band_column": bb_band_column,
+            }
+        )
 
 
 def add_tp_fields(streamlit_inputs, required_fields):
@@ -1257,6 +1308,7 @@ def set_fractal_entry(streamlit_inputs, saved_inputs):
         streamlit_inputs["entry_fractal_file_number"] = (
             entry_fractal_file_number
         )
+        update_bb_band_check(streamlit_inputs, saved_inputs)
 
 
 def set_start_end_datetime(streamlit_inputs, saved_inputs):

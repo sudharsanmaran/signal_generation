@@ -109,3 +109,14 @@ class TargetProfitInput(BaseModel):
             ):
                 raise ValueError("TP Percent and TP Method are required")
         return v
+
+
+class BollingerBandInput(BaseModel):
+    """
+    Pydantic model for validating Bollinger Band input data.
+    """
+
+    check_bb_band: bool = None
+    bb_file_number: str = None
+    bb_band_sd: float = None
+    bb_band_column: str = None

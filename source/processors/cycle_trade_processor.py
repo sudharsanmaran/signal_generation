@@ -69,13 +69,17 @@ def get_base_df(validated_data, strategy_df, strategy_pair_str, instrument):
         "entry": {
             MarketDirection.LONG: validated_data["long_entry_signals"],
             MarketDirection.SHORT: validated_data["short_entry_signals"],
-        }
+        },
+        "exit": {
+            MarketDirection.LONG: validated_data["long_exit_signals"],
+            MarketDirection.SHORT: validated_data["short_exit_signals"],
+        },
     }
 
-    def get_direction(row):
+    def get_direction(row, key="entry"):
         market_direction = get_market_direction(
             row,
-            condition_key="entry",
+            condition_key=key,
             signal_columns=signal_columns,
             market_direction_conditions=market_direction_conditions,
         )
@@ -83,10 +87,19 @@ def get_base_df(validated_data, strategy_df, strategy_pair_str, instrument):
             return market_direction
         return MarketDirection.UNKNOWN
 
+    def get_exit_market_direction(row):
+        return get_direction(
+            row,
+            key="exit",
+        )
+
     # display full df
     pd.set_option("display.max_rows", None)
 
     strategy_df["market_direction"] = strategy_df.apply(get_direction, axis=1)
+    strategy_df["exit_market_direction"] = strategy_df.apply(
+        get_exit_market_direction, axis=1
+    )
     strategy_df["previous_market_direction"] = strategy_df[
         "market_direction"
     ].shift(fill_value=strategy_df["market_direction"].iloc[0])
@@ -337,7 +350,7 @@ def update_cycle_columns(df, base_df, start_datetime, kwargs):
     df = df.reset_index().rename(columns={"index": "dt"})
 
     signal_cols = [col for col in base_df.columns if "TAG" in col]
-    cols = ["TIMESTAMP", "market_direction", *signal_cols]
+    cols = ["TIMESTAMP", "market_direction", "exit_market_direction"]
 
     if kwargs.get("include_volume"):
         cols.append("category")

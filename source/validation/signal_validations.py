@@ -25,11 +25,15 @@ from pydantic import ValidationError, field_validator
 
 # Import project-specific constants
 from source.constants import MarketDirection, TradeType
-from source.validation.base_validation import BaseInputs, FractalInput
+from source.validation.base_validation import (
+    BaseInputs,
+    BollingerBandInput,
+    FractalInput,
+)
 from source.validation.validate_trade_management import TradingConfiguration
 
 
-class StrategyInput(BaseInputs, FractalInput):
+class StrategyInput(BaseInputs, FractalInput, BollingerBandInput):
     """
     Pydantic model for validating strategy input data.
     """
@@ -42,11 +46,6 @@ class StrategyInput(BaseInputs, FractalInput):
     trade_type: TradeType
     trigger_trade_management: bool = False
     pa_analysis: bool = False
-
-    check_bb_band: bool = None
-    bb_file_number: str = None
-    bb_band_sd: float = None
-    bb_band_column: str = None
 
     check_trail_bb_band: bool = None
     trail_bb_file_number: str = None
