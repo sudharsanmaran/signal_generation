@@ -1,4 +1,6 @@
-from source.constants import CycleType
+from datetime import time
+from typing import Optional
+from source.constants import CycleType, MarketDirection, TradeType
 from source.validation.base_validation import BollingerBandInput, FractalInput
 
 
@@ -7,6 +9,10 @@ class PAOutput(FractalInput, BollingerBandInput):
     cycle_to_consider: CycleType
     tp_percentage: float
     tp_method: str
+    trade_type: TradeType
+    allowed_direction: MarketDirection
+    trade_start_time: Optional[time] = None
+    trade_end_time: Optional[time] = None
 
 
 def validate_pa_input(input):

@@ -99,16 +99,7 @@ class StrategyInput(BaseInputs, FractalInput, BollingerBandInput):
             )
         return v
 
-    @field_validator("fractal_exit_count")
-    def validate_fractal_exit_count(cls, v):
-        """
-        Validate fractal exit count.
-        """
-        if v.isdigit():
-            return int(v)
-        elif isinstance(v, str) and v.lower() == MarketDirection.ALL.value:
-            return v
-        raise ValueError('Fractal exit count must be an integer or "ALL"')
+
 
 
 class StrategyInputAndTradingConfig(StrategyInput, TradingConfiguration):

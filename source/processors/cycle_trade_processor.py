@@ -1163,7 +1163,8 @@ def is_cycle_entry_fractal(row, state, market_direction, key):
         bool: True if the entry fractal condition is met, False otherwise.
     """
     if (
-        len(state[row[Trade.current_cycle]])
+        market_direction
+        and len(state[row[Trade.current_cycle]])
         and row[confirm_fractal_column_dict[key][market_direction]]
     ):
         return True
@@ -1208,6 +1209,11 @@ def check_cycle_entry_condition(row: pd.Series, state: dict) -> bool:
         return False, None
 
     market_direction = eval(row["market_direction"])
+    if (
+        pd.isna(market_direction)
+        or market_direction == MarketDirection.UNKNOWN
+    ):
+        market_direction = None
 
     if is_initial_cycles(row):
         return False, None

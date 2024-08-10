@@ -543,6 +543,8 @@ def main():
             cycle_options,
         )
         streamlit_inputs["cycle_to_consider"] = cycle_to_consider
+        set_allowed_direction(streamlit_inputs, saved_inputs)
+        set_trade_type(streamlit_inputs, saved_inputs)
         st.text("Entry conditions: ")
         set_fractal_entry(streamlit_inputs, saved_inputs)
         st.text("Exits conditions: ")

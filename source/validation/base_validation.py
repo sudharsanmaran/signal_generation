@@ -38,6 +38,17 @@ class FractalInput(BaseModel):
     fractal_exit_count: Union[int, str] = None
     exit_fractal_file_number: str = None
 
+    @field_validator("fractal_exit_count")
+    def validate_fractal_exit_count(cls, v):
+        """
+        Validate fractal exit count.
+        """
+        if v.isdigit():
+            return int(v)
+        elif isinstance(v, str) and v.lower() == MarketDirection.ALL.value:
+            return v
+        raise ValueError('Fractal exit count must be an integer or "ALL"')
+
 
 class FractalCountInput(BaseModel):
     fractal_count_sd: int = None

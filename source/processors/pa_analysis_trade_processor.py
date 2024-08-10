@@ -109,11 +109,13 @@ def process_pa_output(validated_data, *args):
         file_details,
     )
 
-    merged_df = merge_all_df([pa_df, *dfs.values()])
+    merged_df = merge_all_df([merged_df, *dfs.values()])
 
     merged_df["previous_cycle_id"] = merged_df[
         cycle_cols[validated_data["cycle_to_consider"]]
     ].shift(1)
+
+    write_dataframe_to_csv(merged_df, SG_CYCLE_OUTPUT_FOLDER, "merged_df.csv")
 
     initialize(validated_data)
 
