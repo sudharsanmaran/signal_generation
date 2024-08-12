@@ -106,7 +106,7 @@ def process_strategy(validated_data, strategy_pair, instrument):
 
     strategy_pair_str = "_".join(map(lambda x: str(x), strategy_pair))
 
-    base_path = os.getenv("DB_PATH")
+    strategy_path = os.getenv("STRATEGY_DB_PATH")
 
     start_datetime, end_datetime = format_dates(
         validated_data.get("start_date"), validated_data.get("end_date")
@@ -118,7 +118,7 @@ def process_strategy(validated_data, strategy_pair, instrument):
         strategy_pair,
         start_datetime,
         end_datetime,
-        base_path,
+        strategy_path,
     )[0]
 
     strategy_df = include_volatile_volume_tags(validated_data, strategy_df)

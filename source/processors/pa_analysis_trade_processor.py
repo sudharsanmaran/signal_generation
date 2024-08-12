@@ -42,27 +42,28 @@ def process_pa_output(validated_data, *args):
     instrument = terms[0]
 
     index = "TIMESTAMP"
-    base_path = os.getenv("DB_PATH")
+    fractal_path = os.getenv("FRACTAL_DB_PATH")
+    bb_path = os.getenv("BB_DB_PATH")
+
     file_details = {
         "entry_fractal": update_entry_fractal_file(
             instrument,
             validated_data["entry_fractal_file_number"],
             validated_data["check_entry_fractal"],
-            base_path,
+            fractal_path,
             index,
         ),
         "exit_fractal": update_exit_fractal_file(
             instrument,
             validated_data["exit_fractal_file_number"],
             validated_data["check_exit_fractal"],
-            base_path,
+            fractal_path,
             index,
         ),
         "bb_band": {
             "read": validated_data["check_bb_band"],
             "file_path": os.path.join(
-                base_path,
-                "BB Band",
+                bb_path,
                 instrument,
                 f"{validated_data['bb_file_number']}_result.csv",
             ),

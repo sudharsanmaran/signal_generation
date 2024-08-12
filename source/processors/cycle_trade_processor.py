@@ -1384,7 +1384,7 @@ def process_cycle(validated_data, strategy_pair, instrument):
     strategy_pair_str = "_".join(map(lambda x: str(x), strategy_pair))
     portfolio_ids_str = " - ".join(validated_data.get("portfolio_ids"))
 
-    base_path = os.getenv("DB_PATH")
+    base_path = os.getenv("STRATEGY_DB_PATH")
 
     start_datetime, end_datetime = format_dates(
         validated_data.get("start_date"), validated_data.get("end_date")
