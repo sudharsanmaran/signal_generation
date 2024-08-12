@@ -9,7 +9,8 @@ from volatile_analysis.processor import analyse_volatile
 
 
 AVG_ZSCORE_SUM_THRESHOLD = "avg_zscore_sum_threshold"
-FINAL_DB_PATH = os.getenv("VOLUME_DB_PATH")
+VOLUME_DB_PATH = os.getenv("VOLUME_DB_PATH")
+VOLUME_QUATRE_DB_PATH = os.getenv("VOLUME_QUATRE_DB_PATH")
 CYCLE_DURATION = "cycle_duration"
 WEIGHTED_AVERAGE_PRICE = "Weighted Average Price"
 CUM_AVG_WEIGHTED_AVERAGE_PRICE = "Cum Avg Weighted Average Price"
@@ -57,7 +58,19 @@ def read_file(file_path: str, start_date, end_date) -> dict:
 def process(validated_data: dict):
     # Load data
     df = read_file(
-        FINAL_DB_PATH, validated_data["start_date"], validated_data["end_date"]
+        VOLUME_DB_PATH,
+        validated_data["start_date"],
+        validated_data["end_date"],
+    )
+
+    volume_quatre_df = pd.read_csv(
+        filepath_or_buffer=VOLUME_QUATRE_DB_PATH, index_col="INSTRUMENT"
+    )
+
+    instrument_quatre = volume_quatre_df.loc[validated_data["instrument"]]
+
+    df["quatre_shares"] = df.apply(
+        lambda row: determine_quarter(row, instrument_quatre), axis=1
     )
 
     pd.set_option("display.max_rows", None)
@@ -256,3 +269,18 @@ def update_cycle_id(validated_data, df, filtered_df):
     df.loc[df[COUNT] == 2, "cycle_increment_marker"] = True
     df[CYCLE_ID] = df["cycle_increment_marker"].cumsum()
     df[CYCLE_ID].ffill(inplace=True)
+
+
+def determine_quarter(row, instrument_quatre):
+    month = row["dt"].month
+    year = row["dt"].year
+
+    # Determine the quarter
+    if month in [1, 2, 3]:
+        return instrument_quatre[f"DEC-{year-1}"]
+    elif month in [4, 5, 6]:
+        return instrument_quatre[f"MAR-{year}"]
+    elif month in [7, 8, 9]:
+        return instrument_quatre[f"JUN-{year}"]
+    elif month in [10, 11, 12]:
+        return instrument_quatre[f"SEP-{year}"]
