@@ -69,7 +69,7 @@ If you encounter module import issues, you might need to adjust your Python path
 2. Run the following command, replacing `<project_directory>` with the actual path to your project's root directory:
 
    ```bash
-   export PYTHONPATH="${PYTHONPATH}:<project_directory>/source"
+   export PYTHONPATH="${PYTHONPATH}:<project_directory>\"
    ```
 
 **Windows:**
@@ -80,7 +80,7 @@ If you encounter module import issues, you might need to adjust your Python path
   2. Run the following command, replacing `<project_directory>` with the actual path to your project's root directory:
 
      ```bash
-     set PYTHONPATH=%PYTHONPATH%;<project_directory>\source
+     set PYTHONPATH=%PYTHONPATH%;<project_directory>\
      ```
 
 - **PowerShell:**
@@ -89,7 +89,7 @@ If you encounter module import issues, you might need to adjust your Python path
   2. Run the following command, replacing `<project_directory>` with the actual path to your project's root directory:
 
      ```powershell
-     $env:PYTHONPATH = "<project_directory>\source"; streamlit run .\source\streamlit.py
+     $env:PYTHONPATH = "<project_directory>\"; streamlit run .\source\streamlit.py
      ```
 
 ## Usage
