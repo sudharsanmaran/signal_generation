@@ -87,7 +87,9 @@ def read_data(
     end_date = pd.to_datetime(end_date, format="%d/%m/%Y %H:%M:%S")
 
     # Get the base path from environment variables
-    base_path = os.getenv("DB_PATH")
+    strategy_path = os.getenv("STRATEGY_DB_PATH")
+    bb_path = os.getenv("BB_DB_PATH")
+    fractal_path = os.getenv("FRACTAL_DB_PATH")
 
     # Loop through each portfolio and strategy ID pair
     all_dfs = load_strategy_data(
@@ -96,7 +98,7 @@ def read_data(
         strategy_ids,
         start_date,
         end_date,
-        base_path,
+        strategy_path,
     )
 
     # Index column name
@@ -108,21 +110,20 @@ def read_data(
             instrument,
             entry_fractal_file_number,
             read_entry_fractal,
-            base_path,
+            fractal_path,
             index,
         ),
         "exit_fractal": update_exit_fractal_file(
             instrument,
             exit_fractal_file_number,
             read_exit_fractal,
-            base_path,
+            fractal_path,
             index,
         ),
         "bb_band": {
             "read": read_bb_fractal,
             "file_path": os.path.join(
-                base_path,
-                "BB Band",
+                bb_path,
                 instrument,
                 f"{bb_file_number}_result.csv",
             ),
@@ -135,8 +136,7 @@ def read_data(
             "path": "BB Band",
             "file_number": trail_bb_file_number,
             "file_path": os.path.join(
-                base_path,
-                "BB Band",
+                bb_path,
                 instrument,
                 f"{trail_bb_file_number}_result.csv",
             ),
