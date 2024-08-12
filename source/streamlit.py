@@ -30,6 +30,9 @@ import streamlit as st
 from itertools import product
 from dotenv import load_dotenv
 
+# Load environment variables from a .env file
+load_dotenv(override=True)
+
 # Import project-specific modules
 from source.constants import (
     INSTRUMENTS,
@@ -55,9 +58,6 @@ from source.processors.signal_trade_processor import (
 from source.validation.cycle_validation import validate_cycle_input
 from source.validation.pa_output import validate_pa_input
 from source.validation.signal_validations import validate_signal_input
-
-# Load environment variables from a .env file
-load_dotenv(override=True)
 
 
 def select_all_options(key, combinations):
