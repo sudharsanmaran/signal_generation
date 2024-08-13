@@ -25,6 +25,7 @@ class CycleInputs(
     short_exit_signals: List[tuple]
 
     close_time_frames_1: List[int]
+    parameter_id_1: int = None
     bb_time_frames_1: List[int]
     periods_1: List[int]
     sds_1: List[int]
@@ -33,6 +34,7 @@ class CycleInputs(
     max_to_min_percent: float = None
     calculate_cycles: bool = False
 
+    parameter_id_2: int = None
     bb_time_frames_2: List[int] = None
     periods_2: List[int] = None
     sds_2: List[int] = None
@@ -66,6 +68,7 @@ class CycleInputs(
                 or not values.data["bb_time_frames_1"]
                 or not values.data["periods_1"]
                 or not values.data["sds_1"]
+                or not values.data["parameter_id_1"]
             ):
                 raise ValueError(
                     "Time Frame, Period and Standard Deviation are required"
@@ -81,6 +84,7 @@ class CycleInputs(
                 not values.data["periods_2"]
                 or not values.data["sds_2"]
                 or not values.data["bb_time_frames_2"]
+                or not values.data["parameter_id_2"]
             ):
                 raise ValueError("Period and Standard Deviation are required")
         return v

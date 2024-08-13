@@ -10,7 +10,7 @@ from source.constants import (
     VOLUME_OUTPUT_FOLDER,
     MarketDirection,
 )
-from source.data_reader import load_strategy_data
+from source.data_reader import load_startegy_data_1
 from source.processors.cycle_trade_processor import (
     get_base_df,
     include_volatile_volume_tags,
@@ -104,7 +104,9 @@ def format(data):
 
 def process_strategy(validated_data, strategy_pair, instrument):
 
-    strategy_pair_str = "_".join(map(lambda x: str(x), strategy_pair))
+    strategy_pair_str = ",".join(
+        "{}:{}".format(*item) for item in strategy_pair
+    )
 
     strategy_path = os.getenv("STRATEGY_DB_PATH")
 
@@ -112,9 +114,8 @@ def process_strategy(validated_data, strategy_pair, instrument):
         validated_data.get("start_date"), validated_data.get("end_date")
     )
 
-    strategy_df = load_strategy_data(
+    strategy_df = load_startegy_data_1(
         instrument,
-        validated_data.get("portfolio_ids"),
         strategy_pair,
         start_datetime,
         end_datetime,

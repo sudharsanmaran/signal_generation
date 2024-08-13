@@ -150,9 +150,9 @@ def get_base_df(validated_data, strategy_df, strategy_pair_str, instrument):
     return filtered_df
 
 
-def get_bb_cols(periods, sds, col_type="MEAN"):
+def get_bb_cols(periods, sds, parameter_id, col_type="MEAN"):
     bb_1_cols = {
-        f"P_{int(int(period)/20)}_{col_type}_BAND_{period}_{sd}"
+        f"P_{parameter_id}_{col_type}_BAND_{period}_{sd}"
         for period in periods
         for sd in sds
     }
@@ -202,6 +202,7 @@ def formulate_files_to_read(kwargs):
         (tf, origin): get_bb_cols(
             kwargs.get(f"periods_{origin}"),
             kwargs.get(f"sds_{origin}"),
+            kwargs.get(f"parameter_id_{origin}"),
         )
         for tf, origin in bb_time_frames_with_origin
     }
@@ -214,6 +215,7 @@ def formulate_files_to_read(kwargs):
                     get_bb_cols(
                         kwargs.get(f"periods_{origin}"),
                         kwargs.get(f"sds_{origin}"),
+                        parameter_id=kwargs.get(f"parameter_id_{origin}"),
                         col_type=BB_Band_Columns.UPPER.value,
                     )
                 )
@@ -222,6 +224,7 @@ def formulate_files_to_read(kwargs):
                     get_bb_cols(
                         kwargs.get(f"periods_{origin}"),
                         kwargs.get(f"sds_{origin}"),
+                        parameter_id=kwargs.get(f"parameter_id_{origin}"),
                         col_type=BB_Band_Columns.LOWER.value,
                     )
                 )

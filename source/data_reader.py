@@ -22,6 +22,7 @@ The `data_reader.py` module provided is responsible for reading and merging vari
 
 from functools import reduce
 import os
+from typing import Tuple
 import pandas as pd
 
 # Import project-specific constants
@@ -213,6 +214,41 @@ def read_files(
                 df.rename(columns=details["rename"], inplace=True)
             data_frames[file_name] = df
     return data_frames
+
+
+def load_startegy_data_1(
+    instrument,
+    strategy_pairs: Tuple[Tuple],
+    start_date,
+    end_date,
+    base_path,
+):
+    is_close_read, strategy_dfs = False, []
+    for portfolio_id, strategy_id in strategy_pairs:
+        strategy_path = os.path.join(
+            base_path, portfolio_id, instrument, f"{strategy_id}_result.csv"
+        )
+        columns = ["TIMESTAMP", f"TAG_{portfolio_id}"]
+        if not is_close_read:
+            columns.insert(1, "Close")
+            is_close_read = True
+        try:
+            strategy_df = pd.read_csv(
+                strategy_path,
+                parse_dates=["TIMESTAMP"],
+                date_format="%Y-%m-%d %H:%M:%S",
+                usecols=columns,
+                index_col="TIMESTAMP",
+            )
+        except Exception as e:
+            print(f"Error reading {strategy_path}: {e}")
+            raise e
+        strategy_df.index = pd.to_datetime(strategy_df.index)
+        strategy_df = strategy_df.loc[start_date:end_date]
+        strategy_dfs.append(strategy_df)
+    all_strategies_df = pd.concat(strategy_dfs, axis=1)
+    all_dfs = [all_strategies_df]
+    return all_dfs
 
 
 def load_strategy_data(

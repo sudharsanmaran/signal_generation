@@ -1091,11 +1091,18 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
         #     index=2,
         #     options=["UPPER", "LOWER", "MEAN"],
         # )
+        parameter_id_1 = st.number_input(
+            "Parameter ID",
+            min_value=1,
+            step=1,
+        )
+
         periods_1 = st.multiselect(
             "Periods",
             PERIOD_OPTIONS,
             default=saved_inputs.get("period", [20]),
         )
+
         sds_1 = st.multiselect(
             "Standard Deviations",
             SD_OPTIONS,
@@ -1125,6 +1132,7 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
                 "sds_1": sds_1,
                 "close_percent": close_percent,
                 "max_to_min_percent": max_to_min_percent,
+                "parameter_id_1": parameter_id_1,
             }
         )
 
@@ -1161,6 +1169,12 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
             ):
                 bb_2_period_options = PERIOD_OPTIONS
 
+            parameter_id_2 = st.number_input(
+                "BB 2 Parameter ID 2",
+                min_value=1,
+                step=1,
+            )
+
             periods_2 = st.multiselect(
                 "BB 2 Periods",
                 bb_2_period_options,
@@ -1175,6 +1189,7 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
                     "bb_time_frames_2": bb_time_frames_2,
                     "periods_2": periods_2,
                     "sds_2": sds_2,
+                    "parameter_id_2": parameter_id_2,
                 }
             )
 
