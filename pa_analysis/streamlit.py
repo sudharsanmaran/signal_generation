@@ -5,6 +5,8 @@ import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 
+load_dotenv(override=True)
+
 from pa_analysis.analysis_processor import process
 from pa_analysis.summary import process_summaries
 from pa_analysis.utils import categorize_signal
@@ -31,9 +33,6 @@ from source.streamlit import (
     update_volume_and_volatile_files,
 )
 from pa_analysis.validation import validate
-
-
-load_dotenv(override=True)
 
 
 def main_1():
