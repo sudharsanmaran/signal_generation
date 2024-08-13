@@ -228,7 +228,7 @@ def load_startegy_data_1(
         strategy_path = os.path.join(
             base_path, portfolio_id, instrument, f"{strategy_id}_result.csv"
         )
-        columns = ["TIMESTAMP", f"TAG_{portfolio_id}"]
+        columns = ["TIMESTAMP", f"TAG_{portfolio_id}_{strategy_id}"]
         if not is_close_read:
             columns.insert(1, "Close")
             is_close_read = True
