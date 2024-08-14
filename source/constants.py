@@ -29,6 +29,7 @@ These enumerations and constants are used throughout the trading system to ensur
 
 from enum import Enum
 import os
+from pathlib import Path
 
 
 class TradeExitType(Enum):
@@ -105,29 +106,29 @@ confirm_fractal_column_dict = {
     },
 }
 
-BASE_OUTPUT_FOLDER = "outputs"
+BASE_OUTPUT_FOLDER = Path("outputs")
 SG = "sg"
 PA = "pa"
 VA = "va"
-VLOUME = "volume"
-MERGED_DF_FOLDER = f"{BASE_OUTPUT_FOLDER}/{SG}/merged_df"
-SG_OUTPUT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{SG}/signal_generation_output"
-SG_CYCLE_OUTPUT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{SG}/cycle_output"
-PA_ANALYSIS_FOLDER = f"{BASE_OUTPUT_FOLDER}/{PA}/pa_analysis_outputs"
-PA_ANALYSIS_CYCLE_FOLDER = (
-    f"{BASE_OUTPUT_FOLDER}/{PA}/pa_analysis_cycle_outputs"
+VOLUME = "volume"
+MERGED_DF_FOLDER = str(BASE_OUTPUT_FOLDER / SG / "merged_df")
+SG_OUTPUT_FOLDER = str(BASE_OUTPUT_FOLDER / SG / "signal_generation_output")
+SG_CYCLE_OUTPUT_FOLDER = str(BASE_OUTPUT_FOLDER / SG / "cycle_output")
+PA_ANALYSIS_FOLDER = str(BASE_OUTPUT_FOLDER / PA / "pa_analysis_outputs")
+PA_ANALYSIS_CYCLE_FOLDER = str(
+    BASE_OUTPUT_FOLDER / PA / "pa_analysis_cycle_outputs"
 )
-PA_ANALYSIS_SUMMARY_FOLDER = (
-    f"{BASE_OUTPUT_FOLDER}/{PA}/pa_analysis_summary_outputs"
+PA_ANALYSIS_SUMMARY_FOLDER = str(
+    BASE_OUTPUT_FOLDER / PA / "pa_analysis_summary_outputs"
 )
-TARGET_PROFIT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{PA}/tp_outputs"
-VOLATILE_OUTPUT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{VA}/volatile_outputs"
-VOLATILE_OUTPUT_SUMMARY_FOLDER = (
-    f"{BASE_OUTPUT_FOLDER}/{VA}/volatile_summary_outputs"
+TARGET_PROFIT_FOLDER = str(BASE_OUTPUT_FOLDER / PA / "tp_outputs")
+VOLATILE_OUTPUT_FOLDER = str(BASE_OUTPUT_FOLDER / VA / "volatile_outputs")
+VOLATILE_OUTPUT_SUMMARY_FOLDER = str(
+    BASE_OUTPUT_FOLDER / VA / "volatile_summary_outputs"
 )
-VOLUME_OUTPUT_FOLDER = f"{BASE_OUTPUT_FOLDER}/{VLOUME}/volume_outputs"
-VOLUME_OUTPUT_SUMMARY_FOLDER = (
-    f"{BASE_OUTPUT_FOLDER}/{VLOUME}/volume_summary_outputs"
+VOLUME_OUTPUT_FOLDER = str(BASE_OUTPUT_FOLDER / VOLUME / "volume_outputs")
+VOLUME_OUTPUT_SUMMARY_FOLDER = str(
+    BASE_OUTPUT_FOLDER / VOLUME / "volume_summary_outputs"
 )
 
 # Define the percentage of available CPU to be used
