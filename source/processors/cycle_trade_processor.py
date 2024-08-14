@@ -62,9 +62,7 @@ def get_base_df(validated_data, strategy_df, strategy_pair_str, instrument):
     strategy_df["signal_change"] = False
     strategy_df["time"] = 0.0
 
-    signal_columns = [
-        f"TAG_{id}" for id in validated_data.get("portfolio_ids")
-    ]
+    signal_columns = [col for col in strategy_df.columns if "TAG" in col]
     market_direction_conditions = {
         "entry": {
             MarketDirection.LONG: validated_data["long_entry_signals"],

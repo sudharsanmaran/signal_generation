@@ -228,17 +228,17 @@ def load_startegy_data_1(
         strategy_path = os.path.join(
             base_path, portfolio_id, instrument, f"{strategy_id}_result.csv"
         )
-        columns = ["TIMESTAMP", f"TAG_{portfolio_id}_{strategy_id}"]
+        columns = ["dt", f"TAG_{portfolio_id}_{strategy_id}"]
         if not is_close_read:
             columns.insert(1, "Close")
             is_close_read = True
         try:
             strategy_df = pd.read_csv(
                 strategy_path,
-                parse_dates=["TIMESTAMP"],
+                parse_dates=["dt"],
                 date_format="%Y-%m-%d %H:%M:%S",
                 usecols=columns,
-                index_col="TIMESTAMP",
+                index_col="dt",
             )
         except Exception as e:
             print(f"Error reading {strategy_path}: {e}")

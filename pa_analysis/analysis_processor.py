@@ -122,6 +122,10 @@ def process_strategy(validated_data, strategy_pair, instrument):
         strategy_path,
     )[0]
 
+    if strategy_df.empty:
+        print(f"Empty DataFrame for {instrument} and {strategy_pair_str}")
+        raise ValueError("Empty DataFrame")
+
     strategy_df = include_volatile_volume_tags(validated_data, strategy_df)
 
     base_df = get_base_df(
