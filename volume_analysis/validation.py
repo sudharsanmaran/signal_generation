@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, Union
+from typing import Union
 from pydantic import BaseModel, ValidationError, field_validator
 
 
