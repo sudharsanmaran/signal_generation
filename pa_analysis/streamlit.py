@@ -1,19 +1,14 @@
-from itertools import combinations, permutations, product
+from itertools import combinations, product
 from pathlib import Path
 import time
 import pandas as pd
 import streamlit as st
-from dotenv import load_dotenv
-
-load_dotenv(override=True)
 
 from pa_analysis.analysis_processor import process
 from pa_analysis.summary import process_summaries
 from pa_analysis.utils import categorize_signal
 from source.constants import (
     PA_ANALYSIS_CYCLE_FOLDER,
-    VOLATILE_OUTPUT_FOLDER,
-    VOLUME_OUTPUT_FOLDER,
     MarketDirection,
 )
 from source.streamlit import (

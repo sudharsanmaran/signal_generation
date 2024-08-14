@@ -1,9 +1,6 @@
 from pathlib import Path
 import time
-import dotenv
 import streamlit as st
-
-dotenv.load_dotenv(override=True)
 
 from source.constants import VOLUME_OUTPUT_FOLDER
 from source.streamlit import set_start_end_datetime

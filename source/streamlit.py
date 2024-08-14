@@ -28,10 +28,6 @@ import time
 from pydantic import ValidationError
 import streamlit as st
 from itertools import product
-from dotenv import load_dotenv
-
-# Load environment variables from a .env file
-load_dotenv(override=True)
 
 # Import project-specific modules
 from source.constants import (

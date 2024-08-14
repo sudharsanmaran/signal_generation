@@ -30,6 +30,10 @@ These enumerations and constants are used throughout the trading system to ensur
 from enum import Enum
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+
+load_dotenv(override=True)
 
 
 class TradeExitType(Enum):
