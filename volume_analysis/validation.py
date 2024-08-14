@@ -1,10 +1,14 @@
 from datetime import datetime
-from typing import Union
+from typing import Dict, List, Union
 from pydantic import BaseModel, ValidationError, field_validator
 
 
 class Inputs(BaseModel):
     instrument: str
+    time_frame: str
+    period: str
+    parameter_id: str
+
     avg_zscore_sum_threshold: int
     cycle_duration: int
     cycle_skip_count: int

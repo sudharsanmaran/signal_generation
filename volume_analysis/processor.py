@@ -27,7 +27,14 @@ FILTERED_V = "filtered_v"
 CATEGORY = "category"
 
 
-def read_file(file_path: str, start_date, end_date) -> dict:
+def read_file(file_path: str, validated_data) -> dict:
+    start_date = validated_data["start_date"]
+    end_date = validated_data["end_date"]
+    parameter_id = validated_data["parameter_id"]
+    period = validated_data["period"]
+    time_frame = validated_data["time_frame"]
+    instrument = validated_data["instrument"]
+
     columns_to_read = [
         "dt",
         "o",
@@ -35,20 +42,20 @@ def read_file(file_path: str, start_date, end_date) -> dict:
         "l",
         "c",
         "v",
-        "calculate_volume_stdv_1",
-        "calculate_avg_volume_1",
-        "calculate_sum_zscores_1_5",
-        "calculate_avg_zscore_sums_1_5",
+    ]
+    dependent_cols = [
+        f"calculate_volume_stdv_{parameter_id}",
+        f"calculate_avg_volume_{parameter_id}",
+        f"calculate_sum_zscores_{parameter_id}_{period}",
+        f"calculate_avg_zscore_sums_{parameter_id}_{period}",
     ]
     df = pd.read_csv(
-        file_path,
-        usecols=columns_to_read,
-        dtype={
-            "calculate_volume_stdv_1": float,
-            "calculate_avg_volume_1": float,
-            "calculate_sum_zscores_1_5": float,
-            "calculate_avg_zscore_sums_1_5": float,
-        },
+        os.path.join(
+            file_path,
+            f"{time_frame}_{instrument}.csv",
+        ),
+        usecols=[*columns_to_read, *dependent_cols],
+        dtype={col: float for col in dependent_cols},
     )
     df["dt"] = pd.to_datetime(df["dt"])
     df = df[(df["dt"] >= start_date) & (df["dt"] <= end_date)]
@@ -59,8 +66,7 @@ def process(validated_data: dict):
     # Load data
     df = read_file(
         VOLUME_DB_PATH,
-        validated_data["start_date"],
-        validated_data["end_date"],
+        validated_data,
     )
 
     volume_quatre_df = pd.read_csv(

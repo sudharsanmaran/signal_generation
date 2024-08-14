@@ -22,6 +22,15 @@ def main():
         instrument = st.text_input("Instrument", value="HDFC")
         streamlit_inputs["instrument"] = instrument
 
+        time_frame = st.text_input("Time Frame", value="1")
+        streamlit_inputs["time_frame"] = time_frame
+
+        period = st.text_input("Period", value="5")
+        streamlit_inputs["period"] = period
+
+        parameter_id = st.text_input("Parameter ID", value="1")
+        streamlit_inputs["parameter_id"] = parameter_id
+
         avg_zscore_sum_threshold = st.number_input(
             "Avg Zscore Sums Threshold", value=1, step=1
         )

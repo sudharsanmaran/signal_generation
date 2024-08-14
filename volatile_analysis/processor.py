@@ -41,8 +41,6 @@ def get_files_data(validated_data):
         "h",
         "l",
         "c",
-        f"calculate_change_{parameter_id}",
-        f"calculate_annualized_volatility_{parameter_id}",
     ]
     index = "dt"
     instrument = validated_data["instrument"]
@@ -58,6 +56,16 @@ def get_files_data(validated_data):
             "cols": [
                 index,
                 *cols,
+                *get_calculate_change_cols(
+                    parameter_id,
+                    validated_data["periods"][time_frame],
+                    time_frame,
+                ),
+                *get_calculate_annualized_volatility_cols(
+                    parameter_id,
+                    validated_data["periods"][time_frame],
+                    time_frame,
+                ),
                 *get_stdv_cols(
                     parameter_id,
                     validated_data["periods"][time_frame],
@@ -79,6 +87,22 @@ def get_files_data(validated_data):
 def get_stdv_cols(parameter_id, periods, time_frame):
     return [
         f"calculate_stdv_{parameter_id[(time_frame, period)]}_{period}"
+        for period in periods
+    ]
+
+
+def get_calculate_change_cols(parameter_id, periods, time_frame):
+    return [
+        f"calculate_change_{parameter_id[(time_frame, period)]}"
+        for period in periods
+    ]
+
+
+def get_calculate_annualized_volatility_cols(
+    parameter_id, periods, time_frame
+):
+    return [
+        f"calculate_annualized_volatility_{parameter_id[(time_frame, period)]}"
         for period in periods
     ]
 
