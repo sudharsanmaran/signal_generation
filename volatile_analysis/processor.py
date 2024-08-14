@@ -41,8 +41,8 @@ def get_files_data(validated_data):
         "h",
         "l",
         "c",
-        "calculate_change_1",
-        "calculate_annualized_volatility_1",
+        f"calculate_change_{parameter_id}",
+        f"calculate_annualized_volatility_{parameter_id}",
     ]
     index = "dt"
     instrument = validated_data["instrument"]
