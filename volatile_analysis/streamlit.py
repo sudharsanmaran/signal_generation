@@ -59,6 +59,19 @@ def main():
                         {(tf, period): parameter_id}
                     )
 
+            streamlit_inputs["stdv_parameter_id"] = {}
+            for tf, periods in std_periods_map.items():
+                for period in periods:
+
+                    parameter_id = st.number_input(
+                        f"stdv Parameter ID for tf:{tf}, period:{period}",
+                        value=1,
+                        step=1,
+                    )
+                    streamlit_inputs["stdv_parameter_id"].update(
+                        {(tf, period): parameter_id}
+                    )
+
             set_start_end_datetime(streamlit_inputs, {})
 
             # float for z score input
@@ -118,7 +131,8 @@ def main():
                         start = time.time()
                         process_volatile(validated_data=validated_input)
                         st.success(
-                            f"Data processed successfully, time taken: {time.time()-start}"
+                            f"Data processed successfully, time taken: {
+                                time.time()-start}"
                         )
                     # except Exception as e:
                     #     st.write(f"Error: {e}")
