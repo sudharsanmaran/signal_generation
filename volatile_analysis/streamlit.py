@@ -29,14 +29,22 @@ def main():
             streamlit_inputs["instrument"] = instrument
 
             periods_map = defaultdict(list)
+            std_periods_map = defaultdict(list)
             for time_frame in time_frames:
                 selected_period = st.multiselect(
                     f"Period for tf:{time_frame}",
-                    options=[5, 10, 20, 40, 80],
-                    default=[20],
+                    options=[1764, 1008],
+                    default=[1764],
                 )
                 periods_map[time_frame] = selected_period
+                std_period = st.multiselect(
+                    f"STDV Period for tf:{time_frame}",
+                    options=[5, 10, 20, 40, 80],
+                    default=[5],
+                )
+                std_periods_map[time_frame] = std_period
             streamlit_inputs["periods"] = periods_map
+            streamlit_inputs["std_periods"] = std_periods_map
 
             streamlit_inputs["parameter_id"] = {}
             for tf, periods in periods_map.items():
@@ -107,13 +115,13 @@ def main():
                     )
                     if validated_input:
                         # try:
-                            start = time.time()
-                            process_volatile(validated_data=validated_input)
-                            st.success(
-                                f"Data processed successfully, time taken: {time.time()-start}"
-                            )
-                        # except Exception as e:
-                        #     st.write(f"Error: {e}")
+                        start = time.time()
+                        process_volatile(validated_data=validated_input)
+                        st.success(
+                            f"Data processed successfully, time taken: {time.time()-start}"
+                        )
+                    # except Exception as e:
+                    #     st.write(f"Error: {e}")
             else:
                 st.warning("Please fill all the required fields")
 

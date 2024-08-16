@@ -68,7 +68,7 @@ def get_files_data(validated_data):
                 ),
                 *get_stdv_cols(
                     parameter_id,
-                    validated_data["periods"][time_frame],
+                    validated_data["std_periods"][time_frame],
                     time_frame,
                 ),
                 *get_avg_volatility_cols(
@@ -128,7 +128,9 @@ def process_volatile(validated_data):
     )
     df = updated_inputs(df, validated_data)
     prefix = get_prefix(validated_data, df)
-    write_dataframe_to_csv(df, VOLATILE_OUTPUT_FOLDER, f"{prefix}.csv".replace(":","-"))
+    write_dataframe_to_csv(
+        df, VOLATILE_OUTPUT_FOLDER, f"{prefix}.csv".replace(":", "-")
+    )
     return
 
 

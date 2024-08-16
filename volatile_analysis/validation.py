@@ -7,6 +7,7 @@ class VolitileInputs(BaseModel):
     time_frames: List[int]
     instrument: str
     periods: Dict[int, List[int]]
+    std_periods: Dict[int, List[int]]
     parameter_id: dict[tuple[int, int], int]
 
     start_date: Union[str, datetime]
