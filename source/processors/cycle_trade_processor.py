@@ -142,7 +142,7 @@ def get_base_df(validated_data, strategy_df, strategy_pair_str, instrument):
     write_dataframe_to_csv(
         filtered_df,
         SG_CYCLE_OUTPUT_FOLDER,
-        f"filtered_df_{instrument}_{strategy_pair_str}.csv",
+        f"filtered_df_{instrument}_{strategy_pair_str}.csv".replace(":","-"),
     )
 
     return filtered_df
@@ -242,6 +242,7 @@ def formulate_files_to_read(kwargs):
             "index_col": "dt",
             "file_path": os.path.join(
                 base_path,
+                instrument,
                 f"{instrument}_TF_{tf}.csv",
             ),
             "rename": rename_dict[(tf, origin)],
@@ -257,6 +258,7 @@ def formulate_files_to_read(kwargs):
                 "index_col": "dt",
                 "file_path": os.path.join(
                     base_path,
+                    instrument,
                     f"{instrument}_TF_{time_frame}.csv",
                 ),
             }
@@ -279,8 +281,9 @@ def formulate_files_to_read(kwargs):
                     "cols": [index, *fractal_cycle_columns],
                     "index_col": "dt",
                     "file_path": os.path.join(
-                        os.getenv("FRACTAL_CYCLE_COUNT_FILE_PATH"),
-                        f"{kwargs.get('fractal_tf')}_result.csv",
+                        os.getenv("FRACTAL_DB_PATH"),
+                        instrument,
+                        f"{instrument}_TF_{kwargs.get('fractal_count_tf')}.csv",
                     ),
                 }
             }
@@ -299,8 +302,9 @@ def formulate_files_to_read(kwargs):
                     "cols": [index, *fractal_cycle_columns],
                     "index_col": "dt",
                     "file_path": os.path.join(
-                        os.getenv("FRACTAL_CYCLE_COUNT_FILE_PATH"),
-                        f"{kwargs.get('fractal_count_tf')}_result.csv",
+                        os.getenv("FRACTAL_DB_PATH"),
+                        instrument,
+                        f"{instrument}_TF_{kwargs.get('fractal_count_tf')}.csv",
                     ),
                     "rename": {
                         col: name
@@ -351,7 +355,7 @@ def update_cycle_columns(df, base_df, start_datetime, kwargs):
     df = df.reset_index().rename(columns={"index": "dt"})
 
     signal_cols = [col for col in base_df.columns if "TAG" in col]
-    cols = ["TIMESTAMP", "market_direction", "exit_market_direction"]
+    cols = ["dt", "market_direction", "exit_market_direction"]
 
     if kwargs.get("include_volume"):
         cols.append("category")
@@ -365,7 +369,7 @@ def update_cycle_columns(df, base_df, start_datetime, kwargs):
         df,
         base_df[cols],
         left_on="dt",
-        right_on="TIMESTAMP",
+        right_on="dt",
         direction="backward",
     )
 

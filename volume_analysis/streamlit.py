@@ -16,7 +16,7 @@ def main():
         "Select Expander", ["Single Analysis", "Summary"]
     )
     if expander_option == "Single Analysis":
-        instrument = st.text_input("Instrument", value="HDFC")
+        instrument = st.text_input("Instrument", value="ABBOTINDIA")
         streamlit_inputs["instrument"] = instrument
 
         time_frame = st.text_input("Time Frame", value="1")

@@ -50,7 +50,7 @@ def get_files_data(validated_data):
             "read": True,
             "file_path": os.path.join(
                 base_path,
-                f"{time_frame}_{instrument}.csv",
+                f"{instrument}_TF_{time_frame}.csv",
             ),
             "index_col": index,
             "cols": [
@@ -128,7 +128,7 @@ def process_volatile(validated_data):
     )
     df = updated_inputs(df, validated_data)
     prefix = get_prefix(validated_data, df)
-    write_dataframe_to_csv(df, VOLATILE_OUTPUT_FOLDER, f"{prefix}.csv")
+    write_dataframe_to_csv(df, VOLATILE_OUTPUT_FOLDER, f"{prefix}.csv".replace(":","-"))
     return
 
 

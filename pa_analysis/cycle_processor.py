@@ -433,7 +433,7 @@ def update_secondary_cycle_analytics(
     write_dataframe_to_csv(
         df,
         PA_ANALYSIS_CYCLE_FOLDER,
-        f"{output_file_name}.csv",
+        f"{output_file_name}.csv".replace(":","-"),
     )
     return results
 

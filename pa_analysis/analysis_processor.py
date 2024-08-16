@@ -128,6 +128,11 @@ def process_strategy(validated_data, strategy_pair, instrument):
 
     strategy_df = include_volatile_volume_tags(validated_data, strategy_df)
 
+    if strategy_df.empty:
+        raise ValueError(
+            "strategy df id empty"
+        )
+
     base_df = get_base_df(
         validated_data, strategy_df, strategy_pair_str, instrument
     )
@@ -142,7 +147,7 @@ def process_strategy(validated_data, strategy_pair, instrument):
         )
     result_df = pd.DataFrame(result_base_df)
     write_dataframe_to_csv(
-        result_df, PA_ANALYSIS_FOLDER, f"{output_file_name}.csv"
+        result_df, PA_ANALYSIS_FOLDER, f"{output_file_name}.csv".replace(":","-")
     )
     return result_base_df
 

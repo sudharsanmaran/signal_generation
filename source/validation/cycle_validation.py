@@ -28,7 +28,7 @@ class CycleInputs(
     parameter_id_1: int = None
     bb_time_frames_1: List[int]
     periods_1: List[int]
-    sds_1: List[int]
+    sds_1: List[float]
     include_higher_and_lower: bool = False
     close_percent: float = None
     max_to_min_percent: float = None
@@ -37,7 +37,7 @@ class CycleInputs(
     parameter_id_2: int = None
     bb_time_frames_2: List[int] = None
     periods_2: List[int] = None
-    sds_2: List[int] = None
+    sds_2: List[float] = None
     check_bb_2: bool = False
 
     cycle_to_consider: CycleType = None

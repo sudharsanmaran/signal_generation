@@ -21,11 +21,11 @@ def main():
     if expander_option == "Single Analysis":
         with st.expander("Single Analysis", expanded=True):
             time_frames = st.multiselect(
-                "Time Frames", options=[1, 2, 3, 4, 5, 6], default=[1]
+                "Time Frames", options=[60, 120, 240], default=[60]
             )
             streamlit_inputs["time_frames"] = time_frames
 
-            instrument = st.text_input("Instrument", value="BANKNIFTY")
+            instrument = st.text_input("Instrument", value="ABBOTINDIA")
             streamlit_inputs["instrument"] = instrument
 
             periods_map = defaultdict(list)

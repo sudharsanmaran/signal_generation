@@ -17,7 +17,7 @@ CUM_AVG_WEIGHTED_AVERAGE_PRICE = "Cum Avg Weighted Average Price"
 CUM_AVG_WEIGHTED_AVERAGE_PRICE_TO_C = "Cum Avg Weighted Avg Price to C"
 AVG_ZSCORE = "Average Z score"
 RANK_ON_Z_SCORE = "Rank on Z Score"
-CALCULATE_AVG_ZSCORE_SUMS = "calculate_avg_zscore_sums_1_5"
+
 C = "c"
 DT = "dt"
 COUNT = "Count"
@@ -52,7 +52,7 @@ def read_file(file_path: str, validated_data) -> dict:
     df = pd.read_csv(
         os.path.join(
             file_path,
-            f"{time_frame}_{instrument}.csv",
+            f"{instrument}_TF_{time_frame}.csv",
         ),
         usecols=[*columns_to_read, *dependent_cols],
         dtype={col: float for col in dependent_cols},
@@ -63,21 +63,23 @@ def read_file(file_path: str, validated_data) -> dict:
 
 
 def process(validated_data: dict):
+
+    CALCULATE_AVG_ZSCORE_SUMS = f"calculate_avg_zscore_sums_{validated_data['parameter_id']}_{validated_data['period']}"
     # Load data
     df = read_file(
         VOLUME_DB_PATH,
         validated_data,
     )
 
-    volume_quatre_df = pd.read_csv(
-        filepath_or_buffer=VOLUME_QUATRE_DB_PATH, index_col="INSTRUMENT"
-    )
+    # volume_quatre_df = pd.read_csv(
+    #     filepath_or_buffer=VOLUME_QUATRE_DB_PATH, index_col="INSTRUMENT"
+    # )
 
-    instrument_quatre = volume_quatre_df.loc[validated_data["instrument"]]
+    # instrument_quatre = volume_quatre_df.loc[validated_data["instrument"]]
 
-    df["quatre_shares"] = df.apply(
-        lambda row: determine_quarter(row, instrument_quatre), axis=1
-    )
+    # df["quatre_shares"] = df.apply(
+    #     lambda row: determine_quarter(row, instrument_quatre), axis=1
+    # )
 
     pd.set_option("display.max_rows", None)
 
@@ -181,7 +183,7 @@ def process(validated_data: dict):
     write_dataframe_to_csv(
         df,
         VOLUME_OUTPUT_FOLDER,
-        f"{validated_data['instrument']}_ZS_{validated_data[AVG_ZSCORE_SUM_THRESHOLD]}_CD_{validated_data[CYCLE_DURATION]}_{df.index[0]}_{df.index[-1]}.csv",
+        f"{validated_data['instrument']}_ZS_{validated_data[AVG_ZSCORE_SUM_THRESHOLD]}_CD_{validated_data[CYCLE_DURATION]}_{df.index[0]}_{df.index[-1]}.csv".replace(":","-"),
     )
 
 
