@@ -33,14 +33,14 @@ def main():
             for time_frame in time_frames:
                 selected_period = st.multiselect(
                     f"Period for tf:{time_frame}",
-                    options=[1764, 1008],
-                    default=[1764],
+                    options=[5, 10, 20, 40, 80],
+                    default=[5],
                 )
                 periods_map[time_frame] = selected_period
                 std_period = st.multiselect(
                     f"STDV Period for tf:{time_frame}",
-                    options=[5, 10, 20, 40, 80],
-                    default=[5],
+                    options=[1764, 1008],
+                    default=[1764],
                 )
                 std_periods_map[time_frame] = std_period
             streamlit_inputs["periods"] = periods_map
