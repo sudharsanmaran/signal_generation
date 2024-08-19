@@ -32,9 +32,11 @@ class BaseInputs(BaseModel):
 
 class FractalInput(BaseModel):
     check_entry_fractal: bool = None
+    entry_fractal_period: int = None
     entry_fractal_file_number: str = None
 
     check_exit_fractal: bool = None
+    exit_fractal_period: int = None
     fractal_exit_count: Union[int, str] = None
     exit_fractal_file_number: str = None
 
