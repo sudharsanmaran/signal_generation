@@ -203,7 +203,7 @@ class Trade:
         ]
 
 
-def initialize(validated_input):
+def initialize(validated_input, strategy_pair):
 
     def set_compare_functions(direction, condition):
         if condition == "higher":
@@ -255,9 +255,8 @@ def initialize(validated_input):
     }
     Trade.allowed_direction = validated_input.get("allowed_direction")
     Trade.signal_columns = (
-        [f"TAG_{id}" for id in validated_input.get("portfolio_ids")]
-        if validated_input.get("signal_columns")
-        else None
+        [f"TAG_{portfolio_id}_{strategy_id}" for portfolio_id,
+            strategy_id in zip(validated_input['portfolio_ids'], strategy_pair)]
     )
 
     fractal_exit_count = validated_input.get("fractal_exit_count")
@@ -266,9 +265,11 @@ def initialize(validated_input):
     )
 
     if Trade.check_bb_band:
-        Trade.bb_band_column = f"P_1_{validated_input.get('bb_band_column').upper()}_BAND_{validated_input.get('bb_band_sd')}"
+        Trade.bb_band_column = f"P_{validated_input['parameter_id']}_{validated_input.get(
+            'bb_band_column').upper()}_BAND_{validated_input['period']}_{validated_input.get('bb_band_sd')}"
     if Trade.check_trail_bb_band:
-        Trade.trail_bb_band_column = f"P_1_{validated_input.get('trail_bb_band_column').upper()}_BAND_{validated_input.get('trail_bb_band_sd')}"
+        Trade.trail_bb_band_column = f"P_{validated_input['parameter_id']}_{validated_input.get(
+            'trail_bb_band_column').upper()}_BAND_{validated_input['period']}_{validated_input.get('trail_bb_band_sd')}"
 
     # Initialize trail compare functions with default values
     Trade.trail_compare_functions = {

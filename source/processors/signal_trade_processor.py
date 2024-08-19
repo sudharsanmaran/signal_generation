@@ -543,7 +543,7 @@ def multiple_process(validated_input, process: callable):
 
 
 def process_strategy(validated_input, strategy_pair, instrument):
-    initialize(validated_input)
+    initialize(validated_input, strategy_pair)
     portfolio_ids_str = " - ".join(Trade.portfolio_ids)
     strategy_pair_str = "_".join(map(lambda a: str(a), strategy_pair))
     file_name = f"df_{instrument}_{strategy_pair_str}.csv"

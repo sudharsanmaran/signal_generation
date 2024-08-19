@@ -204,9 +204,11 @@ def read_files(
                 dtype=details.get("dtype", None),
                 index_col=details["index_col"],
             )
-            df.index = pd.to_datetime(df.index)
+            df.index = pd.to_datetime(df.index, errors='coerce')
+
             # Filter the DataFrame for the specified date range
-            df = df.loc[start_date:end_date]
+            # df = df.loc[start_date:end_date]
+
             # Rename columns if specified
             if "rename" in details:
                 df.rename(columns=details["rename"], inplace=True)

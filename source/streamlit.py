@@ -918,6 +918,18 @@ def update_bb_band_check(streamlit_inputs, saved_inputs):
             index=options.index(saved_inputs.get("bb_band_sd", 2.0)),
         )
 
+        parameter_id = st.number_input(
+            "Parameter ID",
+            min_value=1,
+            step=1,
+        )
+
+        period = st.selectbox(
+            "Period",
+            PERIOD_OPTIONS,
+            index=0,
+        )
+
         options = ["mean", "upper", "lower"]
         bb_band_column = st.selectbox(
             "BB Band Column",
@@ -930,6 +942,8 @@ def update_bb_band_check(streamlit_inputs, saved_inputs):
                 "bb_file_number": bb_file_number,
                 "bb_band_sd": bb_band_sd,
                 "bb_band_column": bb_band_column,
+                "parameter_id": parameter_id,
+                "period": period,
             }
         )
 

@@ -131,3 +131,5 @@ class BollingerBandInput(BaseModel):
     bb_file_number: str = None
     bb_band_sd: float = None
     bb_band_column: str = None
+    parameter_id: int = None
+    period: int = None

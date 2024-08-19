@@ -89,24 +89,24 @@ entry_fractal_columns = [
 # Dictionary mapping entry and exit fractal columns to market directions
 fractal_column_dict = {
     "entry": {
-        MarketDirection.LONG: "entry_P_1_FRACTAL_LONG",
-        MarketDirection.SHORT: "entry_P_1_FRACTAL_SHORT",
+        MarketDirection.LONG: "entry_FRACTAL_LONG",
+        MarketDirection.SHORT: "entry_FRACTAL_SHORT",
     },
     "exit": {
-        MarketDirection.LONG: "exit_P_1_FRACTAL_LONG",
-        MarketDirection.SHORT: "exit_P_1_FRACTAL_SHORT",
+        MarketDirection.LONG: "exit_FRACTAL_LONG",
+        MarketDirection.SHORT: "exit_FRACTAL_SHORT",
     },
 }
 
 # Dictionary mapping confirmed entry and exit fractal columns to market directions
 confirm_fractal_column_dict = {
     "entry": {
-        MarketDirection.LONG: "entry_P_1_FRACTAL_CONFIRMED_LONG",
-        MarketDirection.SHORT: "entry_P_1_FRACTAL_CONFIRMED_SHORT",
+        MarketDirection.LONG: "entry_FRACTAL_CONFIRMED_LONG",
+        MarketDirection.SHORT: "entry_FRACTAL_CONFIRMED_SHORT",
     },
     "exit": {
-        MarketDirection.LONG: "exit_P_1_FRACTAL_CONFIRMED_LONG",
-        MarketDirection.SHORT: "exit_P_1_FRACTAL_CONFIRMED_SHORT",
+        MarketDirection.LONG: "exit_FRACTAL_CONFIRMED_LONG",
+        MarketDirection.SHORT: "exit_FRACTAL_CONFIRMED_SHORT",
     },
 }
 
