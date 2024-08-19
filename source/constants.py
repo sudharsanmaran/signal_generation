@@ -76,13 +76,13 @@ POSSIBLE_STRATEGY_IDS = list(range(1, 11))
 
 # List of fractal column names
 exit_fractal_columns = [
-    "P_1_FRACTAL_CONFIRMED_LONG",
-    "P_1_FRACTAL_CONFIRMED_SHORT",
+    "FRACTAL_CONFIRMED_LONG",
+    "FRACTAL_CONFIRMED_SHORT",
 ]
 
 entry_fractal_columns = [
-    "P_1_FRACTAL_LONG",
-    "P_1_FRACTAL_SHORT",
+    "FRACTAL_LONG",
+    "FRACTAL_SHORT",
     *exit_fractal_columns,
 ]
 

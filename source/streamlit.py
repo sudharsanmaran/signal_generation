@@ -115,7 +115,8 @@ def set_portfolio_flags(portfolio_ids, streamlit_inputs, saved_inputs):
 
         # Get the current input from the user, pre-populated with saved flags
         possible_flags_input = st.text_input(
-            f"Possible Flags for portfolio {portfolio_id} (comma-separated, e.g., r, g, y)",
+            f"Possible Flags for portfolio {
+                portfolio_id} (comma-separated, e.g., r, g, y)",
             value=saved_flags,
         )
 
@@ -157,7 +158,8 @@ def set_portfolio_strategies(portfolio_ids, streamlit_inputs, saved_inputs):
     possible_strategies_per_portfolio = {}
     for portfolio_id in portfolio_ids:
         possible_strategies_input = st.text_input(
-            f"Possible Strategies for portfolio {portfolio_id} (e.g., ALL, 2-10, 7)",
+            f"Possible Strategies for portfolio {
+                portfolio_id} (e.g., ALL, 2-10, 7)",
             value=saved_inputs.get("possible_strategies_input", {}).get(
                 portfolio_id, "1"
             ),
@@ -1068,7 +1070,7 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
 
         if close_time_frames_1:
             bb_tf_options = TIMEFRAME_OPTIONS[
-                TIMEFRAME_OPTIONS.index(max(close_time_frames_1)) :
+                TIMEFRAME_OPTIONS.index(max(close_time_frames_1)):
             ]
         else:
             bb_tf_options = TIMEFRAME_OPTIONS
@@ -1141,7 +1143,7 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
         if check_bb_2:
             if bb_time_frames_1:
                 bb_2_tf_options = TIMEFRAME_OPTIONS[
-                    TIMEFRAME_OPTIONS.index(max(bb_time_frames_1)) :
+                    TIMEFRAME_OPTIONS.index(max(bb_time_frames_1)):
                 ]
             else:
                 bb_2_tf_options = TIMEFRAME_OPTIONS
@@ -1153,7 +1155,7 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
 
             if periods_1:
                 bb_2_period_options = PERIOD_OPTIONS[
-                    PERIOD_OPTIONS.index(max(periods_1)) + 1 :
+                    PERIOD_OPTIONS.index(max(periods_1)) + 1:
                 ]
             else:
                 bb_2_period_options = PERIOD_OPTIONS
@@ -1514,14 +1516,15 @@ def execute(validated_input, exec_func: callable, module="Trade Management"):
     start = time.time()
     # try:
     # multiple_process(validated_input, exec_func)
-    exec_func(validated_input, (1, 1), "BANKNIFTY")
+    exec_func(validated_input, (1,), "ABBOTINDIA")
     # except Exception as e:
     #     st.error(f"Error executing {module}: {e}")
     #     return
     stop = time.time()
 
     st.success(
-        f"Trade processing completed successfully! Total time taken: {stop-start} seconds"
+        f"Trade processing completed successfully! Total time taken: {
+            stop-start} seconds"
     )
 
 

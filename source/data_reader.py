@@ -90,7 +90,7 @@ def read_data(
     # Get the base path from environment variables
     strategy_path = os.getenv("STRATEGY_DB_PATH")
     bb_path = os.getenv("BB_DB_PATH")
-    fractal_path = os.getenv("FRACTAL_DB_PATH")
+    fractal_path = os.getenv("SIGNAL_FRACTAL_DB_PATH")
 
     # Loop through each portfolio and strategy ID pair
     all_dfs = load_strategy_data(
@@ -103,7 +103,7 @@ def read_data(
     )
 
     # Index column name
-    index = "TIMESTAMP"
+    index = "dt"
 
     # Dictionary to store file details for reading additional data
     file_details = {
@@ -126,9 +126,9 @@ def read_data(
             "file_path": os.path.join(
                 bb_path,
                 instrument,
-                f"{bb_file_number}_result.csv",
+                f"{instrument}_TF_{bb_file_number}.csv",
             ),
-            "index_col": "TIMESTAMP",
+            "index_col": "dt",
             "cols": [index, bb_band_column],
             "rename": {bb_band_column: f"bb_{bb_band_column}"},
         },
@@ -139,9 +139,9 @@ def read_data(
             "file_path": os.path.join(
                 bb_path,
                 instrument,
-                f"{trail_bb_file_number}_result.csv",
+                f"{instrument}_TF_{trail_bb_file_number}.csv",
             ),
-            "index_col": "TIMESTAMP",
+            "index_col": "dt",
             "cols": [index, trail_bb_band_column],
             "rename": {trail_bb_band_column: f"trail_{trail_bb_band_column}"},
         },
@@ -159,9 +159,8 @@ def update_exit_fractal_file(
         "read": read_exit_fractal,
         "file_path": os.path.join(
             base_path,
-            "Fractal",
             instrument,
-           f"{instrument}_TF_{exit_fractal_file_number}.csv",
+            f"{instrument}_TF_{exit_fractal_file_number}.csv",
         ),
         "index_col": "TIMESTAMP",
         "cols": [index, *exit_fractal_columns],
@@ -269,7 +268,7 @@ def load_strategy_data(
             base_path, portfolio_id, instrument, f"{strategy_id}_result.csv"
         )
         # Define the columns to be read from the CSV file
-        columns = ["TIMESTAMP", f"TAG_{portfolio_id}"]
+        columns = ["dt", f"TAG_{portfolio_id}_{strategy_id}"]
         if not is_close_read:
             columns.insert(1, "Close")
             is_close_read = True
@@ -278,10 +277,10 @@ def load_strategy_data(
             # Read the strategy CSV file into a DataFrame
             strategy_df = pd.read_csv(
                 strategy_path,
-                parse_dates=["TIMESTAMP"],
+                parse_dates=["dt"],
                 date_format="%Y-%m-%d %H:%M:%S",
                 usecols=columns,
-                index_col="TIMESTAMP",
+                index_col="dt",
             )
         except Exception as e:
             print(f"Error reading {strategy_path}: {e}")

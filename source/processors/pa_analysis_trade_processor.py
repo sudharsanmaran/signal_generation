@@ -42,7 +42,7 @@ def process_pa_output(validated_data, *args):
     instrument = terms[0]
 
     index = "TIMESTAMP"
-    fractal_path = os.getenv("FRACTAL_DB_PATH")
+    fractal_path = os.getenv("SIGNAL_FRACTAL_DB_PATH")
     bb_path = os.getenv("BB_DB_PATH")
 
     file_details = {
