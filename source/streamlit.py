@@ -115,7 +115,8 @@ def set_portfolio_flags(portfolio_ids, streamlit_inputs, saved_inputs):
 
         # Get the current input from the user, pre-populated with saved flags
         possible_flags_input = st.text_input(
-            f"Possible Flags for portfolio {portfolio_id} (comma-separated, e.g., r, g, y)",
+            f"Possible Flags for portfolio {
+                portfolio_id} (comma-separated, e.g., r, g, y)",
             value=saved_flags,
         )
 
@@ -157,7 +158,8 @@ def set_portfolio_strategies(portfolio_ids, streamlit_inputs, saved_inputs):
     possible_strategies_per_portfolio = {}
     for portfolio_id in portfolio_ids:
         possible_strategies_input = st.text_input(
-            f"Possible Strategies for portfolio {portfolio_id} (e.g., ALL, 2-10, 7)",
+            f"Possible Strategies for portfolio {
+                portfolio_id} (e.g., ALL, 2-10, 7)",
             value=saved_inputs.get("possible_strategies_input", {}).get(
                 portfolio_id, "1"
             ),
@@ -1091,7 +1093,7 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
 
         if close_time_frames_1:
             bb_tf_options = TIMEFRAME_OPTIONS[
-                TIMEFRAME_OPTIONS.index(max(close_time_frames_1)) :
+                TIMEFRAME_OPTIONS.index(max(close_time_frames_1)):
             ]
         else:
             bb_tf_options = TIMEFRAME_OPTIONS
@@ -1164,7 +1166,7 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
         if check_bb_2:
             if bb_time_frames_1:
                 bb_2_tf_options = TIMEFRAME_OPTIONS[
-                    TIMEFRAME_OPTIONS.index(max(bb_time_frames_1)) :
+                    TIMEFRAME_OPTIONS.index(max(bb_time_frames_1)):
                 ]
             else:
                 bb_2_tf_options = TIMEFRAME_OPTIONS
@@ -1176,7 +1178,7 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
 
             if periods_1:
                 bb_2_period_options = PERIOD_OPTIONS[
-                    PERIOD_OPTIONS.index(max(periods_1)) + 1 :
+                    PERIOD_OPTIONS.index(max(periods_1)) + 1:
                 ]
             else:
                 bb_2_period_options = PERIOD_OPTIONS
@@ -1348,9 +1350,16 @@ def set_fractal_entry(streamlit_inputs, saved_inputs):
             "Entry Fractal File Number",
             value=saved_inputs.get("entry_fractal_file_number", "1"),
         )
+        entry_fractal_period = st.number_input(
+            "Entry Fractal Period",
+            min_value=1,
+            value=saved_inputs.get("entry_fractal_period", 5),
+            step=1,
+        )
         streamlit_inputs["entry_fractal_file_number"] = (
             entry_fractal_file_number
         )
+        streamlit_inputs["entry_fractal_period"] = entry_fractal_period
         update_bb_band_check(streamlit_inputs, saved_inputs)
 
 
@@ -1551,7 +1560,8 @@ def execute(validated_input, exec_func: callable, module="Trade Management"):
     stop = time.time()
 
     st.success(
-        f"Trade processing completed successfully! Total time taken: {stop-start} seconds"
+        f"Trade processing completed successfully! Total time taken: {
+            stop-start} seconds"
     )
 
 

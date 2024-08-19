@@ -65,15 +65,16 @@ def process_pa_output(validated_data, *args):
             "file_path": os.path.join(
                 bb_path,
                 instrument,
-                f"{validated_data['bb_file_number']}_result.csv",
+                f"{instrument}_TF_{validated_data['bb_file_number']}.csv",
             ),
             "index_col": "dt",
             "cols": [
                 index,
-                f'P_1_{validated_data["bb_band_column"].upper()}_BAND_{validated_data["bb_band_sd"]}',
+                f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper(
+                )}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}',
             ],
             "rename": {
-                f'P_1_{validated_data["bb_band_column"].upper()}_BAND_{validated_data["bb_band_sd"]}': f"bb_{validated_data['bb_band_column']}"
+                f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper()}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}': f"bb_{validated_data['bb_band_column']}"
             },
         },
     }
