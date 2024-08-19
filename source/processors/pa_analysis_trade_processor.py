@@ -41,7 +41,7 @@ def process_pa_output(validated_data, *args):
     terms = validated_data["pa_file"].split("_")
     instrument = terms[0]
 
-    index = "TIMESTAMP"
+    index = "dt"
     fractal_path = os.getenv("SIGNAL_FRACTAL_DB_PATH")
     bb_path = os.getenv("BB_DB_PATH")
 
@@ -67,7 +67,7 @@ def process_pa_output(validated_data, *args):
                 instrument,
                 f"{validated_data['bb_file_number']}_result.csv",
             ),
-            "index_col": "TIMESTAMP",
+            "index_col": "dt",
             "cols": [
                 index,
                 f'P_1_{validated_data["bb_band_column"].upper()}_BAND_{validated_data["bb_band_sd"]}',
