@@ -71,7 +71,8 @@ def process_pa_output(validated_data, *args):
             "index_col": "dt",
             "cols": [
                 index,
-                f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper()}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}',
+                f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper(
+                )}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}',
             ],
             "rename": {
                 f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper()}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}': f"bb_{validated_data['bb_band_column']}"
@@ -99,6 +100,7 @@ def process_pa_output(validated_data, *args):
         "market_direction",
         "exit_market_direction",
         "group_id",
+        "signal_category",
         cycle_cols[validated_data["cycle_to_consider"]],
         TargetProfitColumns.TP_END.value,
     ]
@@ -116,11 +118,10 @@ def process_pa_output(validated_data, *args):
     if validated_data["calculate_fractal_analysis"]:
         fractal_analysis = {}
         fractal_analysis["Strategy"] = validated_data["pa_file"]
-        fractal_analysis["Category"] = 1
         fractal_analysis["Instrument"] = instrument
 
         cols = [
-            "category",
+            "signal_category",
             "market_direction",
             "group_id",
             cycle_cols[validated_data["cycle_to_consider"]],
@@ -179,7 +180,7 @@ def process_pa_output(validated_data, *args):
             fractal_analysis_df["fractal_count"].mean()
         )
         fractal_analysis_df.loc[start_index, "median no of fractals"] = (
-            fractal_analysis_df["avg_time_diff"].median()
+            fractal_analysis_df["fractal_count"].median()
         )
         for key, value in fractal_analysis.items():
             fractal_analysis_df.loc[start_index, key] = value

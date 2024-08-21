@@ -75,7 +75,7 @@ def process_cycles(**kwargs):
     for time_frame, df in all_df.items():
 
         start_index = df.index[0]
-        df.loc[start_index, "category"] = kwargs["category"]
+        df.loc[start_index, "signal_category"] = kwargs["category"]
 
         results = analyze_cycles(df, time_frame, kwargs)
 
