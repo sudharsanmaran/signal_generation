@@ -207,7 +207,7 @@ def read_files(
             df.index = pd.to_datetime(df.index, errors='coerce')
 
             # Filter the DataFrame for the specified date range
-            # df = df.loc[start_date:end_date]
+            df = df.loc[start_date:end_date]
 
             # Rename columns if specified
             if "rename" in details:
