@@ -278,7 +278,7 @@ def check_entry_conditions(row, state):
         Trade.no_of_rows_to_skip -= 1
         return False, None
 
-    market_direction = get_market_direction(row, "entry")
+    market_direction = get_market_direction(row, "entry", signal_columns=Trade.signal_columns, market_direction_conditions=Trade.market_direction_conditions)
 
     if not market_direction:
         return False, None
@@ -430,7 +430,7 @@ def identify_exit_signals(row, exit_state, entry_state):
             exit_type (TradeExitType or None): The type of exit signal (END, SIGNAL, FRACTAL, TRAILING) or None if no exit is identified
     """
 
-    market_direction = get_market_direction(row, "exit")
+    market_direction = get_market_direction(row, "exit", signal_columns=Trade.signal_columns, market_direction_conditions=Trade.market_direction_conditions)
 
     # reset_last_state(state, market_direction)
     # update_last_state(state, market_direction, row, "exit")
@@ -594,10 +594,12 @@ def process_strategy(validated_input, strategy_pair, instrument):
         )
 
     output_df = pd.DataFrame(trade_outputs)
+    print("DF created")
     if DEBUG:
         write_dataframe_to_csv(output_df, SG_OUTPUT_FOLDER, file_name)
 
     if Trade.trigger_trade_management:
+        print("On IF")
         generate_tradesheet(
             validated_input, output_df, strategy_pair_str, instrument
         )
