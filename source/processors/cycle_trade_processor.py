@@ -796,11 +796,11 @@ def get_cycle_base_df(**kwargs):
 
             df_to_analyze[tf] = merged_df
 
-            write_dataframe_to_csv(
-                merged_df,
-                "pa_analysis_output/cycle_outpts/base_df",
-                f"base_df_tf_{tf}.csv",
-            )
+            # write_dataframe_to_csv(
+            #     merged_df,
+            #     "pa_analysis_output/cycle_outpts/base_df",
+            #     f"base_df_tf_{tf}.csv",
+            # )
     else:
         for key, df in close_time_frames_1_dfs.items():
             bb_cols = []

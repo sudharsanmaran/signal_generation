@@ -110,8 +110,7 @@ def get_calculate_annualized_volatility_cols(
 
 def get_avg_volatility_cols(parameter_id, periods, time_frame):
     return [
-        f"calculate_avg_volatility_{parameter_id[(time_frame, period)]}_{
-            period}"
+        f"calculate_avg_volatility_{parameter_id[(time_frame, period)]}_{period}"
         for period in periods
     ]
 
@@ -125,8 +124,7 @@ def process_volatile(validated_data):
         validate_data=validated_data,
         group_by_col=AnalysisConstant.CYCLE_ID.value,
         include_next_first_row=include_next_first_row,
-        tagcol=f"{validated_data['time_frames'][0]}_{
-            validated_data['periods'][validated_data['time_frames'][0]][0]}_{AnalysisConstant.VOLATILE_TAG.value}",
+        tagcol=f"{validated_data['time_frames'][0]}_{validated_data['periods'][validated_data['time_frames'][0]][0]}_{AnalysisConstant.VOLATILE_TAG.value}",
         analyze=validated_data["analyze"],
     )
     df = updated_inputs(df, validated_data)
@@ -649,8 +647,7 @@ def get_base_df(validated_data):
         for period in validated_data["periods"][time_frame]:
             update_z_score(
                 df,
-                f"calculate_avg_volatility_{validated_data['parameter_id'][(time_frame, period)]}_{
-                    period}",
+                f"calculate_avg_volatility_{validated_data['parameter_id'][(time_frame, period)]}_{period}",
                 period,
                 time_frame,
             )
@@ -683,8 +680,7 @@ def get_base_df(validated_data):
                 time_frame,
                 validated_data["sum_window_size"],
                 period,
-                col=f"{time_frame}_{period}_{
-                    AnalysisConstant.NORM_Z_SCORE.value}",
+                col=f"{time_frame}_{period}_{AnalysisConstant.NORM_Z_SCORE.value}",
             )
 
             trailing_window_avg(
@@ -692,18 +688,15 @@ def get_base_df(validated_data):
                 time_frame,
                 validated_data["avg_window_size"],
                 period,
-                col=f"{time_frame}_{period}_{
-                    AnalysisConstant.TRAIL_WINDOW_SUM.value}",
+                col=f"{time_frame}_{period}_{AnalysisConstant.TRAIL_WINDOW_SUM.value}",
             )
 
             update_volatile_tag(
                 df,
                 validated_data["lv_tag"],
                 validated_data["hv_tag"],
-                col=f"{time_frame}_{period}_{
-                    AnalysisConstant.TRAIL_WINDOW_AVG.value}",
-                new_col=f"{time_frame}_{period}_{
-                    AnalysisConstant.VOLATILE_TAG.value}",
+                col=f"{time_frame}_{period}_{AnalysisConstant.TRAIL_WINDOW_AVG.value}",
+                new_col=f"{time_frame}_{period}_{AnalysisConstant.VOLATILE_TAG.value}",
             )
 
             updated_dfs[time_frame] = df
@@ -720,7 +713,6 @@ def update_z_score(df, col_name, period, time_frame):
         period,
         time_frame,
         cum_std_col=f"{time_frame}_{period}_{AnalysisConstant.CUM_STD.value}",
-        cum_avg_volatility_col=f"{time_frame}_{period}_{
-            AnalysisConstant.CUM_AVG_VOLATILITY.value}",
+        cum_avg_volatility_col=f"{time_frame}_{period}_{AnalysisConstant.CUM_AVG_VOLATILITY.value}",
     )
     return df
