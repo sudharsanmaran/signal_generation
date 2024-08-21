@@ -5,6 +5,7 @@ import pandas as pd
 from source.constants import (
     PA_ANALYSIS_CYCLE_FOLDER,
     SG_CYCLE_OUTPUT_FOLDER,
+    SG_FRACTAL_ANALYSIS_OUTPUT_FOLDER,
     CycleType,
     MarketDirection,
     SecondCycleIDColumns,
@@ -70,8 +71,7 @@ def process_pa_output(validated_data, *args):
             "index_col": "dt",
             "cols": [
                 index,
-                f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper(
-                )}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}',
+                f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper()}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}',
             ],
             "rename": {
                 f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper()}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}': f"bb_{validated_data['bb_band_column']}"
@@ -112,6 +112,83 @@ def process_pa_output(validated_data, *args):
     )
 
     merged_df = merge_all_df([merged_df, *dfs.values()])
+
+    if validated_data["calculate_fractal_analysis"]:
+        fractal_analysis = {}
+        fractal_analysis["Strategy"] = validated_data["pa_file"]
+        fractal_analysis["Category"] = 1
+        fractal_analysis["Instrument"] = instrument
+
+        cols = [
+            "category",
+            "market_direction",
+            "group_id",
+            cycle_cols[validated_data["cycle_to_consider"]],
+            "entry_FRACTAL_CONFIRMED_LONG",
+            "entry_FRACTAL_CONFIRMED_SHORT",
+        ]
+        fractal_analysis_df = merged_df[cols]
+
+        # time diffrence between entry_FRACTAL_CONFIRMED_LONG and entry_FRACTAL_CONFIRMED_SHORT true
+        long_true_mask = (
+            fractal_analysis_df["entry_FRACTAL_CONFIRMED_LONG"] == True
+        )
+        short_true_mask = (
+            fractal_analysis_df["entry_FRACTAL_CONFIRMED_SHORT"] == True
+        )
+
+        fractal_analysis_df.loc[long_true_mask, "time_diff_long"] = (
+            fractal_analysis_df.index[long_true_mask].to_series().diff()
+        )
+        fractal_analysis_df.loc[short_true_mask, "time_diff_short"] = (
+            fractal_analysis_df.index[short_true_mask].to_series().diff()
+        )
+
+        for _, group_data in fractal_analysis_df.groupby(
+            ["group_id", cycle_cols[validated_data["cycle_to_consider"]]]
+        ):
+            first_index, last_index = group_data.index[0], group_data.index[-1]
+            if (
+                group_data.loc[first_index, "market_direction"]
+                == "MarketDirection.LONG"
+            ):
+                fractal_analysis_df.loc[last_index, "fractal_count"] = (
+                    group_data["entry_FRACTAL_CONFIRMED_LONG"].sum()
+                )
+                fractal_analysis_df.loc[last_index, "avg_time_diff"] = (
+                    group_data["time_diff_long"].mean()
+                )
+                fractal_analysis_df.loc[last_index, "median_time_diff"] = (
+                    group_data["time_diff_long"].median()
+                )
+            else:
+                fractal_analysis_df.loc[last_index, "fractal_count"] = (
+                    group_data["entry_FRACTAL_CONFIRMED_SHORT"].sum()
+                )
+
+                fractal_analysis_df.loc[last_index, "avg_time_diff"] = (
+                    group_data["time_diff_short"].mean()
+                )
+
+                fractal_analysis_df.loc[last_index, "median_time_diff"] = (
+                    group_data["time_diff_short"].median()
+                )
+
+        start_index = fractal_analysis_df.index[0]
+        fractal_analysis_df.loc[start_index, "avg no of fractals"] = (
+            fractal_analysis_df["fractal_count"].mean()
+        )
+        fractal_analysis_df.loc[start_index, "median no of fractals"] = (
+            fractal_analysis_df["avg_time_diff"].median()
+        )
+        for key, value in fractal_analysis.items():
+            fractal_analysis_df.loc[start_index, key] = value
+
+        write_dataframe_to_csv(
+            fractal_analysis_df,
+            SG_FRACTAL_ANALYSIS_OUTPUT_FOLDER,
+            "fractal_analysis.csv",
+        )
 
     merged_df["previous_cycle_id"] = merged_df[
         cycle_cols[validated_data["cycle_to_consider"]]

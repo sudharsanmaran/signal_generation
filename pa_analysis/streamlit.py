@@ -77,6 +77,8 @@ def main_1():
                 categories.keys(),
             )
 
+            streamlit_inputs["category"] = selected_category
+
             all_flag_combinations = [*categories[selected_category]]
 
             if streamlit_inputs["allowed_direction"] in (

@@ -118,6 +118,9 @@ VOLUME = "volume"
 MERGED_DF_FOLDER = str(BASE_OUTPUT_FOLDER / SG / "merged_df")
 SG_OUTPUT_FOLDER = str(BASE_OUTPUT_FOLDER / SG / "signal_generation_output")
 SG_CYCLE_OUTPUT_FOLDER = str(BASE_OUTPUT_FOLDER / SG / "cycle_output")
+SG_FRACTAL_ANALYSIS_OUTPUT_FOLDER = str(
+    BASE_OUTPUT_FOLDER / SG / "fractal_analysis_output"
+)
 PA_ANALYSIS_FOLDER = str(BASE_OUTPUT_FOLDER / PA / "pa_analysis_outputs")
 PA_ANALYSIS_CYCLE_FOLDER = str(
     BASE_OUTPUT_FOLDER / PA / "pa_analysis_cycle_outputs"

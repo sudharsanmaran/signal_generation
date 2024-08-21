@@ -13,6 +13,7 @@ class PAOutput(FractalInput, BollingerBandInput):
     allowed_direction: MarketDirection
     trade_start_time: Optional[time] = None
     trade_end_time: Optional[time] = None
+    calculate_fractal_analysis: bool = False
 
 
 def validate_pa_input(input):

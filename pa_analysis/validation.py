@@ -11,6 +11,8 @@ class CycleAnalysis(CycleInputs):
     include_volume: bool = False
     include_volatile: bool = False
 
+    category: int = None
+
     # @field_validator("include_volume", mode="before")
     # def validate_include_volume(cls, v, values):
     #     """

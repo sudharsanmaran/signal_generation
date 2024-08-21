@@ -74,6 +74,9 @@ def process_cycles(**kwargs):
     # process the data
     for time_frame, df in all_df.items():
 
+        start_index = df.index[0]
+        df.loc[start_index, "category"] = kwargs["category"]
+
         results = analyze_cycles(df, time_frame, kwargs)
 
         # max to min percent
@@ -433,7 +436,7 @@ def update_secondary_cycle_analytics(
     write_dataframe_to_csv(
         df,
         PA_ANALYSIS_CYCLE_FOLDER,
-        f"{output_file_name}.csv".replace(":","-"),
+        f"{output_file_name}.csv".replace(":", "-"),
     )
     return results
 
