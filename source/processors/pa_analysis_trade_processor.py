@@ -62,24 +62,29 @@ def process_pa_output(validated_data, *args):
             fractal_path,
             index,
         ),
-        "bb_band": {
-            "read": validated_data["check_bb_band"],
-            "file_path": os.path.join(
-                bb_path,
-                instrument,
-                f"{instrument}_TF_{validated_data['bb_file_number']}.csv",
-            ),
-            "index_col": "dt",
-            "cols": [
-                index,
-                f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper(
-                )}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}',
-            ],
-            "rename": {
-                f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper()}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}': f"bb_{validated_data['bb_band_column']}"
-            },
-        },
     }
+
+    if validated_data["check_bb_band"]:
+        file_details.update(
+            {
+                "bb_band": {
+                    "read": validated_data["check_bb_band"],
+                    "file_path": os.path.join(
+                        bb_path,
+                        instrument,
+                        f"{instrument}_TF_{validated_data['bb_file_number']}.csv",
+                    ),
+                    "index_col": "dt",
+                    "cols": [
+                        index,
+                        f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper()}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}',
+                    ],
+                    "rename": {
+                        f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper()}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}': f"bb_{validated_data['bb_band_column']}"
+                    },
+                },
+            }
+        )
 
     cycle_cols = get_cycle_columns(pa_df)
 
