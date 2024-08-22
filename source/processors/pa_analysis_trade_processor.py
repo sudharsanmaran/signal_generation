@@ -30,6 +30,7 @@ from source.processors.signal_trade_processor import (
 )
 from source.trade import Trade, initialize
 from source.utils import write_dataframe_to_csv
+from tradesheet.index import generate_tradesheet
 
 
 def process_pa_output(validated_data, *args):
@@ -221,6 +222,12 @@ def process_pa_output(validated_data, *args):
     )
 
     write_dataframe_to_csv(output_df, SG_CYCLE_OUTPUT_FOLDER, file_name)
+
+    if Trade.trigger_trade_management:
+        print("Trade Management Triggered")
+        generate_tradesheet(
+            validated_data, output_df, "", instrument
+        )
 
 
 def get_cycle_columns(merged_df):

@@ -506,6 +506,8 @@ def multiple_process(validated_input, process: callable):
     instruments = validated_input.get("instruments", [])
 
     # Dynamic worker count
+    # todo
+    #  for pa db we don't have stategies and instruments
     num_workers = min(
         int(multiprocessing.cpu_count() * cpu_percent_to_use),
         len(strategy_pairs) * len(instruments),

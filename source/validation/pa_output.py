@@ -15,6 +15,8 @@ class PAOutput(FractalInput, BollingerBandInput):
     trade_end_time: Optional[time] = None
     calculate_fractal_analysis: bool = False
 
+    trigger_trade_management: bool = False
+
 
 def validate_pa_input(input):
     try:
