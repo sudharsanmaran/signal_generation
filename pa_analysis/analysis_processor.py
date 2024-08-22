@@ -10,7 +10,7 @@ from source.constants import (
     VOLUME_OUTPUT_FOLDER,
     MarketDirection,
 )
-from source.data_reader import load_startegy_data_1
+from source.data_reader import load_strategy_data_1
 from source.processors.cycle_trade_processor import (
     get_base_df,
     include_volatile_volume_tags,
@@ -114,7 +114,7 @@ def process_strategy(validated_data, strategy_pair, instrument):
         validated_data.get("start_date"), validated_data.get("end_date")
     )
 
-    strategy_df = load_startegy_data_1(
+    strategy_df = load_strategy_data_1(
         instrument,
         strategy_pair,
         start_datetime,
@@ -129,9 +129,7 @@ def process_strategy(validated_data, strategy_pair, instrument):
     strategy_df = include_volatile_volume_tags(validated_data, strategy_df)
 
     if strategy_df.empty:
-        raise ValueError(
-            "strategy df id empty"
-        )
+        raise ValueError("strategy df id empty")
 
     base_df = get_base_df(
         validated_data, strategy_df, strategy_pair_str, instrument
@@ -147,7 +145,9 @@ def process_strategy(validated_data, strategy_pair, instrument):
         )
     result_df = pd.DataFrame(result_base_df)
     write_dataframe_to_csv(
-        result_df, PA_ANALYSIS_FOLDER, f"{output_file_name}.csv".replace(":","-")
+        result_df,
+        PA_ANALYSIS_FOLDER,
+        f"{output_file_name}.csv".replace(":", "-"),
     )
     return result_base_df
 
