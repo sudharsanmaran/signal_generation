@@ -113,9 +113,13 @@ def process_pa_output(validated_data, *args):
 
     merged_df = pa_df[cols]
 
+    start_date, end_date = pa_df.index[0], pa_df.index[-1]
+    validated_data["start_date"] = start_date
+    validated_data["end_date"] = end_date
+
     dfs = read_files(
-        pa_df.index[0],
-        pa_df.index[-1],
+        start_date,
+        end_date,
         file_details,
     )
 
@@ -231,7 +235,7 @@ def process_pa_output(validated_data, *args):
     if Trade.trigger_trade_management:
         print("Trade Management Triggered")
         generate_tradesheet(
-            validated_data, output_df, "", instrument
+            validated_data, output_df, "PA DB", instrument
         )
 
 

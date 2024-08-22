@@ -2,9 +2,10 @@ from datetime import time
 from typing import Optional
 from source.constants import CycleType, MarketDirection, TradeType
 from source.validation.base_validation import BollingerBandInput, FractalInput
+from source.validation.validate_trade_management import TradingConfiguration
 
 
-class PAOutput(FractalInput, BollingerBandInput):
+class PAOutput(FractalInput, BollingerBandInput, TradingConfiguration):
     pa_file: str
     cycle_to_consider: CycleType
     tp_percentage: float
