@@ -204,7 +204,7 @@ def read_files(
                 dtype=details.get("dtype", None),
                 index_col=details["index_col"],
             )
-            df.index = pd.to_datetime(df.index, errors='coerce')
+            df.index = pd.to_datetime(df.index, errors="coerce")
 
             # Filter the DataFrame for the specified date range
             df = df.loc[start_date:end_date]
@@ -216,7 +216,7 @@ def read_files(
     return data_frames
 
 
-def load_startegy_data_1(
+def load_strategy_data_1(
     instrument,
     strategy_pairs: Tuple[Tuple],
     start_date,
