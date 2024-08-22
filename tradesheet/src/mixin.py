@@ -5,8 +5,8 @@ import time
 import pandas as pd
 import numpy as np
 
-from tradesheet.constants import ExpiryCols, EXPIRY_FILE, LOT_FILE, StrikeDiffCols, STRIKE_FILE, ONLY_DATE, EXIT_DATE, \
-    InputCols, EXIT_EXPIRY, DTE_COL, EXPIRY_COL, LOT_SIZE, STRIKE_DIFF, EXPIRY_NUMBER_COL, OPTION_FILE_NAME, DATE
+from tradesheet.constants import ExpiryCols, EXPIRY_FILE, STOCKS_EXPIRY_FILE, LOT_FILE, STOCKS_LOT_FILE, StrikeDiffCols, STRIKE_FILE, STOCKS_STRIKE_FILE, \
+    ONLY_DATE, EXIT_DATE, InputCols, EXIT_EXPIRY, DTE_COL, EXPIRY_COL, LOT_SIZE, STRIKE_DIFF, EXPIRY_NUMBER_COL, OPTION_FILE_NAME, DATE
 from tradesheet.src.cash import CashSegment
 
 
@@ -29,10 +29,10 @@ class OptionMixin:
         if self.is_next_expiry and self.expiry != self.next_expiry:
             self.next_expiry_column = self.get_expiry_column_name(self.next_expiry)
 
-        self.expiry_df = self.read_expiry_data(ExpiryCols, EXPIRY_FILE, parse_date=True)
-        self.lot_df = self.read_expiry_data(StrikeDiffCols, LOT_FILE)
+        self.expiry_df = self.read_expiry_data(ExpiryCols, [EXPIRY_FILE, STOCKS_EXPIRY_FILE], parse_date=True)
+        self.lot_df = self.read_expiry_data(StrikeDiffCols, [LOT_FILE, STOCKS_LOT_FILE]) 
         if self.is_hedge or self.is_option:
-            self.strike_df = self.read_expiry_data(StrikeDiffCols, STRIKE_FILE)
+            self.strike_df = self.read_expiry_data(StrikeDiffCols, [STRIKE_FILE, STOCKS_STRIKE_FILE]) 
 
         self.ee_df[ONLY_DATE] = pd.to_datetime(self.ee_df[InputCols.ENTRY_DT]).dt.date
         self.ee_df[EXIT_DATE] = pd.to_datetime(self.ee_df[InputCols.EXIT_DT]).dt.date

@@ -120,20 +120,24 @@ class TradeSheetGenerator:
             expiry_date_columns.append(self.next_expiry_column)
         return [col_class.SYMBOL] + expiry_date_columns
 
-    def read_expiry_data(self, col_class: object, file_path: str, parse_date: bool = False) -> pd.DataFrame:
+    def read_expiry_data(self, col_class: object, file_path_lst: list, parse_date: bool = False) -> pd.DataFrame:
         """Function will read file and convert date column to date and return df
             This function is used to read expiry, strike and lot size file.
         """
-        df = pd.read_csv(file_path, date_format=col_class.DATE_FORMAT)
-        df[col_class.DATE] = pd.to_datetime(df[col_class.DATE]).dt.date
-        if parse_date:
-            for col in df.columns.to_list():
-                if ExpiryCols.EXPIRY_PREFIX in col:
-                    df[col] = pd.to_datetime(df[col]).dt.date
+        final_df = pd.DataFrame()
+        for file_path in file_path_lst:
+            df = pd.read_csv(file_path, date_format=col_class.DATE_FORMAT)
+            df[col_class.DATE] = pd.to_datetime(df[col_class.DATE]).dt.date
+            if parse_date:
+                for col in df.columns.to_list():
+                    if ExpiryCols.EXPIRY_PREFIX in col:
+                        df[col] = pd.to_datetime(df[col]).dt.date
 
-        return df[
-            (df[col_class.SYMBOL] == self.symbol) & (df[col_class.DATE] >= self.start_date) & (
-                    df[col_class.DATE] <= self.ee_df[InputCols.EXIT_DT].max().date())]
+            df = df[
+                (df[col_class.SYMBOL] == self.symbol) & (df[col_class.DATE] >= self.start_date) & (
+                        df[col_class.DATE] <= self.ee_df[InputCols.EXIT_DT].max().date())]
+            final_df = pd.concat([final_df, df])
+        return final_df
 
     def sum_of_volume(self, date: datetime, ticker=None) -> int:
         """function is used to find sum of volume of entry and exit time.
