@@ -923,7 +923,9 @@ def main():
                     write_user_inputs(temp, filename)
 
                 # Start trade processing
-                execute(validated_input, exec_func)
+                execute(
+                    validated_input, exec_func, expander_option=expander_option
+                )
     else:
         st.error("Please fill in all the required fields.")
 
@@ -1569,14 +1571,21 @@ def update_volume_and_volatile_files(streamlit_inputs):
         streamlit_inputs["volume_tag_to_process"] = volume_tag_to_process
 
 
-def execute(validated_input, exec_func: callable, module="Trade Management"):
+def execute(
+    validated_input,
+    exec_func: callable,
+    module="Trade Management",
+    expander_option="Signal",
+):
     start = time.time()
-    # try:
-    # multiple_process(validated_input, exec_func)
-    exec_func(validated_input, (1,), "ABBOTINDIA")
-    # except Exception as e:
-    #     st.error(f"Error executing {module}: {e}")
-    #     return
+    if expander_option == "PA DB":
+        exec_func(validated_input)
+    else:
+        try:
+            multiple_process(validated_input, exec_func)
+        except Exception as e:
+            st.error(f"Error executing {module}: {e}")
+            return
     stop = time.time()
 
     st.success(
