@@ -1,3 +1,5 @@
+from source.constants import OutputColumn, MarketDirection
+
 INPUT_FILE = "input_file.csv"
 # INPUT_FILES_PATH = "H:\\Sudharsan\\signal_generation\\calathea_capital\\tradesheet\\"
 INPUT_FILES_PATH = "D:\\code\\SUDHARSAN\\signal_generation\\tradesheet\\"
@@ -10,6 +12,10 @@ EXPIRY_FILE = f"{DB_FILE_PATH}EXPIRY.csv"
 STRIKE_FILE = f"{DB_FILE_PATH}STRIKE_DIFF.csv"
 LOT_FILE = f"{DB_FILE_PATH}LOTSIZE.csv"
 
+STOCKS_EXPIRY_FILE = f"{DB_FILE_PATH}STOCKS_EXPIRY.csv"
+STOCKS_STRIKE_FILE = f"{DB_FILE_PATH}STOCKS_STRIKE_DIFF.csv"
+STOCKS_LOT_FILE = f"{DB_FILE_PATH}STOCKS_LOTSIZE.csv"
+
 CASH_FILE_PATH = f"{DATABASE_PATH}CSV"
 CASH_FILE_PREFIX = "GFDLNFO_MINUTE_{}_SPOT_"
 
@@ -18,9 +24,11 @@ FUTURE_FILE_PREFIX = "GFDLNFO_MINUTE_{}-{}.NFO_{}.csv"
 
 OPTION_FILE_PATH = f"{DATABASE_PATH}CSV_OPT"
 OPTION_FILE_NAME = "{}_{}_OPT.csv"
+OPTION_DATE_FORMAT = "%d/%m/%Y %H:%M:%S"
 
 CASH = "CASH"
 ENTRY = "Entry"
+PRE_EXIT = "PRE_EXIT"
 EXIT = "Exit"
 CHECK_AD = "Check A/D"
 DATE = "DateTime"
@@ -45,6 +53,11 @@ class ExitTypes:
 class InputValues:
     APPRECIATION = "Appreciation"
     DEPRECIATION = "Depreciation"
+
+
+class TradeType:
+    REDEPLOYMENT = "redeployment"
+    ROLLOVER = "rollover"
 
 
 class InputFileCols:
@@ -83,10 +96,12 @@ class InputFileCols:
     CAPITAL = "capital"
     RISK = "risk"
     LEVERAGE = "leverage"
-    DTE_BASED_EXIT = "DTE Bases Exit"
-    EXIT_DTE_NUMBER = "Exit DTE Number"
-    EXIT_DTE_TIME = "Exit DTE Time"
-    ROLLOVER_CANDLE = "Rollover candle"
+
+    DTE_BASED_EXIT = "dte_based_exit"
+    EXIT_DTE_NUMBER = "exit_dte_number"
+    EXIT_DTE_TIME = "exit_dte_time"
+    ROLLOVER_CANDLE = "rollover_candle"
+
     HEDGE = "hedge"
     HEDGE_DELAYED_EXIT = "hedge_delayed_exit"
     HEDGE_EXPIRY = "hedge_expiry"
@@ -94,14 +109,14 @@ class InputFileCols:
 
 
 class InputCols:
-    TAG = "SG_Signal"
-    EXIT_CLOSE = "SG_Exit Price"
-    ENTRY_CLOSE = "SG_Entry Price"
-    EXIT_TYPE = "SG_Exit Types"
-    ENTRY_DT = "SG_Entry Datetime"
-    EXIT_DT = "SG_Exit Datetime"
-    GREEN = "L"
-    RED = "S"
+    TAG = OutputColumn.SIGNAL.value
+    EXIT_CLOSE = OutputColumn.EXIT_PRICE.value
+    ENTRY_CLOSE = OutputColumn.ENTRY_PRICE.value
+    EXIT_TYPE = OutputColumn.EXIT_TYPE.value
+    ENTRY_DT = OutputColumn.ENTRY_DATETIME.value
+    EXIT_DT = OutputColumn.EXIT_DATETIME.value
+    GREEN = MarketDirection.LONG.value
+    RED = MarketDirection.SHORT.value
 
 
 class CashCols:
@@ -130,7 +145,6 @@ class OutputCols:
     TRADE_ID = "Trade Id"
     ROLLOVER_ID = "RollOver Id"
     EXPIRY_DATE = "Expiry date"
-    CURRENT_EXPIRY = "Current Expiry / next expiry"
     DTE = "DTE"
     TICKER = "tradingSymbol"
     TRACKING_PRICE = "Tracking Price"
@@ -145,15 +159,14 @@ class OutputCols:
     SL_PERCENT = "SL %"
     EXIT_TIME = "Exit Time"
     EXIT_PRICE = "Exit Price"
-    ENTRY_PRICE = "Entry Price"
-    DELAYED_EXIT_PRICE = "Delayed exit price"
+    ENTRY_TIME = "Entry Time"
     EXIT_TYPE = "Exit Type"
     RE_AD = "RE_Appreciation / Depreciation"
     RE_AD_PERCENT = "RE_Appreciation / Depreciation %"
     RE_AD_PRICE = "RE_Appreciation / Depreciation Price"
     RE_AD_PRICE_LEVEL = "RE A/D price Level"
     RE_AD_TIME = "RE_Appreciation / Depreciation Time"
-    RE_AD_ENTRY_PRICE = "RE_Entry Price"
+    RE_AD_ENTRY_TIME = "RE_Entry TIme"
     RE_AD_EXIT_PRICE = "RE_Appreciation / Depreciation Exit Price"
     RE_EXIT_TYPE = "RE_Appreciation / Depreciation Exit Type"
     RE_EXIT_TIME = "RE_Appreciation / Depreciation Exit Time"
@@ -178,21 +191,20 @@ class OutputCols:
     EXIT_VOLUME = "Volume at exit"
     VOLUME_MIN = "Volume for x mins"
 
+    H_TICKER = "Hedge Symbol"
+    H_ENTRY_PRICE = "Hedge Entry Price"
+    H_EXIT_PRICE = "Hedge Exit Price"
+    H_P_L = "Hedge Profit/loss"
+    H_PRICE_NA = "Hedge price NA"
+    H_RE_ENTRY_PRICE = "RE Hedge Entry Price"
+    H_RE_EXIT_PRICE = "RE Hedge Exit Price"
+    H_RE_P_L = "RE Hedge Profit/loss"
+    H_RE_PRICE_NA = "RE Hedge price NA"
+
 
 exclude = [OutputCols.EXPIRY_DATE, OutputCols.DTE]
 
 RESULT_DICT = {value: None for name, value in vars(OutputCols).items(
 ) if not callable(value) and not name.startswith('_') and value not in exclude}
 EXPIRY_COL = OutputCols.EXPIRY_DATE
-
-
-class HedgeCols:
-    TICKER = "Hedge Symbol"
-    ENTRY_PRICE = "Hedge Entry Price"
-    EXIT_PRICE = "Hedge Exit Price"
-    P_L = "Hedge Profit/loss"
-    PRICE_NA = "Hedge price NA"
-    RE_ENTRY_PRICE = "RE Hedge Entry Price"
-    RE_EXIT_PRICE = "RE Hedge Exit Price"
-    RE_P_L = "RE Hedge Profit/loss"
-    RE_PRICE_NA = "RE Hedge price NA"
+EXPIRY_NUMBER_COL = "Expiry Number"
