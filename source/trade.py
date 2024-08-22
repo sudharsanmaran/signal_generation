@@ -19,7 +19,12 @@ This commented code should help clarify the purpose and functionality of each pa
 from typing import Dict, Optional, List
 
 # Import project-specific constants
-from source.constants import MarketDirection, OutputColumn, TradeExitType
+from source.constants import (
+    CycleType,
+    MarketDirection,
+    OutputColumn,
+    TradeExitType,
+)
 
 
 class Trade:
@@ -57,6 +62,12 @@ class Trade:
 
     skip_rows: bool = False
     no_of_rows_to_skip: Optional[int] = None
+
+    cycle_to_consider: CycleType = None
+    cycle_columns: Optional[Dict] = {}
+    current_cycle: Optional[str] = None
+
+    calculate_tp: bool = False
 
     def __init__(
         self, entry_signal, entry_datetime, entry_price, signal_count
@@ -110,11 +121,13 @@ class Trade:
         if not self.trade_closed:
             self.exit_id_counter += 1
 
-            if exit_type in (
+            if exit_type in {
                 TradeExitType.SIGNAL,
                 TradeExitType.TRAILING,
                 TradeExitType.END,
-            ):
+                TradeExitType.CYCLE_CHANGE,
+                TradeExitType.TP,
+            }:
                 self.trade_closed = True
 
             if Trade.fractal_exit_count:
@@ -190,7 +203,7 @@ class Trade:
         ]
 
 
-def initialize(validated_input):
+def initialize(validated_input, strategy_pair=None):
 
     def set_compare_functions(direction, condition):
         if condition == "higher":
@@ -229,6 +242,7 @@ def initialize(validated_input):
     Trade.trigger_trade_management = validated_input.get(
         "trigger_trade_management"
     )
+    Trade.cycle_to_consider = validated_input.get("cycle_to_consider")
     Trade.market_direction_conditions = {
         "entry": {
             MarketDirection.LONG: validated_input.get("long_entry_signals"),
@@ -240,9 +254,10 @@ def initialize(validated_input):
         },
     }
     Trade.allowed_direction = validated_input.get("allowed_direction")
-    Trade.signal_columns = [
-        f"TAG_{id}" for id in validated_input.get("portfolio_ids")
-    ]
+    Trade.signal_columns = (
+        [f"TAG_{portfolio_id}_{strategy_id}" for portfolio_id,
+            strategy_id in zip(validated_input['portfolio_ids'], strategy_pair)] if strategy_pair else None
+    )
 
     fractal_exit_count = validated_input.get("fractal_exit_count")
     Trade.fractal_exit_count = (
@@ -250,9 +265,9 @@ def initialize(validated_input):
     )
 
     if Trade.check_bb_band:
-        Trade.bb_band_column = f"P_1_{validated_input.get('bb_band_column').upper()}_BAND_{validated_input.get('bb_band_sd')}"
+        Trade.bb_band_column = f"P_{validated_input['parameter_id']}_{validated_input.get('bb_band_column').upper()}_BAND_{validated_input['period']}_{validated_input.get('bb_band_sd')}"
     if Trade.check_trail_bb_band:
-        Trade.trail_bb_band_column = f"P_1_{validated_input.get('trail_bb_band_column').upper()}_BAND_{validated_input.get('trail_bb_band_sd')}"
+        Trade.trail_bb_band_column = f"P_{validated_input['parameter_id']}_{validated_input.get('trail_bb_band_column').upper()}_BAND_{validated_input['period']}_{validated_input.get('trail_bb_band_sd')}"
 
     # Initialize trail compare functions with default values
     Trade.trail_compare_functions = {
@@ -281,3 +296,6 @@ def initialize(validated_input):
     if validated_input.get("skip_rows"):
         Trade.skip_rows = True
         Trade.no_of_rows_to_skip = validated_input.get("no_of_rows_to_skip")
+
+    if validated_input.get("calculate_tp"):
+        Trade.calculate_tp = True

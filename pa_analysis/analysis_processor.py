@@ -1,22 +1,28 @@
-import csv
 import os
 
 import pandas as pd
+
 from pa_analysis.constants import OutputHeader, RankingColumns, SignalColumns
 from pa_analysis.cycle_processor import process_cycles
-from pa_analysis.utils import make_positive, make_round, write_dict_to_csv
-from source.constants import MarketDirection
-from source.data_reader import load_strategy_data
-from source.trade_processor import (
-    get_market_direction,
-    write_dataframe_to_csv,
+from source.constants import (
+    PA_ANALYSIS_FOLDER,
+    VOLATILE_OUTPUT_FOLDER,
+    VOLUME_OUTPUT_FOLDER,
+    MarketDirection,
+)
+from source.data_reader import load_strategy_data_1
+from source.processors.cycle_trade_processor import (
+    get_base_df,
+    include_volatile_volume_tags,
 )
 
-
-def format_dates(start_date, end_date):
-    start_datetime = pd.to_datetime(start_date, format="%d/%m/%Y %H:%M:%S")
-    end_datetime = pd.to_datetime(end_date, format="%d/%m/%Y %H:%M:%S")
-    return start_datetime, end_datetime
+from source.utils import (
+    format_dates,
+    make_positive,
+    make_round,
+    write_dataframe_to_csv,
+    write_dict_to_csv,
+)
 
 
 # Function to flatten the nested dictionary
@@ -98,22 +104,32 @@ def format(data):
 
 def process_strategy(validated_data, strategy_pair, instrument):
 
-    strategy_pair_str = "_".join(map(lambda x: str(x), strategy_pair))
+    strategy_pair_str = ",".join(
+        "{}:{}".format(*item) for item in strategy_pair
+    )
 
-    base_path = os.getenv("DB_PATH")
+    strategy_path = os.getenv("STRATEGY_DB_PATH")
 
     start_datetime, end_datetime = format_dates(
         validated_data.get("start_date"), validated_data.get("end_date")
     )
 
-    strategy_df = load_strategy_data(
+    strategy_df = load_strategy_data_1(
         instrument,
-        validated_data.get("portfolio_ids"),
         strategy_pair,
         start_datetime,
         end_datetime,
-        base_path,
+        strategy_path,
     )[0]
+
+    if strategy_df.empty:
+        print(f"Empty DataFrame for {instrument} and {strategy_pair_str}")
+        raise ValueError("Empty DataFrame")
+
+    strategy_df = include_volatile_volume_tags(validated_data, strategy_df)
+
+    if strategy_df.empty:
+        raise ValueError("strategy df id empty")
 
     base_df = get_base_df(
         validated_data, strategy_df, strategy_pair_str, instrument
@@ -122,11 +138,17 @@ def process_strategy(validated_data, strategy_pair, instrument):
     # based on base df need to generate output analytic df
     result_base_df = generate_analytics(base_df)
     if validated_data["calculate_cycles"]:
-        process_cycles(
+        output_file_name = process_cycles(
             **validated_data,
             base_df=base_df,
             instrument=instrument,
         )
+    result_df = pd.DataFrame(result_base_df)
+    write_dataframe_to_csv(
+        result_df,
+        PA_ANALYSIS_FOLDER,
+        f"{output_file_name}.csv".replace(":", "-"),
+    )
     return result_base_df
 
 
@@ -558,94 +580,3 @@ def update_signals(result, direction, plus_mask_df, minus_mask_df):
     result[plus] = len(plus_mask_df)
     result[minus] = len(minus_mask_df)
     result[net] = result[plus] + result[minus]
-
-
-def get_base_df(validated_data, strategy_df, strategy_pair_str, instrument):
-    """
-    Get the base DataFrame for the strategy.
-
-    Parameters:
-        validated_data (dict): The validated data from the user.
-        strategy_df (DataFrame): The DataFrame containing the strategy data.
-
-    Returns:
-        DataFrame: The DataFrame containing the base strategy data.
-    """
-
-    # Initialize columns for results
-    strategy_df["signal_change"] = False
-    strategy_df["time"] = 0.0
-
-    signal_columns = [
-        f"TAG_{id}" for id in validated_data.get("portfolio_ids")
-    ]
-    market_direction_conditions = {
-        "entry": {
-            MarketDirection.LONG: validated_data["long_entry_signals"],
-            MarketDirection.SHORT: validated_data["short_entry_signals"],
-        }
-    }
-
-    def get_direction(row):
-        market_direction = get_market_direction(
-            row,
-            condition_key="entry",
-            signal_columns=signal_columns,
-            market_direction_conditions=market_direction_conditions,
-        )
-        if market_direction:
-            return market_direction
-        return MarketDirection.UNKNOWN
-
-    # display full df
-    pd.set_option("display.max_rows", None)
-
-    strategy_df["market_direction"] = strategy_df.apply(get_direction, axis=1)
-    strategy_df["previous_market_direction"] = strategy_df[
-        "market_direction"
-    ].shift(fill_value=strategy_df["market_direction"].iloc[0])
-
-    strategy_df["signal_change"] = (
-        strategy_df["market_direction"]
-        != strategy_df["previous_market_direction"]
-    )
-
-    # Filter out rows where there was no signal change
-    filtered_df = strategy_df[strategy_df["signal_change"]].copy()
-
-    filtered_df["time"] = make_round(
-        filtered_df.index.to_series().diff().shift(-1).dt.total_seconds()
-        / (3600 * 24)
-    )
-
-    filtered_df["points"] = filtered_df["Close"].diff().shift(-1).fillna(0)
-    filtered_df["profit_loss"] = 0
-
-    # Calculate points based on market direction
-    long_mask = filtered_df["market_direction"] == MarketDirection.LONG
-    short_mask = filtered_df["market_direction"] == MarketDirection.SHORT
-    filtered_df.loc[long_mask, "points"] = make_round(
-        filtered_df["Close"].shift(-1) - filtered_df["Close"]
-    )
-    filtered_df.loc[short_mask, "points"] = make_round(
-        filtered_df["Close"] - filtered_df["Close"].shift(-1)
-    )
-
-    # Determine profit or loss
-    filtered_df["profit_loss"] = (filtered_df["points"] > 0).astype(int)
-
-    filtered_df["points_percent"] = make_round(
-        filtered_df["points"] / filtered_df["Close"] * 100
-    )
-
-    filtered_df["temp"] = filtered_df["points"] * filtered_df["time"]
-
-    filtered_df = filtered_df[:-1]
-
-    write_dataframe_to_csv(
-        filtered_df,
-        "pa_analysis_output",
-        f"filtered_df_{instrument}_{strategy_pair_str}.csv",
-    )
-
-    return filtered_df

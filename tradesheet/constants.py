@@ -1,10 +1,11 @@
 from source.constants import OutputColumn, MarketDirection
 
 INPUT_FILE = "input_file.csv"
-INPUT_FILES_PATH = "H:\\Sudharsan\\signal_generation\\calathea_capital\\tradesheet\\"
+# INPUT_FILES_PATH = "H:\\Sudharsan\\signal_generation\\calathea_capital\\tradesheet\\"
+INPUT_FILES_PATH = "D:\\code\\SUDHARSAN\\signal_generation\\tradesheet\\"
 DB_FILE_PATH = f"{INPUT_FILES_PATH}DB\\"
 OUTPUT_PATH = f"{INPUT_FILES_PATH}Output\\"
-DATABASE_PATH = "S:\\MBM\\MBM_DATA_BACKTEST\\"
+DATABASE_PATH = "D:\\MBM\\MBM_DATA_BACKTEST\\"
 
 ENTRY_EXIT_FILE = f"{DB_FILE_PATH}module_1_output.csv"
 EXPIRY_FILE = f"{DB_FILE_PATH}EXPIRY.csv"
@@ -203,6 +204,7 @@ class OutputCols:
 
 exclude = [OutputCols.EXPIRY_DATE, OutputCols.DTE]
 
-RESULT_DICT = {value: None for name, value in vars(OutputCols).items() if not callable(value) and not name.startswith('_') and value not in exclude}
+RESULT_DICT = {value: None for name, value in vars(OutputCols).items(
+) if not callable(value) and not name.startswith('_') and value not in exclude}
 EXPIRY_COL = OutputCols.EXPIRY_DATE
 EXPIRY_NUMBER_COL = "Expiry Number"

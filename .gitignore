@@ -15,6 +15,7 @@ log.txt
 Pipfile.lock
 env3.*
 env
+virtual
 .env
 docs_build
 site_build
@@ -50,9 +51,12 @@ user_inputs*.csv
 .~lock.merged_df*.csv#
 .~lock.output*.csv#
 .~lock.user_inputs*.csv#
+.~lock.*
 user_inputs.json
 
 tradesheet/Output
+
+outputs/*
 
 filter*.csv
 final_result.csv
@@ -60,3 +64,5 @@ pa_analysis_output.zip
 pa_analysis_output/cycle_outpts/base_df/base*
 pa_analysis_output/cycle_outpts/results/result*
 pa_analysis_output/cycle_outpts/cycle_base_df.csv
+pa_analysis_output/cycle_outpts/base_df/.~lock.base_df_tf_2.csv#
+.env

@@ -22,6 +22,7 @@ The `data_reader.py` module provided is responsible for reading and merging vari
 
 from functools import reduce
 import os
+from typing import Tuple
 import pandas as pd
 
 # Import project-specific constants
@@ -87,7 +88,9 @@ def read_data(
     end_date = pd.to_datetime(end_date, format="%d/%m/%Y %H:%M:%S")
 
     # Get the base path from environment variables
-    base_path = os.getenv("DB_PATH")
+    strategy_path = os.getenv("STRATEGY_DB_PATH")
+    bb_path = os.getenv("BB_DB_PATH")
+    fractal_path = os.getenv("SIGNAL_FRACTAL_DB_PATH")
 
     # Loop through each portfolio and strategy ID pair
     all_dfs = load_strategy_data(
@@ -96,49 +99,36 @@ def read_data(
         strategy_ids,
         start_date,
         end_date,
-        base_path,
+        strategy_path,
     )
 
     # Index column name
-    index = "TIMESTAMP"
+    index = "dt"
 
     # Dictionary to store file details for reading additional data
     file_details = {
-        "entry_fractal": {
-            "read": read_entry_fractal,
-            "file_path": os.path.join(
-                base_path,
-                "Fractal",
-                instrument,
-                f"{entry_fractal_file_number}_result.csv",
-            ),
-            "index_col": "TIMESTAMP",
-            "cols": [index, *entry_fractal_columns],
-            "dtype": {col: "boolean" for col in entry_fractal_columns},
-            "rename": {col: f"entry_{col}" for col in entry_fractal_columns},
-        },
-        "exit_fractal": {
-            "read": read_exit_fractal,
-            "file_path": os.path.join(
-                base_path,
-                "Fractal",
-                instrument,
-                f"{exit_fractal_file_number}_result.csv",
-            ),
-            "index_col": "TIMESTAMP",
-            "cols": [index, *exit_fractal_columns],
-            "dtype": {col: "boolean" for col in entry_fractal_columns},
-            "rename": {col: f"exit_{col}" for col in entry_fractal_columns},
-        },
+        "entry_fractal": update_entry_fractal_file(
+            instrument,
+            entry_fractal_file_number,
+            read_entry_fractal,
+            fractal_path,
+            index,
+        ),
+        "exit_fractal": update_exit_fractal_file(
+            instrument,
+            exit_fractal_file_number,
+            read_exit_fractal,
+            fractal_path,
+            index,
+        ),
         "bb_band": {
             "read": read_bb_fractal,
             "file_path": os.path.join(
-                base_path,
-                "BB Band",
+                bb_path,
                 instrument,
-                f"{bb_file_number}_result.csv",
+                f"{instrument}_TF_{bb_file_number}.csv",
             ),
-            "index_col": "TIMESTAMP",
+            "index_col": "dt",
             "cols": [index, bb_band_column],
             "rename": {bb_band_column: f"bb_{bb_band_column}"},
         },
@@ -147,12 +137,11 @@ def read_data(
             "path": "BB Band",
             "file_number": trail_bb_file_number,
             "file_path": os.path.join(
-                base_path,
-                "BB Band",
+                bb_path,
                 instrument,
-                f"{trail_bb_file_number}_result.csv",
+                f"{instrument}_TF_{trail_bb_file_number}.csv",
             ),
-            "index_col": "TIMESTAMP",
+            "index_col": "dt",
             "cols": [index, trail_bb_band_column],
             "rename": {trail_bb_band_column: f"trail_{trail_bb_band_column}"},
         },
@@ -161,6 +150,40 @@ def read_data(
     dfs = read_files(start_date, end_date, file_details)
     all_dfs.extend(dfs.values())
     return all_dfs
+
+
+def update_exit_fractal_file(
+    instrument, exit_fractal_file_number, read_exit_fractal, base_path, index
+):
+    return {
+        "read": read_exit_fractal,
+        "file_path": os.path.join(
+            base_path,
+            instrument,
+            f"{instrument}_TF_{exit_fractal_file_number}.csv",
+        ),
+        "index_col": index,
+        "cols": [index, *exit_fractal_columns],
+        "dtype": {col: "boolean" for col in entry_fractal_columns},
+        "rename": {col: f"exit_{col}" for col in entry_fractal_columns},
+    }
+
+
+def update_entry_fractal_file(
+    instrument, entry_fractal_file_number, read_entry_fractal, base_path, index
+):
+    return {
+        "read": read_entry_fractal,
+        "file_path": os.path.join(
+            base_path,
+            instrument,
+            f"{instrument}_TF_{entry_fractal_file_number}.csv",
+        ),
+        "index_col": index,
+        "cols": [index, *entry_fractal_columns],
+        "dtype": {col: "boolean" for col in entry_fractal_columns},
+        "rename": {col: f"entry_{col}" for col in entry_fractal_columns},
+    }
 
 
 def read_files(
@@ -181,14 +204,51 @@ def read_files(
                 dtype=details.get("dtype", None),
                 index_col=details["index_col"],
             )
-            df.index = pd.to_datetime(df.index)
+            df.index = pd.to_datetime(df.index, errors="coerce")
+
             # Filter the DataFrame for the specified date range
             df = df.loc[start_date:end_date]
+
             # Rename columns if specified
             if "rename" in details:
                 df.rename(columns=details["rename"], inplace=True)
             data_frames[file_name] = df
     return data_frames
+
+
+def load_strategy_data_1(
+    instrument,
+    strategy_pairs: Tuple[Tuple],
+    start_date,
+    end_date,
+    base_path,
+):
+    is_close_read, strategy_dfs = False, []
+    for portfolio_id, strategy_id in strategy_pairs:
+        strategy_path = os.path.join(
+            base_path, portfolio_id, instrument, f"{strategy_id}_result.csv"
+        )
+        columns = ["dt", f"TAG_{portfolio_id}_{strategy_id}"]
+        if not is_close_read:
+            columns.insert(1, "Close")
+            is_close_read = True
+        try:
+            strategy_df = pd.read_csv(
+                strategy_path,
+                parse_dates=["dt"],
+                date_format="%Y-%m-%d %H:%M:%S",
+                usecols=columns,
+                index_col="dt",
+            )
+        except Exception as e:
+            print(f"Error reading {strategy_path}: {e}")
+            raise e
+        strategy_df.index = pd.to_datetime(strategy_df.index)
+        strategy_df = strategy_df.loc[start_date:end_date]
+        strategy_dfs.append(strategy_df)
+    all_strategies_df = pd.concat(strategy_dfs, axis=1)
+    all_dfs = [all_strategies_df]
+    return all_dfs
 
 
 def load_strategy_data(
@@ -210,7 +270,7 @@ def load_strategy_data(
             base_path, portfolio_id, instrument, f"{strategy_id}_result.csv"
         )
         # Define the columns to be read from the CSV file
-        columns = ["TIMESTAMP", f"TAG_{portfolio_id}"]
+        columns = ["dt", f"TAG_{portfolio_id}_{strategy_id}"]
         if not is_close_read:
             columns.insert(1, "Close")
             is_close_read = True
@@ -219,10 +279,10 @@ def load_strategy_data(
             # Read the strategy CSV file into a DataFrame
             strategy_df = pd.read_csv(
                 strategy_path,
-                parse_dates=["TIMESTAMP"],
+                parse_dates=["dt"],
                 date_format="%Y-%m-%d %H:%M:%S",
                 usecols=columns,
-                index_col="TIMESTAMP",
+                index_col="dt",
             )
         except Exception as e:
             print(f"Error reading {strategy_path}: {e}")

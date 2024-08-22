@@ -1,5 +1,9 @@
 from enum import Enum
 import os
+from dotenv import load_dotenv
+
+
+load_dotenv(override=True)
 
 
 class OutputHeader(Enum):
@@ -80,27 +84,62 @@ SD_OPTIONS = sorted(
 )
 
 
-class CycleOutputColumns(Enum):
-    DURATION_SIGNAL_START_TO_CYCLE_START = (
-        "Duration Signal Start to Cycle Start"
-    )
-    CYCLE_DURATION = "Cycle Duration"
-    MOVE = "Move"
-    MOVE_PERCENT = "Move Percent"
-    CYCLE_MAX = "Cycle Max"
-    DURATION_TO_MAX = "Duration to Max"
-    DURATION_ABOVE_BB = "Duration Above BB"
-    SIGNAL_START_TO_MAX_POINTS = "Signal Start to Max Points"
-    SIGNAL_START_TO_MAX_PERCENT = "Signal Start to Max Percent"
+class MTMCrossedCycleColumns(Enum):
+    IS_MTM_CROSS_PNT_3 = "IS_MTM Crossed .3"
+    IS_MTM_CROSS_PNT_5 = "IS_MTM Crossed .5"
+    IS_MTM_CROSS_PNT_75 = "IS_MTM Crossed .75"
+    IS_MTM_CROSS_1 = "IS_MTM Crossed 1"
+    IS_MTM_CROSS_2 = "IS_MTM Crossed 2"
+    IS_MTM_CROSS_3 = "IS_MTM Crossed 3"
+    IS_MTM_CROSS_4 = "IS_MTM Crossed 4"
+    IS_MTM_CROSS_5 = "IS_MTM Crossed 5"
+    IS_MTM_CROSS_6 = "IS_MTM Crossed 6"
+    IS_MTM_CROSS_7 = "IS_MTM Crossed 7"
+    IS_MTM_CROSS_8 = "IS_MTM Crossed 8"
+
+
+class SummaryColumns(Enum):
+    INSTRUMENT = "Instrument"
+    START_DATE = "Start Date"
+    END_DATE = "End Date"
+    DURATION = "Duration"
     CATEGORY = "Category"
-    MOVE_START_TO_MAX_CYCLE_POINTS = "Move Start to Max Cycle Points"
-    MOVE_START_TO_MAX_CYCLE_PERCENT = "Move Start to Max Cycle Percent"
-    AVERAGE_TILL_MAX = "Average Till Max"
-    CYCLE_MIN = "Cycle Min"
-    SIGNAL_START_TO_MINIMUM_POINTS = "Signal Start to Minimum Points"
-    SIGNAL_START_TO_MINIMUM_PERCENT = "Signal Start to Minimum Percent"
-    AVERAGE_TILL_MIN = "Average Till Min"
-    DURATION_BETWEEN_MAX_MIN = "Duration Between Max Min"
-    AVG_OF_MAX_TO_AVG_OF_MIN = "Avg of Max to Avg of Min"
-    MAX_TO_MIN = "Max to Min"
-    CLOSE_TO_CLOSE = "Close to Close"
+    PRICE_MOVEMENT = "Price Movement"
+    PRICE_MOVEMENT_PERCENT = "Price Movement Percent"
+    PRICE_MOVEMENT_DURATION = "Price Movement Duration"
+    GROUP_COUNT = "Group Count"
+    WEIGHTED_AVERAGE_SIGNAL_DURATION = (
+        "Weighted Average Signal Duration (in days)"
+    )
+    PROBABILITY = "Probability"
+    NET_POINTS_PER_GROUP = "Net Points (per Group)"
+    NET_POINTS_PERCENT_PER_GROUP = "Net Points Percent (per Group)"
+    RISK_REWARD = "Risk Reward Ratio"
+
+
+class FirstCycleSummaryColumns(Enum):
+    GROUP_COUNT = "Group Count"
+    AVG_NO_OF_CYCLES_PER_GROUP = "Avg No. of Cycles per Group"
+    AVG_CYCLES_DURATION_PER_GROUP = "Avg Cycles Duration per Group"
+    CTC_POINT = "CTC Point"
+    CTC_POINT_PERCENT = "CTC Point Percent"
+    POINTS_FRM_AVG_TILL_MAX_TO_MIN = "Points from Avg till Max to Min"
+    POINTS_FRM_AVG_TILL_MIN_TO_MAX_PERCENT = (
+        "Points from Avg till Min to Max Percent"
+    )
+    POS_NEG_CTC = "Pos Neg CTC"
+
+
+class MTMCycleSummaryColumns(Enum):
+    GROUP_COUNT = "Group Count"
+    AVG_NO_OF_CYCLES_PER_GROUP = "Avg No. of Cycles per Group"
+    AVG_CYCLES_DURATION_PER_GROUP = "Avg Cycles Duration per Group"
+    CTC_POINT = "CTC Point"
+    CTC_POINT_PERCENT = "CTC Point Percent"
+    POINTS_FROM_MAX = "Points from Maximum"
+    POINTS_FROM_MAX_PERCENT = "Points from Maximum Percent"
+    POS_NEG_POINTS_FROM_MAX = "Pos Neg Points from Maximum"
+    POS_NEG_CTC_POINT = "Pos Neg CTC Point"
+    AVG_NO_OF_FRACTAL_PER_CYCLE = "Avg No. of Fractal per Cycle"
+    CTC_RISK_REWARD = "CTC Risk Reward Ratio"
+    POINTS_FROM_MAX_RISK_REWARD = "Points from Maximum Risk Reward Ratio"

@@ -19,49 +19,33 @@ The `validation.py` module provided defines a Pydantic model `StrategyInput` for
 """
 
 # Import necessary libraries
-import ast
-from datetime import datetime, time
 from itertools import chain
-from typing import List, Optional, Union
-from pydantic import BaseModel, ValidationError, field_validator
+from typing import List, Optional
+from pydantic import ValidationError, field_validator
 
 # Import project-specific constants
 from source.constants import MarketDirection, TradeType
-from source.validate_trade_management import TradingConfiguration
+from source.validation.base_validation import (
+    BaseInputs,
+    BollingerBandInput,
+    FractalInput,
+)
+from source.validation.validate_trade_management import TradingConfiguration
 
 
-class StrategyInput(BaseModel):
+class StrategyInput(BaseInputs, FractalInput, BollingerBandInput):
     """
     Pydantic model for validating strategy input data.
     """
 
-    portfolio_ids: tuple
-    strategy_pairs: List[tuple]
-    instruments: List[str]
-    start_date: Union[str, datetime]
-    end_date: Union[str, datetime]
     long_entry_signals: List[tuple]
     long_exit_signals: List[tuple]
     short_entry_signals: List[tuple]
     short_exit_signals: List[tuple]
+
     trade_type: TradeType
-    allowed_direction: MarketDirection
-    trade_start_time: Optional[time] = None
-    trade_end_time: Optional[time] = None
     trigger_trade_management: bool = False
     pa_analysis: bool = False
-
-    check_entry_fractal: bool = None
-    entry_fractal_file_number: str = None
-
-    check_exit_fractal: bool = None
-    fractal_exit_count: Union[int, str] = None
-    exit_fractal_file_number: str = None
-
-    check_bb_band: bool = None
-    bb_file_number: str = None
-    bb_band_sd: float = None
-    bb_band_column: str = None
 
     check_trail_bb_band: bool = None
     trail_bb_file_number: str = None
@@ -76,19 +60,6 @@ class StrategyInput(BaseModel):
 
     skip_rows: bool = False
     no_of_rows_to_skip: Optional[int] = None
-
-    @field_validator("start_date", "end_date")
-    def convert_to_datetime(cls, v):
-        """
-        Convert string dates to datetime objects.
-        """
-        if isinstance(v, str):
-            return datetime.strptime(v, "%d/%m/%Y %H:%M:%S")
-        elif isinstance(v, datetime):
-            return v
-        raise ValueError(
-            'Invalid datetime format, should be "dd/mm/yyyy hh:mm:ss"'
-        )
 
     @field_validator("bb_band_sd", "trail_bb_band_sd")
     def validate_bb_band_sd(cls, v):
@@ -128,38 +99,7 @@ class StrategyInput(BaseModel):
             )
         return v
 
-    # @field_validator("trade_type")
-    # def validate_trade_type(cls, v):
-    #     """
-    #     Validate trade type.
-    #     """
-    #     if v not in {TradeType.INTRADAY, TradeType.POSITIONAL}:
-    #         raise ValueError(
-    #             'Trade type must be one of the following: "Intraday", "Positional"'
-    #         )
-    #     return v
 
-    # @field_validator("allowed_direction")
-    # def validate_allowed_direction(cls, v):
-    #     """
-    #     Validate allowed direction.
-    #     """
-    #     if v not in {MarketDirection.LONG, MarketDirection.SHORT, MarketDirection.ALL}:
-    #         raise ValueError(
-    #             'Allowed direction must be one of the following: "long", "short", "all"'
-    #         )
-    #     return v
-
-    @field_validator("fractal_exit_count")
-    def validate_fractal_exit_count(cls, v):
-        """
-        Validate fractal exit count.
-        """
-        if v.isdigit():
-            return int(v)
-        elif isinstance(v, str) and v.lower() == MarketDirection.ALL.value:
-            return v
-        raise ValueError('Fractal exit count must be an integer or "ALL"')
 
 
 class StrategyInputAndTradingConfig(StrategyInput, TradingConfiguration):
@@ -244,7 +184,7 @@ def check_exit_conditions(validated_data):
         )
 
 
-def validate_input(input_data):
+def validate_signal_input(input_data):
     """
     Validate the input data against the StrategyInput model and custom rules.
 

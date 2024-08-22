@@ -1,47 +1,22 @@
-import csv
-import os
+from collections import defaultdict
+from typing import List, Tuple
 
 
-def make_positive(value):
-    if value < 0:
-        return value * -1
-    return value
+def categorize_signal(all_combinations: List[Tuple[str, ...]]) -> int:
+    """Categorize a signal based on mismatches with all combinations."""
 
+    categories = defaultdict(set)
+    length = len(all_combinations[0])
+    while length:
+        for combination in all_combinations:
+            if any(combination.count(i) == length for i in combination):
+                if combination not in categories[length + 1]:
+                    categories[length].add(combination)
+        length -= 1
 
-def make_round(value):
-    return round(value, 2)
+    # remove empty categories
+    cat_to_remove = [cat for cat in categories if len(categories[cat]) <= 1]
+    for cat in cat_to_remove:
+        del categories[cat]
 
-
-def format_duration(seconds):
-    days = seconds / (3600 * 24)
-    if days >= 1:
-        return f"{make_round(days)} days"
-    hours = seconds / 3600
-    if hours >= 1:
-        return f"{make_round(hours)} hours"
-    minutes = seconds / 60
-    return f"{make_round(minutes)} minutes"
-
-
-def write_dict_to_csv(
-    data,
-    main_header,
-    sub_header=None,
-    output_dir="pa_analysis_output",
-    csv_filename="final_result.csv",
-):
-    csv_file_path = os.path.join(output_dir, csv_filename)
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Write to CSV
-    with open(csv_file_path, mode="w", newline="") as file:
-        writer = csv.writer(file)
-
-        # Write main and sub headers
-        writer.writerow(main_header)
-        if sub_header:
-            writer.writerow(sub_header)
-
-        # Write the data rows
-        for row in data:
-            writer.writerow(row.values())
+    return categories

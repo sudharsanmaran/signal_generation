@@ -23,26 +23,37 @@ To document and comment the provided code in the `streamlit.py` file, I will add
 from datetime import datetime
 import json
 import os
+from pathlib import Path
 import time
 from pydantic import ValidationError
 import streamlit as st
 from itertools import product
-from dotenv import load_dotenv
 
 # Import project-specific modules
 from source.constants import (
     INSTRUMENTS,
+    PA_ANALYSIS_CYCLE_FOLDER,
+    PERIOD_OPTIONS,
     POSSIBLE_STRATEGY_IDS,
+    SD_OPTIONS,
     STOCKS_FNO,
     STOCKS_NON_FNO,
+    TIMEFRAME_OPTIONS,
+    VOLATILE_OUTPUT_FOLDER,
+    VOLUME_OUTPUT_FOLDER,
+    CycleType,
     MarketDirection,
     TradeType,
 )
-from source.trade_processor import multiple_process, process_strategy
-from source.validations import validate_input
-
-# Load environment variables from a .env file
-load_dotenv(override=True)
+from source.processors.cycle_trade_processor import process_cycle
+from source.processors.pa_analysis_trade_processor import process_pa_output
+from source.processors.signal_trade_processor import (
+    multiple_process,
+    process_strategy,
+)
+from source.validation.cycle_validation import validate_cycle_input
+from source.validation.pa_output import validate_pa_input
+from source.validation.signal_validations import validate_signal_input
 
 
 def select_all_options(key, combinations):
@@ -83,7 +94,7 @@ def parse_strategy_ids(input_str):
     return ids
 
 
-def get_portfolio_flags(portfolio_ids, streamlit_inputs, saved_inputs):
+def set_portfolio_flags(portfolio_ids, streamlit_inputs, saved_inputs):
     """
     Get possible flags for each portfolio from user input.
 
@@ -133,7 +144,7 @@ def get_portfolio_flags(portfolio_ids, streamlit_inputs, saved_inputs):
     return possible_flags_per_portfolio
 
 
-def get_portfolio_strategies(portfolio_ids, streamlit_inputs, saved_inputs):
+def set_portfolio_strategies(portfolio_ids, streamlit_inputs, saved_inputs):
     """
     Get possible strategies for each portfolio from user input.
 
@@ -251,9 +262,18 @@ def main():
     """
 
     errors, streamlit_inputs, saved_inputs = [], {}, {}
+
+    st.header("Signal Generation")
+
+    expander_option = st.selectbox(
+        "Select Expander", ["Signal", "Cycle", "PA DB"]
+    )
     use_saved_input = st.checkbox("Use Saved Inputs", value=False)
     if use_saved_input:
-        all_user_inputs = load_input_from_json()
+        file_name = "user_inputs.json"
+        if expander_option == "PA DB":
+            file_name = "pa_db_user_inputs.json"
+        all_user_inputs = load_input_from_json(file_name)
         if all_user_inputs:
             search_term = st.text_input("Search Notes")
 
@@ -268,396 +288,293 @@ def main():
             )
             saved_inputs = all_user_inputs[selected_note]
 
-            # json does not support tuple, so converting to tuple
-            saved_inputs["long_entry_signals"] = list(
-                map(lambda x: tuple(x), saved_inputs["long_entry_signals"])
-            )
-            saved_inputs["long_exit_signals"] = list(
-                map(lambda x: tuple(x), saved_inputs["long_exit_signals"])
-            )
-            saved_inputs["short_entry_signals"] = list(
-                map(lambda x: tuple(x), saved_inputs["short_entry_signals"])
-            )
-            saved_inputs["short_exit_signals"] = list(
-                map(lambda x: tuple(x), saved_inputs["short_exit_signals"])
-            )
-            saved_inputs["strategy_pairs"] = list(
-                map(lambda x: tuple(x), saved_inputs["strategy_pairs"])
-            )
+            if not expander_option == "PA DB":
+
+                # json does not support tuple, so converting to tuple
+                saved_inputs["long_entry_signals"] = list(
+                    map(lambda x: tuple(x), saved_inputs["long_entry_signals"])
+                )
+                if "long_exit_signals" in saved_inputs:
+                    saved_inputs["long_exit_signals"] = list(
+                        map(
+                            lambda x: tuple(x),
+                            saved_inputs["long_exit_signals"],
+                        )
+                    )
+                saved_inputs["short_entry_signals"] = list(
+                    map(
+                        lambda x: tuple(x), saved_inputs["short_entry_signals"]
+                    )
+                )
+                if "short_exit_signals" in saved_inputs:
+                    saved_inputs["short_exit_signals"] = list(
+                        map(
+                            lambda x: tuple(x),
+                            saved_inputs["short_exit_signals"],
+                        )
+                    )
+                saved_inputs["strategy_pairs"] = list(
+                    map(lambda x: tuple(x), saved_inputs["strategy_pairs"])
+                )
 
         else:
             st.warning("saved data not found")
 
-    st.header("Signal Generation")
+    if expander_option == "Signal":
 
-    with st.expander("Configuration", expanded=False):
-        portfolio_ids_input = st.text_input(
-            "Portfolio IDs (comma-separated, e.g., 1, 2, 3)",
-            value=saved_inputs.get("portfolio_ids_input", "F13,F13_1"),
-        )
-        streamlit_inputs["portfolio_ids_input"] = portfolio_ids_input
-
-        options = [
-            direction.value
-            for direction in MarketDirection
-            if direction != MarketDirection.PREVIOUS
-        ]
-        default_index = options.index(
-            saved_inputs.get("allowed_direction", "all")
-        )
-        allowed_direction = st.selectbox(
-            "Allowed Direction",
-            options=options,
-            index=default_index,
-        )
-        streamlit_inputs["allowed_direction"] = allowed_direction
-        options = [trade_type.value for trade_type in TradeType]
-        trade_type = st.selectbox(
-            "Trade Type",
-            options=["P", "I"],
-            index=options.index(saved_inputs.get("trade_type", "P")),
-        )
-        streamlit_inputs["trade_type"] = trade_type
-
-        if trade_type == TradeType.INTRADAY.value:
-            trade_start_time = st.text_input(
-                "Trade Start Time (format: hh:mm:ss)",
-                value=saved_inputs.get("trade_start_time", "09:15:00"),
-            )
-            trade_end_time = st.text_input(
-                "Trade End Time (format: hh:mm:ss)",
-                value=saved_inputs.get("trade_end_time", "15:30:00"),
-            )
-            streamlit_inputs.update(
-                {
-                    "trade_start_time": trade_start_time,
-                    "trade_end_time": trade_end_time,
-                }
+        with st.expander("Configuration", expanded=False):
+            portfolio_ids_input = set_portfolio_ids(
+                streamlit_inputs, saved_inputs
             )
 
-        instruments = st.multiselect(
-            "INDICES",
-            options=INSTRUMENTS,
-            default=saved_inputs.get("instruments", ["BANKNIFTY"]),
-        )
-        streamlit_inputs["instruments"] = instruments
+            set_allowed_direction(streamlit_inputs, saved_inputs)
+            set_trade_type(streamlit_inputs, saved_inputs)
 
-        stocks_fno = st.multiselect(
-            "Stocks-FNO",
-            options=STOCKS_FNO,
-            default=saved_inputs.get("stocks_fno", ["HDFCBANK"]),
-        )
-        streamlit_inputs["stocks_fno"] = stocks_fno
+            set_instrument(streamlit_inputs, saved_inputs)
 
-        stocks_non_fno = st.multiselect(
-            "Stocks-NONFNO",
-            options=STOCKS_NON_FNO,
-            default=saved_inputs.get("stocks_non_fno", ["YESBANK"]),
-        )
-        streamlit_inputs["stocks_non_fno"] = stocks_non_fno
-
-        if portfolio_ids_input and allowed_direction:
-            portfolio_ids = tuple(
-                map(lambda a: a.strip(), portfolio_ids_input.split(","))
+            stocks_fno = st.multiselect(
+                "Stocks-FNO",
+                options=STOCKS_FNO,
+                default=saved_inputs.get("stocks_fno", ["HDFCBANK"]),
             )
-            streamlit_inputs["portfolio_ids"] = portfolio_ids
-            possible_flags_per_portfolio = get_portfolio_flags(
-                portfolio_ids, streamlit_inputs, saved_inputs
-            )
-            filtered_flag_combinations = get_flag_combinations(
-                portfolio_ids, possible_flags_per_portfolio
-            )
-            all_flag_combinations = ["ALL"] + filtered_flag_combinations
+            streamlit_inputs["stocks_fno"] = stocks_fno
 
-            if allowed_direction in (
-                MarketDirection.LONG.value,
-                MarketDirection.ALL.value,
-            ):
-                long_entry_signals = st.multiselect(
-                    "Long Entry Signals",
-                    all_flag_combinations,
-                    default=saved_inputs.get("long_entry_signals", None),
-                    key="long_entry_signals",
-                    on_change=select_all_options,
-                    args=("long_entry_signals", filtered_flag_combinations),
+            stocks_non_fno = st.multiselect(
+                "Stocks-NONFNO",
+                options=STOCKS_NON_FNO,
+                default=saved_inputs.get("stocks_non_fno", ["YESBANK"]),
+            )
+            streamlit_inputs["stocks_non_fno"] = stocks_non_fno
+
+            if portfolio_ids_input and streamlit_inputs["allowed_direction"]:
+                portfolio_ids = format_set_portfolio_ids(
+                    streamlit_inputs, portfolio_ids_input
                 )
-            else:
-                long_entry_signals = []
-
-            if allowed_direction in (
-                MarketDirection.SHORT.value,
-                MarketDirection.ALL.value,
-            ):
-                short_entry_signals = st.multiselect(
-                    "Short Entry Signals",
-                    [
-                        combination
-                        for combination in all_flag_combinations
-                        if combination not in long_entry_signals
-                    ],
-                    default=saved_inputs.get("short_entry_signals", None),
-                    key="short_entry_signals",
-                    on_change=select_all_options,
-                    args=(
-                        "short_entry_signals",
-                        filtered_flag_combinations,
-                    ),
+                possible_flags_per_portfolio = set_portfolio_flags(
+                    portfolio_ids, streamlit_inputs, saved_inputs
                 )
-            else:
-                short_entry_signals = []
-
-            if allowed_direction in (
-                MarketDirection.LONG.value,
-                MarketDirection.ALL.value,
-            ):
-                long_exit_signals = st.multiselect(
-                    "Long Exit Signals",
-                    set(filtered_flag_combinations) - set(long_entry_signals),
-                    default=set(
-                        [
-                            *saved_inputs.get("long_exit_signals", []),
-                            *short_entry_signals,
-                        ]
-                    ),
+                set_entry_exit_signals(
+                    streamlit_inputs,
+                    saved_inputs,
+                    portfolio_ids,
+                    possible_flags_per_portfolio,
                 )
-            else:
-                long_exit_signals = []
-
-            if allowed_direction in (
-                MarketDirection.SHORT.value,
-                MarketDirection.ALL.value,
-            ):
-                short_exit_signals = st.multiselect(
-                    "Short Exit Signals",
-                    set(filtered_flag_combinations)
-                    - set(short_entry_signals)
-                    - set(long_exit_signals),
-                    default=set(
-                        [
-                            *saved_inputs.get("short_exit_signals", []),
-                            *long_entry_signals,
-                        ]
-                    ),
+                strategy_ids_per_portfolio = set_portfolio_strategies(
+                    portfolio_ids, streamlit_inputs, saved_inputs
                 )
-            else:
-                short_exit_signals = []
-
-            streamlit_inputs.update(
-                {
-                    "long_entry_signals": long_entry_signals,
-                    "short_entry_signals": short_entry_signals,
-                    "long_exit_signals": long_exit_signals,
-                    "short_exit_signals": short_exit_signals,
-                }
-            )
-            strategy_ids_per_portfolio = get_portfolio_strategies(
-                portfolio_ids, streamlit_inputs, saved_inputs
-            )
-            filtered_strategy_id_combinations = get_strategy_id_combinations(
-                portfolio_ids, strategy_ids_per_portfolio
-            )
-            all_filtered_strategy_id_combinations = [
-                "ALL"
-            ] + filtered_strategy_id_combinations
-            strategy_pairs = st.multiselect(
-                "Strategy Pairs",
-                all_filtered_strategy_id_combinations,
-                default=saved_inputs.get("strategy_pairs", None),
-                key="Strategy Pairs",
-                on_change=select_all_options,
-                args=("Strategy Pairs", filtered_strategy_id_combinations),
-            )
-            streamlit_inputs["strategy_pairs"] = strategy_pairs
-
-            start_date = st.text_input(
-                "Start Date (format: dd/mm/yyyy hh:mm:ss)",
-                value=saved_inputs.get("start_date", "3/01/2019 09:00:00"),
-            )
-            end_date = st.text_input(
-                "End Date (format: dd/mm/yyyy hh:mm:ss)",
-                value=saved_inputs.get("end_date", "3/04/2019 16:00:00"),
-            )
-            streamlit_inputs.update(
-                {"start_date": start_date, "end_date": end_date}
-            )
-
-            st.text("Entry conditions: ")
-            check_entry_based = st.checkbox(
-                "Check Entry Based",
-                value=saved_inputs.get("check_entry_based", False),
-            )
-            streamlit_inputs["check_entry_based"] = check_entry_based
-            if check_entry_based:
-                number_of_entries = st.number_input(
-                    "Number of Entries",
-                    min_value=0,
-                    value=saved_inputs.get("number_of_entries", 10),
-                    step=1,
-                )
-                streamlit_inputs["number_of_entries"] = number_of_entries
-                steps_to_skip = st.number_input(
-                    "Steps to Skip",
-                    min_value=0,
-                    value=saved_inputs.get("steps_to_skip", 3),
-                    step=1,
-                )
-                streamlit_inputs["steps_to_skip"] = steps_to_skip
-
-            # Entry Fractal Inputs (conditionally displayed)
-            check_entry_fractal = st.checkbox(
-                "Check Entry Fractal",
-                value=saved_inputs.get("check_entry_fractal", False),
-            )
-            streamlit_inputs["check_entry_fractal"] = check_entry_fractal
-            if check_entry_fractal:
-                entry_fractal_file_number = st.text_input(
-                    "Entry Fractal File Number",
-                    value=saved_inputs.get("entry_fractal_file_number", "1"),
-                )
-                streamlit_inputs["entry_fractal_file_number"] = (
-                    entry_fractal_file_number
+                strategy_pairs = set_strategy_pair(
+                    streamlit_inputs,
+                    saved_inputs,
+                    portfolio_ids,
+                    strategy_ids_per_portfolio,
                 )
 
-                # Bollinger Band Inputs (conditionally displayed)
-                check_bb_band = st.checkbox(
-                    "Check BB Band",
-                    value=saved_inputs.get("check_bb_band", False),
+                set_start_end_datetime(streamlit_inputs, saved_inputs)
+
+                st.text("Entry conditions: ")
+                check_entry_based = st.checkbox(
+                    "Check Entry Based",
+                    value=saved_inputs.get("check_entry_based", False),
                 )
-                streamlit_inputs["check_bb_band"] = check_bb_band
-                if check_bb_band:
-                    bb_file_number = st.text_input(
-                        "BB File Number",
-                        value=saved_inputs.get("bb_file_number", "1"),
+                streamlit_inputs["check_entry_based"] = check_entry_based
+                if check_entry_based:
+                    number_of_entries = st.number_input(
+                        "Number of Entries",
+                        min_value=0,
+                        value=saved_inputs.get("number_of_entries", 10),
+                        step=1,
+                    )
+                    streamlit_inputs["number_of_entries"] = number_of_entries
+                    steps_to_skip = st.number_input(
+                        "Steps to Skip",
+                        min_value=0,
+                        value=saved_inputs.get("steps_to_skip", 3),
+                        step=1,
+                    )
+                    streamlit_inputs["steps_to_skip"] = steps_to_skip
+
+                # Entry Fractal Inputs (conditionally displayed)
+                check_entry_fractal = st.checkbox(
+                    "Check Entry Fractal",
+                    value=saved_inputs.get("check_entry_fractal", False),
+                )
+                streamlit_inputs["check_entry_fractal"] = check_entry_fractal
+                if check_entry_fractal:
+                    entry_fractal_file_number = st.text_input(
+                        "Entry Fractal File Number",
+                        value=saved_inputs.get(
+                            "entry_fractal_file_number", "1"
+                        ),
+                    )
+                    entry_fractal_period = st.number_input(
+                        "Entry Fractal Period",
+                        min_value=1,
+                        value=saved_inputs.get("entry_fractal_period", 5),
+                        step=1,
+                    )
+                    streamlit_inputs["entry_fractal_file_number"] = (
+                        entry_fractal_file_number
+                    )
+                    streamlit_inputs["entry_fractal_period"] = (
+                        entry_fractal_period
+                    )
+
+                    # Bollinger Band Inputs (conditionally displayed)
+                    update_bb_band_check(streamlit_inputs, saved_inputs)
+                skip_rows = st.checkbox(
+                    "Skip Rows", value=saved_inputs.get("skip_rows", False)
+                )
+                streamlit_inputs["skip_rows"] = skip_rows
+                if skip_rows:
+                    no_of_rows_to_skip = st.number_input(
+                        "No Of Rows To Skip",
+                        min_value=0,
+                        value=saved_inputs.get("no_of_rows_to_skip", 0),
+                        step=1,
+                    )
+                    streamlit_inputs["no_of_rows_to_skip"] = no_of_rows_to_skip
+
+                if check_entry_based and check_entry_fractal:
+                    check_entry_based = False
+                    check_entry_fractal = False
+
+                    error_mssg = "Please select either 'Check Entry Based' or 'Check Entry Fractal', not both."
+                    st.error(error_mssg)
+                    errors.append(error_mssg)
+
+                st.text("Exits conditions: ")
+                # Exit Fractal Inputs (conditionally displayed)
+                set_fractal_exit(streamlit_inputs, saved_inputs)
+
+                # Trail BB Band Inputs (conditionally displayed)
+                check_trail_bb_band = st.checkbox(
+                    "Check Trail BB Band",
+                    value=saved_inputs.get("check_trail_bb_band", False),
+                )
+                streamlit_inputs["check_trail_bb_band"] = check_trail_bb_band
+                if check_trail_bb_band:
+                    trail_bb_file_number = st.text_input(
+                        "Trail BB File Number",
+                        value=saved_inputs.get("trail_bb_file_number", "1"),
                     )
 
                     options = [2.0, 2.25, 2.5, 2.75, 3.0]
-                    bb_band_sd = st.selectbox(
-                        "BB Band Standard Deviations",
+                    trail_bb_band_sd = st.selectbox(
+                        "Trail BB Band Standard Deviations",
                         options=options,
                         index=options.index(
-                            saved_inputs.get("bb_band_sd", 2.0)
+                            saved_inputs.get("trail_bb_band_sd", 2.0)
                         ),
                     )
 
                     options = ["mean", "upper", "lower"]
-                    bb_band_column = st.selectbox(
-                        "BB Band Column",
+                    trail_bb_band_column = st.selectbox(
+                        "Trail BB Band Column",
                         options=options,
                         index=options.index(
-                            saved_inputs.get("bb_band_column", "mean")
+                            saved_inputs.get("trail_bb_band_column", "mean")
                         ),
                     )
 
+                    options = ["higher", "lower"]
+                    trail_bb_band_long_direction = st.selectbox(
+                        "Trail BB Band Long Direction",
+                        options=options,
+                        index=options.index(
+                            saved_inputs.get(
+                                "trail_bb_band_long_direction", "higher"
+                            )
+                        ),
+                    )
+
+                    trail_bb_band_short_direction = st.selectbox(
+                        "Trail BB Band Short Direction",
+                        options=options,
+                        index=options.index(
+                            saved_inputs.get(
+                                "trail_bb_band_short_direction", "higher"
+                            )
+                        ),
+                    )
                     streamlit_inputs.update(
                         {
-                            "bb_file_number": bb_file_number,
-                            "bb_band_sd": bb_band_sd,
-                            "bb_band_column": bb_band_column,
+                            "trail_bb_file_number": trail_bb_file_number,
+                            "trail_bb_band_sd": trail_bb_band_sd,
+                            "trail_bb_band_column": trail_bb_band_column,
+                            "trail_bb_band_long_direction": trail_bb_band_long_direction,
+                            "trail_bb_band_short_direction": trail_bb_band_short_direction,
                         }
                     )
-            skip_rows = st.checkbox(
-                "Skip Rows", value=saved_inputs.get("skip_rows", False)
+
+    elif expander_option == "Cycle":
+        with st.expander("Configuration", expanded=False):
+            update_volume_and_volatile_files(streamlit_inputs)
+            portfolio_ids_input = set_portfolio_ids(
+                streamlit_inputs, saved_inputs
             )
-            streamlit_inputs["skip_rows"] = skip_rows
-            if skip_rows:
-                no_of_rows_to_skip = st.number_input(
-                    "No Of Rows To Skip",
-                    min_value=0,
-                    value=saved_inputs.get("no_of_rows_to_skip", 0),
-                    step=1,
+            set_allowed_direction(streamlit_inputs, saved_inputs)
+            set_trade_type(streamlit_inputs, saved_inputs)
+            set_instrument(streamlit_inputs, saved_inputs)
+            if portfolio_ids_input:
+                portfolio_ids = format_set_portfolio_ids(
+                    streamlit_inputs, portfolio_ids_input
                 )
-                streamlit_inputs["no_of_rows_to_skip"] = no_of_rows_to_skip
+                possible_flags_per_portfolio = set_portfolio_flags(
+                    portfolio_ids, streamlit_inputs, saved_inputs
+                )
+                set_entry_exit_signals(
+                    streamlit_inputs,
+                    saved_inputs,
+                    portfolio_ids,
+                    possible_flags_per_portfolio,
+                )
+                strategy_ids_per_portfolio = set_portfolio_strategies(
+                    portfolio_ids, streamlit_inputs, saved_inputs
+                )
+                set_strategy_pair(
+                    streamlit_inputs,
+                    saved_inputs,
+                    portfolio_ids,
+                    strategy_ids_per_portfolio,
+                )
+                set_start_end_datetime(streamlit_inputs, saved_inputs)
+                st.text("Entry conditions: ")
+                set_fractal_entry(streamlit_inputs, saved_inputs)
+                st.text("Exits conditions: ")
+                set_fractal_exit(streamlit_inputs, saved_inputs)
+                st.text("Cycle conditions: ")
+                set_cycle_configs(streamlit_inputs, saved_inputs)
 
-            if check_entry_based and check_entry_fractal:
-                check_entry_based = False
-                check_entry_fractal = False
+    elif expander_option == "PA DB":
+        folder = Path(PA_ANALYSIS_CYCLE_FOLDER)
+        pa_files = [f.name for f in folder.iterdir() if f.is_file()]
 
-                error_mssg = "Please select either 'Check Entry Based' or 'Check Entry Fractal', not both."
-                st.error(error_mssg)
-                errors.append(error_mssg)
-
-            st.text("Exits conditions: ")
-            # Exit Fractal Inputs (conditionally displayed)
-            check_exit_fractal = st.checkbox(
-                "Check Exit Fractal",
-                value=saved_inputs.get("check_exit_fractal", False),
-            )
-            streamlit_inputs["check_exit_fractal"] = check_exit_fractal
-            if check_exit_fractal:
-                exit_fractal_file_number = st.text_input(
-                    "Exit Fractal File Number",
-                    value=saved_inputs.get("exit_fractal_file_number", "2"),
-                )
-                fractal_exit_count = st.text_input(
-                    "Fractal Exit Count (e.g., 6, ALL)",
-                    value=saved_inputs.get("fractal_exit_count", "ALL"),
-                )
-                streamlit_inputs.update(
-                    {
-                        "exit_fractal_file_number": exit_fractal_file_number,
-                        "fractal_exit_count": fractal_exit_count,
-                    }
-                )
-
-            # Trail BB Band Inputs (conditionally displayed)
-            check_trail_bb_band = st.checkbox(
-                "Check Trail BB Band",
-                value=saved_inputs.get("check_trail_bb_band", False),
-            )
-            streamlit_inputs["check_trail_bb_band"] = check_trail_bb_band
-            if check_trail_bb_band:
-                trail_bb_file_number = st.text_input(
-                    "Trail BB File Number",
-                    value=saved_inputs.get("trail_bb_file_number", "1"),
-                )
-
-                options = [2.0, 2.25, 2.5, 2.75, 3.0]
-                trail_bb_band_sd = st.selectbox(
-                    "Trail BB Band Standard Deviations",
-                    options=options,
-                    index=options.index(
-                        saved_inputs.get("trail_bb_band_sd", 2.0)
-                    ),
-                )
-
-                options = ["mean", "upper", "lower"]
-                trail_bb_band_column = st.selectbox(
-                    "Trail BB Band Column",
-                    options=options,
-                    index=options.index(
-                        saved_inputs.get("trail_bb_band_column", "mean")
-                    ),
-                )
-
-                options = ["higher", "lower"]
-                trail_bb_band_long_direction = st.selectbox(
-                    "Trail BB Band Long Direction",
-                    options=options,
-                    index=options.index(
-                        saved_inputs.get(
-                            "trail_bb_band_long_direction", "higher"
-                        )
-                    ),
-                )
-
-                trail_bb_band_short_direction = st.selectbox(
-                    "Trail BB Band Short Direction",
-                    options=options,
-                    index=options.index(
-                        saved_inputs.get(
-                            "trail_bb_band_short_direction", "higher"
-                        )
-                    ),
-                )
-                streamlit_inputs.update(
-                    {
-                        "trail_bb_file_number": trail_bb_file_number,
-                        "trail_bb_band_sd": trail_bb_band_sd,
-                        "trail_bb_band_column": trail_bb_band_column,
-                        "trail_bb_band_long_direction": trail_bb_band_long_direction,
-                        "trail_bb_band_short_direction": trail_bb_band_short_direction,
-                    }
-                )
+        pa_file = st.selectbox("Select PA File", pa_files, index=0)
+        streamlit_inputs["pa_file"] = pa_file
+        cycle_options = [
+            cycle.value
+            for cycle in CycleType
+            if cycle != CycleType.PREVIOUS_CYCLE
+        ]
+        calculate_fractal_analysis = st.checkbox(
+            "Calculate Fractal Analysis",
+            value=saved_inputs.get("calculate_fractal_analysis", False),
+        )
+        streamlit_inputs["calculate_fractal_analysis"] = (
+            calculate_fractal_analysis
+        )
+        cycle_to_consider = st.selectbox(
+            "Cycle to Consider",
+            cycle_options,
+        )
+        streamlit_inputs["cycle_to_consider"] = cycle_to_consider
+        set_allowed_direction(streamlit_inputs, saved_inputs)
+        set_trade_type(streamlit_inputs, saved_inputs)
+        st.text("Entry conditions: ")
+        set_fractal_entry(streamlit_inputs, saved_inputs)
+        st.text("Exits conditions: ")
+        set_fractal_exit(streamlit_inputs, saved_inputs)
+        set_target_profit_inputs(streamlit_inputs, saved_inputs)
 
     st.header("Trade Management")
 
@@ -893,27 +810,6 @@ def main():
             {"capital": capital, "risk": risk, "leverage": leverage}
         )
 
-    if (
-        allowed_direction == MarketDirection.LONG.value
-        or allowed_direction == MarketDirection.ALL.value
-    ):
-        if not long_entry_signals or not long_exit_signals:
-            error_mssg = "Please select Long Entry and Exit Signals."
-            st.error(error_mssg)
-            errors.append(error_mssg)
-    if (
-        allowed_direction == MarketDirection.SHORT.value
-        or allowed_direction == MarketDirection.ALL.value
-    ):
-        if not short_entry_signals or not short_exit_signals:
-            error_mssg = "Please select Short Entry and Exit Signals."
-            st.error(error_mssg)
-            errors.append(error_mssg)
-    if not strategy_pairs:
-        error_mssg = "Please select Strategy Pairs."
-        st.error(error_mssg)
-        errors.append(error_mssg)
-
     notes = st.text_input("Notes", value=saved_inputs.get("notes", ""))
     save = st.checkbox("Save Inputs", value=saved_inputs.get("save", True))
     trigger_trade_management = st.checkbox(
@@ -921,26 +817,766 @@ def main():
     )
     streamlit_inputs["trigger_trade_management"] = trigger_trade_management
 
-    if not errors and st.button("Submit"):
+    if expander_option == "Signal" or expander_option == "Cycle":
+        required_fields = [
+            streamlit_inputs["portfolio_ids_input"],
+            streamlit_inputs["trade_type"],
+            streamlit_inputs["instruments"],
+            streamlit_inputs["portfolio_ids"],
+            streamlit_inputs["possible_flags_input"],
+            streamlit_inputs["possible_strategies_input"],
+            streamlit_inputs["strategy_pairs"],
+            streamlit_inputs["start_date"],
+            streamlit_inputs["end_date"],
+        ]
+        if expander_option == "Signal":
+            long_fields = [
+                streamlit_inputs["long_entry_signals"],
+                streamlit_inputs["long_exit_signals"],
+            ]
+            short_fields = [
+                streamlit_inputs["short_entry_signals"],
+                streamlit_inputs["short_exit_signals"],
+            ]
+            required_fields.append(streamlit_inputs["allowed_direction"])
+            if (
+                streamlit_inputs["allowed_direction"]
+                and streamlit_inputs["allowed_direction"]
+                == MarketDirection.LONG.value
+            ):
+                required_fields.extend(long_fields)
+            elif (
+                streamlit_inputs["allowed_direction"]
+                and streamlit_inputs["allowed_direction"]
+                == MarketDirection.SHORT.value
+            ):
+                required_fields.extend(short_fields)
+            elif (
+                streamlit_inputs["allowed_direction"]
+                and streamlit_inputs["allowed_direction"]
+                == MarketDirection.ALL.value
+            ):
 
-        validated_input = validate(streamlit_inputs, key=validate_input)
+                required_fields.extend(
+                    [
+                        *long_fields,
+                        *short_fields,
+                    ]
+                )
+        elif expander_option == "Cycle":
+            cycle_fields = [
+                streamlit_inputs["long_entry_signals"],
+                streamlit_inputs["short_entry_signals"],
+                check_cycles_inputs(streamlit_inputs),
+            ]
+            required_fields.extend(cycle_fields)
 
-        if validated_input:
-            if save:
-                temp = {
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "notes": notes,
+            add_tp_fields(streamlit_inputs, required_fields)
+    elif expander_option == "PA DB":
+        required_fields = [
+            streamlit_inputs["pa_file"],
+        ]
+        if streamlit_inputs["check_entry_fractal"]:
+            required_fields.append(
+                streamlit_inputs["entry_fractal_file_number"]
+            )
+            if streamlit_inputs["check_bb_band"]:
+                required_fields.append(streamlit_inputs["bb_file_number"])
+        if streamlit_inputs["check_exit_fractal"]:
+            required_fields.append(
+                streamlit_inputs["exit_fractal_file_number"]
+            )
+            required_fields.append(streamlit_inputs["fractal_exit_count"])
+
+    all_fields_filled = all(required_fields)
+
+    if all_fields_filled:
+        if st.button("Submit"):
+
+            processors = {
+                "Signal": process_strategy,
+                "Cycle": process_cycle,
+                "PA DB": process_pa_output,
+            }
+            validators = {
+                "Signal": validate_signal_input,
+                "Cycle": validate_cycle_input,
+                "PA DB": validate_pa_input,
+            }
+
+            exec_func = processors[expander_option]
+            validate_func = validators[expander_option]
+
+            validated_input = validate(streamlit_inputs, key=validate_func)
+
+            if validated_input:
+                if save:
+                    temp = {
+                        "timestamp": datetime.now().strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        ),
+                        "notes": notes,
+                    }
+                    temp.update(streamlit_inputs)
+                    if expander_option == "PA DB":
+                        filename = "pa_db_user_inputs.json"
+                    write_user_inputs(temp, filename)
+
+                # Start trade processing
+                execute(validated_input, exec_func)
+    else:
+        st.error("Please fill in all the required fields.")
+
+
+def update_bb_band_check(streamlit_inputs, saved_inputs):
+    check_bb_band = st.checkbox(
+        "Check BB Band",
+        value=saved_inputs.get("check_bb_band", False),
+    )
+    streamlit_inputs["check_bb_band"] = check_bb_band
+    if check_bb_band:
+        bb_file_number = st.text_input(
+            "BB File Number",
+            value=saved_inputs.get("bb_file_number", "1"),
+        )
+
+        options = [2.0, 2.25, 2.5, 2.75, 3.0]
+        bb_band_sd = st.selectbox(
+            "BB Band Standard Deviations",
+            options=options,
+            index=options.index(saved_inputs.get("bb_band_sd", 2.0)),
+        )
+
+        parameter_id = st.number_input(
+            "Parameter ID",
+            min_value=1,
+            step=1,
+        )
+
+        period = st.selectbox(
+            "Period",
+            PERIOD_OPTIONS,
+            index=0,
+        )
+
+        options = ["mean", "upper", "lower"]
+        bb_band_column = st.selectbox(
+            "BB Band Column",
+            options=options,
+            index=options.index(saved_inputs.get("bb_band_column", "mean")),
+        )
+
+        streamlit_inputs.update(
+            {
+                "bb_file_number": bb_file_number,
+                "bb_band_sd": bb_band_sd,
+                "bb_band_column": bb_band_column,
+                "parameter_id": parameter_id,
+                "period": period,
+            }
+        )
+
+
+def add_tp_fields(streamlit_inputs, required_fields):
+    if streamlit_inputs.get("calculate_tp"):
+        required_fields.extend(
+            [
+                streamlit_inputs["tp_method"],
+                streamlit_inputs["tp_percentage"],
+            ]
+        )
+
+
+def set_entry_exit_signals(
+    streamlit_inputs, saved_inputs, portfolio_ids, possible_flags_per_portfolio
+):
+    filtered_flag_combinations = get_flag_combinations(
+        portfolio_ids, possible_flags_per_portfolio
+    )
+    all_flag_combinations = ["ALL"] + filtered_flag_combinations
+
+    if streamlit_inputs["allowed_direction"] in (
+        MarketDirection.LONG.value,
+        MarketDirection.ALL.value,
+    ):
+        long_entry_signals = st.multiselect(
+            "Long Entry Signals",
+            all_flag_combinations,
+            default=saved_inputs.get("long_entry_signals", None),
+            key="long_entry_signals",
+            on_change=select_all_options,
+            args=(
+                "long_entry_signals",
+                filtered_flag_combinations,
+            ),
+        )
+    else:
+        long_entry_signals = []
+
+    if streamlit_inputs["allowed_direction"] in (
+        MarketDirection.SHORT.value,
+        MarketDirection.ALL.value,
+    ):
+        short_entry_signals = st.multiselect(
+            "Short Entry Signals",
+            [
+                combination
+                for combination in all_flag_combinations
+                if combination not in long_entry_signals
+            ],
+            default=saved_inputs.get("short_entry_signals", None),
+            key="short_entry_signals",
+            on_change=select_all_options,
+            args=(
+                "short_entry_signals",
+                filtered_flag_combinations,
+            ),
+        )
+    else:
+        short_entry_signals = []
+
+    if streamlit_inputs["allowed_direction"] in (
+        MarketDirection.LONG.value,
+        MarketDirection.ALL.value,
+    ):
+        long_exit_signals = st.multiselect(
+            "Long Exit Signals",
+            set(filtered_flag_combinations) - set(long_entry_signals),
+            default=set(
+                [
+                    *saved_inputs.get("long_exit_signals", []),
+                    *short_entry_signals,
+                ]
+            ),
+        )
+    else:
+        long_exit_signals = []
+
+    if streamlit_inputs["allowed_direction"] in (
+        MarketDirection.SHORT.value,
+        MarketDirection.ALL.value,
+    ):
+        short_exit_signals = st.multiselect(
+            "Short Exit Signals",
+            set(filtered_flag_combinations)
+            - set(short_entry_signals)
+            - set(long_exit_signals),
+            default=set(
+                [
+                    *saved_inputs.get("short_exit_signals", []),
+                    *long_entry_signals,
+                ]
+            ),
+        )
+    else:
+        short_exit_signals = []
+
+    streamlit_inputs.update(
+        {
+            "long_entry_signals": long_entry_signals,
+            "short_entry_signals": short_entry_signals,
+            "long_exit_signals": long_exit_signals,
+            "short_exit_signals": short_exit_signals,
+        }
+    )
+
+
+def set_cycle_configs(streamlit_inputs, saved_inputs):
+
+    calculate_cycles = st.checkbox(
+        "Calculate Cycles",
+        value=saved_inputs.get("calculate_cycles", True),
+    )
+    streamlit_inputs["calculate_cycles"] = calculate_cycles
+    if calculate_cycles:
+        cycle_options = [
+            cycle.value
+            for cycle in CycleType
+            if cycle != CycleType.PREVIOUS_CYCLE
+        ]
+        cycle_to_consider = st.selectbox(
+            "Cycle to Consider",
+            cycle_options,
+        )
+        streamlit_inputs["cycle_to_consider"] = cycle_to_consider
+
+        set_target_profit_inputs(streamlit_inputs, saved_inputs)
+        set_fractal_inputs(streamlit_inputs, saved_inputs)
+
+        st.text("BB Band 1 inputs:")
+
+        close_time_frames_1 = st.multiselect(
+            "Close Time Frame",
+            TIMEFRAME_OPTIONS,
+            default=saved_inputs.get("close_time_frames_1", [2]),
+        )
+
+        if close_time_frames_1:
+            bb_tf_options = TIMEFRAME_OPTIONS[
+                TIMEFRAME_OPTIONS.index(max(close_time_frames_1)) :
+            ]
+        else:
+            bb_tf_options = TIMEFRAME_OPTIONS
+
+        bb_time_frames_1 = st.multiselect(
+            "BB Time Frame",
+            bb_tf_options,
+        )
+
+        include_higher_and_lower = st.checkbox(
+            "Include Higher and Lower BB Bands",
+            value=saved_inputs.get("include_higer_and_lower", False),
+        )
+        # bb_band_column_1 = st.selectbox(
+        #     "BB Band Column",
+        #     index=2,
+        #     options=["UPPER", "LOWER", "MEAN"],
+        # )
+        parameter_id_1 = st.number_input(
+            "Parameter ID",
+            min_value=1,
+            step=1,
+        )
+
+        periods_1 = st.multiselect(
+            "Periods",
+            PERIOD_OPTIONS,
+            default=saved_inputs.get("period", [20]),
+        )
+
+        sds_1 = st.multiselect(
+            "Standard Deviations",
+            SD_OPTIONS,
+            default=saved_inputs.get("sd", [2]),
+        )
+
+        close_percent = st.number_input(
+            "Close Percent",
+            value=saved_inputs.get("close_percent", 0.5),
+            max_value=1.0,
+            min_value=0.0,
+        )
+
+        max_to_min_percent = st.number_input(
+            "Max to Min Percent",
+            value=saved_inputs.get("max_to_min_percent", 0.5),
+            max_value=1.0,
+            min_value=0.0,
+        )
+
+        streamlit_inputs.update(
+            {
+                "close_time_frames_1": close_time_frames_1,
+                "bb_time_frames_1": bb_time_frames_1,
+                "include_higher_and_lower": include_higher_and_lower,
+                "periods_1": periods_1,
+                "sds_1": sds_1,
+                "close_percent": close_percent,
+                "max_to_min_percent": max_to_min_percent,
+                "parameter_id_1": parameter_id_1,
+            }
+        )
+
+        st.text("BB Band 2 inputs:")
+        check_bb_2 = st.checkbox(
+            "Check BB 2",
+            value=saved_inputs.get("calculate_cycles", False),
+        )
+        streamlit_inputs["check_bb_2"] = check_bb_2
+        if check_bb_2:
+            if bb_time_frames_1:
+                bb_2_tf_options = TIMEFRAME_OPTIONS[
+                    TIMEFRAME_OPTIONS.index(max(bb_time_frames_1)) :
+                ]
+            else:
+                bb_2_tf_options = TIMEFRAME_OPTIONS
+
+            bb_time_frames_2 = st.multiselect(
+                "BB 2 Time Frame",
+                bb_2_tf_options,
+            )
+
+            if periods_1:
+                bb_2_period_options = PERIOD_OPTIONS[
+                    PERIOD_OPTIONS.index(max(periods_1)) + 1 :
+                ]
+            else:
+                bb_2_period_options = PERIOD_OPTIONS
+
+            if (
+                bb_time_frames_2
+                and bb_time_frames_1
+                and min(bb_time_frames_2) > max(bb_time_frames_1)
+            ):
+                bb_2_period_options = PERIOD_OPTIONS
+
+            parameter_id_2 = st.number_input(
+                "BB 2 Parameter ID 2",
+                min_value=1,
+                step=1,
+            )
+
+            periods_2 = st.multiselect(
+                "BB 2 Periods",
+                bb_2_period_options,
+            )
+            sds_2 = st.multiselect(
+                "BB 2 Standard Deviations",
+                SD_OPTIONS,
+                default=saved_inputs.get("sd", [2]),
+            )
+            streamlit_inputs.update(
+                {
+                    "bb_time_frames_2": bb_time_frames_2,
+                    "periods_2": periods_2,
+                    "sds_2": sds_2,
+                    "parameter_id_2": parameter_id_2,
                 }
-                temp.update(streamlit_inputs)
-                write_user_inputs(temp)
-
-            # Start trade processing
-            execute(validated_input)
+            )
 
 
-def execute(validated_input):
+def set_fractal_inputs(streamlit_inputs, saved_inputs):
+    fractal_cycle = st.checkbox(
+        "Fractal Cycle",
+        value=saved_inputs.get("fractal_cycle", False),
+    )
+
+    streamlit_inputs["fractal_cycle"] = fractal_cycle
+    if fractal_cycle:
+        fractal_sd = st.number_input(
+            "Fractal SD",
+            min_value=1,
+            step=1,
+            value=saved_inputs.get("fractal_sd", 2),
+        )
+
+        fractal_tf = st.number_input(
+            "Fractal Time Frame",
+            min_value=1,
+            value=saved_inputs.get("fractal_tf", 1),
+        )
+
+        fractal_cycle_start = st.number_input(
+            "Fractal Cycle Start",
+            min_value=0,
+            value=saved_inputs.get("fractal_cycle_start", 1),
+        )
+
+        streamlit_inputs.update(
+            {
+                "fractal_sd": fractal_sd,
+                "fractal_tf": fractal_tf,
+                "fractal_cycle_start": fractal_cycle_start,
+            }
+        )
+
+    fractal_count = st.checkbox(
+        "Fractal Count",
+        value=saved_inputs.get("fractal_count", False),
+    )
+    streamlit_inputs["fractal_count"] = fractal_count
+    if fractal_count:
+        fractal_count_sd = st.number_input(
+            "Fractal Count SD",
+            min_value=1,
+            step=1,
+            value=saved_inputs.get("fractal_count_sd", 2),
+        )
+
+        fractal_count_tf = st.number_input(
+            "Fractal Count Time Frame",
+            min_value=1,
+            value=saved_inputs.get("fractal_count_tf", 1),
+        )
+        fractal_count_skip = st.number_input(
+            "Fractal Count Skip",
+            min_value=0,
+            value=saved_inputs.get("fractal_count_skip", 1),
+        )
+
+        streamlit_inputs.update(
+            {
+                "fractal_count_sd": fractal_count_sd,
+                "fractal_count_tf": fractal_count_tf,
+                "fractal_count_skip": fractal_count_skip,
+            }
+        )
+
+
+def set_target_profit_inputs(streamlit_inputs, saved_inputs):
+    st.text("Target Profit:")
+    calculate_tp = st.checkbox(
+        "Calculate Target Profit",
+        value=saved_inputs.get("calculate_tp", True),
+    )
+    streamlit_inputs["calculate_tp"] = calculate_tp
+    if calculate_tp:
+        tp_method = st.selectbox(
+            "TP Method",
+            ["1", "2"],
+            index=0,
+        )
+        tp_percentage = st.number_input(
+            "TP Percentage",
+            min_value=0.0,
+            step=0.01,
+            value=saved_inputs.get("tp_percentage", 0.5),
+        )
+        streamlit_inputs.update(
+            {"tp_method": tp_method, "tp_percentage": tp_percentage}
+        )
+
+
+def set_fractal_exit(streamlit_inputs, saved_inputs):
+    check_exit_fractal = st.checkbox(
+        "Check Exit Fractal",
+        value=saved_inputs.get("check_exit_fractal", False),
+    )
+    streamlit_inputs["check_exit_fractal"] = check_exit_fractal
+    if check_exit_fractal:
+        exit_fractal_file_number = st.text_input(
+            "Exit Fractal File Number",
+            value=saved_inputs.get("exit_fractal_file_number", "2"),
+        )
+        exit_fractal_period = st.number_input(
+            "Exit Fractal Period",
+            min_value=1,
+            value=saved_inputs.get("exit_fractal_period", 5),
+            step=1,
+        )
+        fractal_exit_count = st.text_input(
+            "Fractal Exit Count (e.g., 6, ALL)",
+            value=saved_inputs.get("fractal_exit_count", "ALL"),
+        )
+        streamlit_inputs.update(
+            {
+                "exit_fractal_file_number": exit_fractal_file_number,
+                "fractal_exit_count": fractal_exit_count,
+                "exit_fractal_period": exit_fractal_period,
+            }
+        )
+
+
+def set_fractal_entry(streamlit_inputs, saved_inputs):
+    # Entry Fractal Inputs (conditionally displayed)
+
+    check_entry_fractal = st.checkbox(
+        "Check Entry Fractal",
+        value=saved_inputs.get("check_entry_fractal", False),
+    )
+    streamlit_inputs["check_entry_fractal"] = check_entry_fractal
+    if check_entry_fractal:
+        entry_fractal_file_number = st.text_input(
+            "Entry Fractal File Number",
+            value=saved_inputs.get("entry_fractal_file_number", "1"),
+        )
+        entry_fractal_period = st.number_input(
+            "Entry Fractal Period",
+            min_value=1,
+            value=saved_inputs.get("entry_fractal_period", 5),
+            step=1,
+        )
+        streamlit_inputs["entry_fractal_file_number"] = (
+            entry_fractal_file_number
+        )
+        streamlit_inputs["entry_fractal_period"] = entry_fractal_period
+        update_bb_band_check(streamlit_inputs, saved_inputs)
+
+
+def set_start_end_datetime(streamlit_inputs, saved_inputs):
+    start_date = st.text_input(
+        "Start Date (format: dd/mm/yyyy hh:mm:ss)",
+        value=saved_inputs.get("start_date", "3/01/2019 09:00:00"),
+    )
+    end_date = st.text_input(
+        "End Date (format: dd/mm/yyyy hh:mm:ss)",
+        value=saved_inputs.get("end_date", "3/04/2019 16:00:00"),
+    )
+    streamlit_inputs.update({"start_date": start_date, "end_date": end_date})
+
+
+def set_strategy_pair(
+    streamlit_inputs, saved_inputs, portfolio_ids, strategy_ids_per_portfolio
+):
+    filtered_strategy_id_combinations = get_strategy_id_combinations(
+        portfolio_ids, strategy_ids_per_portfolio
+    )
+    all_filtered_strategy_id_combinations = [
+        "ALL"
+    ] + filtered_strategy_id_combinations
+    strategy_pairs = st.multiselect(
+        "Strategy Pairs",
+        all_filtered_strategy_id_combinations,
+        default=saved_inputs.get("strategy_pairs", None),
+        key="Strategy Pairs",
+        on_change=select_all_options,
+        args=("Strategy Pairs", filtered_strategy_id_combinations),
+    )
+    streamlit_inputs["strategy_pairs"] = strategy_pairs
+    return strategy_pairs
+
+
+def set_long_short_signals(
+    streamlit_inputs, saved_inputs, portfolio_ids, possible_flags_per_portfolio
+):
+    filtered_flag_combinations = get_flag_combinations(
+        portfolio_ids, possible_flags_per_portfolio
+    )
+    all_flag_combinations = ["ALL"] + filtered_flag_combinations
+
+    long_entry_signals = st.multiselect(
+        "Long Signals",
+        all_flag_combinations,
+        default=saved_inputs.get("long_entry_signals", "GREEN"),
+        key="long_entry_signals",
+        on_change=select_all_options,
+        args=("long_entry_signals", filtered_flag_combinations),
+    )
+
+    short_entry_signals = st.multiselect(
+        "Short Signals",
+        [
+            combination
+            for combination in all_flag_combinations
+            if combination not in long_entry_signals
+        ],
+        default=saved_inputs.get("short_entry_signals", "RED"),
+        key="short_entry_signals",
+        on_change=select_all_options,
+        args=(
+            "short_entry_signals",
+            filtered_flag_combinations,
+        ),
+    )
+
+    streamlit_inputs.update(
+        {
+            "long_entry_signals": long_entry_signals,
+            "short_entry_signals": short_entry_signals,
+        }
+    )
+
+    return long_entry_signals, short_entry_signals
+
+
+def format_set_portfolio_ids(streamlit_inputs, portfolio_ids_input):
+    portfolio_ids = tuple(
+        map(lambda a: a.strip(), portfolio_ids_input.split(","))
+    )
+    streamlit_inputs["portfolio_ids"] = portfolio_ids
+    return portfolio_ids
+
+
+def set_instrument(streamlit_inputs, saved_inputs):
+    instruments = st.multiselect(
+        "INDICES",
+        options=INSTRUMENTS,
+        default=saved_inputs.get("instruments", ["BANKNIFTY"]),
+    )
+    streamlit_inputs["instruments"] = instruments
+    return instruments
+
+
+def set_portfolio_ids(streamlit_inputs, saved_inputs):
+    portfolio_ids_input = st.text_input(
+        "Portfolio IDs (comma-separated, e.g., 1, 2, 3)",
+        value=saved_inputs.get("portfolio_ids_input", "F13,F13_1"),
+    )
+    streamlit_inputs["portfolio_ids_input"] = portfolio_ids_input
+    return portfolio_ids_input
+
+
+def set_allowed_direction(streamlit_inputs, saved_inputs):
+    options = [
+        direction.value
+        for direction in MarketDirection
+        if direction != MarketDirection.PREVIOUS
+    ]
+    default_index = options.index(saved_inputs.get("allowed_direction", "all"))
+    allowed_direction = st.selectbox(
+        "Allowed Direction",
+        options=options,
+        index=default_index,
+    )
+    streamlit_inputs["allowed_direction"] = allowed_direction
+    return allowed_direction
+
+
+def set_trade_type(streamlit_inputs, saved_inputs):
+    options = [trade_type.value for trade_type in TradeType]
+    trade_type = st.selectbox(
+        "Trade Type",
+        options=["P", "I"],
+        index=options.index(saved_inputs.get("trade_type", "P")),
+    )
+    streamlit_inputs["trade_type"] = trade_type
+
+    trade_start_time, trade_end_time = None, None
+    if trade_type == TradeType.INTRADAY.value:
+        trade_start_time = st.text_input(
+            "Trade Start Time (format: hh:mm:ss)",
+            value=saved_inputs.get("trade_start_time", "09:15:00"),
+        )
+        trade_end_time = st.text_input(
+            "Trade End Time (format: hh:mm:ss)",
+            value=saved_inputs.get("trade_end_time", "15:30:00"),
+        )
+        streamlit_inputs.update(
+            {
+                "trade_start_time": trade_start_time,
+                "trade_end_time": trade_end_time,
+            }
+        )
+    return trade_type, trade_start_time, trade_end_time
+
+
+def update_volume_and_volatile_files(streamlit_inputs):
+    include_volatile = st.checkbox("Include Volatile", value=False)
+    streamlit_inputs["include_volatile"] = include_volatile
+    if include_volatile:
+        folder = Path(VOLATILE_OUTPUT_FOLDER)
+        volatile_files = [f.name for f in folder.iterdir() if f.is_file()]
+
+        selected_volatile_file = st.selectbox(
+            "Select the volatile file",
+            volatile_files,
+            index=0,
+        )
+        volatile_tag_to_process = st.selectbox(
+            "Volatile Tag to Process",
+            ["HV", "LV"],
+            index=0,
+        )
+        streamlit_inputs["volatile_file"] = selected_volatile_file
+        streamlit_inputs["volatile_tag_to_process"] = volatile_tag_to_process
+
+    include_volume = st.checkbox("Include Volume", value=False)
+    streamlit_inputs["include_volume"] = include_volume
+    if include_volume:
+        folder = Path(VOLUME_OUTPUT_FOLDER)
+        volatile_files = [f.name for f in folder.iterdir() if f.is_file()]
+
+        selected_volume_file = st.selectbox(
+            "Select the volume file",
+            volatile_files,
+            index=0,
+        )
+        streamlit_inputs["volume_file"] = selected_volume_file
+
+        volume_tag_to_process = st.selectbox(
+            "Volume Tag to Process", ["CV", "NCV"], index=0
+        )
+        streamlit_inputs["volume_tag_to_process"] = volume_tag_to_process
+
+
+def execute(validated_input, exec_func: callable, module="Trade Management"):
     start = time.time()
-    multiple_process(validated_input, process_strategy)
+    # try:
+    # multiple_process(validated_input, exec_func)
+    exec_func(validated_input, (1,), "ABBOTINDIA")
+    # except Exception as e:
+    #     st.error(f"Error executing {module}: {e}")
+    #     return
     stop = time.time()
 
     st.success(
@@ -957,7 +1593,7 @@ def load_input_from_json(filename="user_inputs.json"):
         return {}
 
 
-def write_user_inputs(user_input):
+def write_user_inputs(user_input, filename="user_inputs.json"):
     """
     Write validated user inputs to a json file.
 
@@ -965,7 +1601,6 @@ def write_user_inputs(user_input):
         user_input (dict): Validated input data.
     """
     try:
-        filename = "user_inputs.json"
         if os.path.isfile(filename) and os.path.getsize(filename) > 0:
             # Load existing data
             existing_data = load_input_from_json(filename)
@@ -986,6 +1621,21 @@ def write_user_inputs(user_input):
 
     except Exception as e:
         st.error(f"Error writing data to json: {e}")
+
+
+def check_cycles_inputs(input) -> bool:
+    if input["calculate_cycles"] and input["check_bb_2"]:
+        return (
+            input["periods_2"] and input["sds_2"] and input["bb_time_frames_2"]
+        )
+    elif input["calculate_cycles"]:
+        return (
+            input["close_time_frames_1"]
+            and input["bb_time_frames_1"]
+            and input["periods_1"]
+            and input["sds_1"]
+        )
+    return True
 
 
 if __name__ == "__main__":

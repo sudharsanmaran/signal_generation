@@ -65,6 +65,7 @@ from source.constants import (
 )
 from source.data_reader import merge_all_df, read_data
 from source.trade import Trade, initialize
+from source.utils import write_dataframe_to_csv
 from tradesheet.index import generate_tradesheet
 
 
@@ -131,6 +132,9 @@ def reset_last_state(state, market_direction):
 
 
 def get_opposite_direction(market_direction):
+    if market_direction not in {MarketDirection.LONG, MarketDirection.SHORT}:
+        return None
+
     opposite_direction = (
         MarketDirection.SHORT
         if market_direction == MarketDirection.LONG
@@ -278,7 +282,12 @@ def check_entry_conditions(row, state):
         Trade.no_of_rows_to_skip -= 1
         return False, None
 
-    market_direction = get_market_direction(row, "entry", signal_columns=Trade.signal_columns, market_direction_conditions=Trade.market_direction_conditions)
+    market_direction = get_market_direction(
+        row,
+        "entry",
+        signal_columns=Trade.signal_columns,
+        market_direction_conditions=Trade.market_direction_conditions,
+    )
 
     if not market_direction:
         return False, None
@@ -430,7 +439,12 @@ def identify_exit_signals(row, exit_state, entry_state):
             exit_type (TradeExitType or None): The type of exit signal (END, SIGNAL, FRACTAL, TRAILING) or None if no exit is identified
     """
 
-    market_direction = get_market_direction(row, "exit", signal_columns=Trade.signal_columns, market_direction_conditions=Trade.market_direction_conditions)
+    market_direction = get_market_direction(
+        row,
+        "exit",
+        signal_columns=Trade.signal_columns,
+        market_direction_conditions=Trade.market_direction_conditions,
+    )
 
     # reset_last_state(state, market_direction)
     # update_last_state(state, market_direction, row, "exit")
@@ -492,17 +506,19 @@ def multiple_process(validated_input, process: callable):
     instruments = validated_input.get("instruments", [])
 
     # Dynamic worker count
+    # todo
+    #  for pa db we don't have stategies and instruments
     num_workers = min(
         int(multiprocessing.cpu_count() * cpu_percent_to_use),
         len(strategy_pairs) * len(instruments),
     )
     # pool = multiprocessing.Pool(processes=num_workers)
-
+    results = []
     with multiprocessing.Pool(processes=num_workers) as pool:
         for instrument in instruments:
             for strategy_pair in strategy_pairs:
                 try:
-                    pool.apply_async(
+                    result = pool.apply_async(
                         process,
                         args=(
                             validated_input,
@@ -510,39 +526,50 @@ def multiple_process(validated_input, process: callable):
                             instrument,
                         ),
                     )
+                    results.append(result)
                     # Process results as they become available (if desired)
                 except Exception as e:
                     print(f"Error encountered during multiprocessing: {e}")
+                    raise e
 
         pool.close()
         pool.join()
+    for result in results:
+        try:
+            result.get()  # Will raise exception if the process raised one
+        except Exception as e:
+            print(f"Error encountered during multiprocessing execution: {e}")
+            raise e
 
     return
 
 
 def process_strategy(validated_input, strategy_pair, instrument):
-    initialize(validated_input)
+    initialize(validated_input, strategy_pair)
     portfolio_ids_str = " - ".join(Trade.portfolio_ids)
     strategy_pair_str = "_".join(map(lambda a: str(a), strategy_pair))
     file_name = f"df_{instrument}_{strategy_pair_str}.csv"
 
-    all_df = read_data(
-        instrument,
-        Trade.portfolio_ids,
-        strategy_pair,
-        validated_input.get("start_date"),
-        validated_input.get("end_date"),
-        validated_input.get("entry_fractal_file_number"),
-        validated_input.get("exit_fractal_file_number"),
-        validated_input.get("bb_file_number"),
-        Trade.bb_band_column,
-        validated_input.get("trail_bb_file_number"),
-        Trade.trail_bb_band_column,
-        read_entry_fractal=Trade.check_entry_fractal,
-        read_exit_fractal=Trade.check_exit_fractal,
-        read_bb_fractal=Trade.check_bb_band,
-        read_trail_bb_fractal=Trade.check_trail_bb_band,
-    )
+    try:
+        all_df = read_data(
+            instrument,
+            Trade.portfolio_ids,
+            strategy_pair,
+            validated_input.get("start_date"),
+            validated_input.get("end_date"),
+            validated_input.get("entry_fractal_file_number"),
+            validated_input.get("exit_fractal_file_number"),
+            validated_input.get("bb_file_number"),
+            Trade.bb_band_column,
+            validated_input.get("trail_bb_file_number"),
+            Trade.trail_bb_band_column,
+            read_entry_fractal=Trade.check_entry_fractal,
+            read_exit_fractal=Trade.check_exit_fractal,
+            read_bb_fractal=Trade.check_bb_band,
+            read_trail_bb_fractal=Trade.check_trail_bb_band,
+        )
+    except FileNotFoundError as e:
+        raise e
 
     # Merge data
     merged_df = merge_all_df(all_df)
@@ -564,12 +591,38 @@ def process_strategy(validated_input, strategy_pair, instrument):
         MarketDirection.PREVIOUS: None,
         "signal_count": 1,
     }
+    output_df = process_trade(
+        instrument,
+        portfolio_ids_str,
+        strategy_pair_str,
+        merged_df,
+        entry_state,
+        exit_state,
+    )
+    if DEBUG:
+        write_dataframe_to_csv(output_df, SG_OUTPUT_FOLDER, file_name)
+
+    if Trade.trigger_trade_management:
+        generate_tradesheet(
+            validated_input, output_df, strategy_pair_str, instrument
+        )
+
+
+def process_trade(
+    instrument,
+    portfolio_ids_str,
+    strategy_pair_str,
+    merged_df,
+    entry_state,
+    exit_state,
+    entry_func: callable = check_entry_conditions,
+    exit_func: callable = identify_exit_signals,
+):
+
     active_trades, completed_trades = [], []
     for index, row in merged_df.iterrows():
-        is_entry, direction = check_entry_conditions(row, entry_state)
-        is_exit, exit_type = identify_exit_signals(
-            row, exit_state, entry_state
-        )
+        is_entry, direction = entry_func(row, entry_state)
+        is_exit, exit_type = exit_func(row, exit_state, entry_state)
         if is_exit:
             for trade in active_trades[:]:
                 trade.add_exit(row.name, row["Close"], exit_type)
@@ -594,18 +647,4 @@ def process_strategy(validated_input, strategy_pair, instrument):
         )
 
     output_df = pd.DataFrame(trade_outputs)
-    print("DF created")
-    if DEBUG:
-        write_dataframe_to_csv(output_df, SG_OUTPUT_FOLDER, file_name)
-
-    if Trade.trigger_trade_management:
-        print("On IF")
-        generate_tradesheet(
-            validated_input, output_df, strategy_pair_str, instrument
-        )
-
-
-def write_dataframe_to_csv(dataframe, folder_name, file_name):
-    path = os.path.join(folder_name, file_name)
-    os.makedirs(folder_name, exist_ok=True)
-    dataframe.to_csv(path, index=True)
+    return output_df
