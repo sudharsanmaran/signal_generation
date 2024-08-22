@@ -262,9 +262,18 @@ def main():
     """
 
     errors, streamlit_inputs, saved_inputs = [], {}, {}
+
+    st.header("Signal Generation")
+
+    expander_option = st.selectbox(
+        "Select Expander", ["Signal", "Cycle", "PA DB"]
+    )
     use_saved_input = st.checkbox("Use Saved Inputs", value=False)
     if use_saved_input:
-        all_user_inputs = load_input_from_json()
+        file_name = "user_inputs.json"
+        if expander_option == "PA DB":
+            file_name = "pa_db_user_inputs.json"
+        all_user_inputs = load_input_from_json(file_name)
         if all_user_inputs:
             search_term = st.text_input("Search Notes")
 
@@ -279,33 +288,37 @@ def main():
             )
             saved_inputs = all_user_inputs[selected_note]
 
-            # json does not support tuple, so converting to tuple
-            saved_inputs["long_entry_signals"] = list(
-                map(lambda x: tuple(x), saved_inputs["long_entry_signals"])
-            )
-            if "long_exit_signals" in saved_inputs:
-                saved_inputs["long_exit_signals"] = list(
-                    map(lambda x: tuple(x), saved_inputs["long_exit_signals"])
+            if not expander_option == "PA DB":
+
+                # json does not support tuple, so converting to tuple
+                saved_inputs["long_entry_signals"] = list(
+                    map(lambda x: tuple(x), saved_inputs["long_entry_signals"])
                 )
-            saved_inputs["short_entry_signals"] = list(
-                map(lambda x: tuple(x), saved_inputs["short_entry_signals"])
-            )
-            if "short_exit_signals" in saved_inputs:
-                saved_inputs["short_exit_signals"] = list(
-                    map(lambda x: tuple(x), saved_inputs["short_exit_signals"])
+                if "long_exit_signals" in saved_inputs:
+                    saved_inputs["long_exit_signals"] = list(
+                        map(
+                            lambda x: tuple(x),
+                            saved_inputs["long_exit_signals"],
+                        )
+                    )
+                saved_inputs["short_entry_signals"] = list(
+                    map(
+                        lambda x: tuple(x), saved_inputs["short_entry_signals"]
+                    )
                 )
-            saved_inputs["strategy_pairs"] = list(
-                map(lambda x: tuple(x), saved_inputs["strategy_pairs"])
-            )
+                if "short_exit_signals" in saved_inputs:
+                    saved_inputs["short_exit_signals"] = list(
+                        map(
+                            lambda x: tuple(x),
+                            saved_inputs["short_exit_signals"],
+                        )
+                    )
+                saved_inputs["strategy_pairs"] = list(
+                    map(lambda x: tuple(x), saved_inputs["strategy_pairs"])
+                )
 
         else:
             st.warning("saved data not found")
-
-    st.header("Signal Generation")
-
-    expander_option = st.selectbox(
-        "Select Expander", ["Signal", "Cycle", "PA DB"]
-    )
 
     if expander_option == "Signal":
 
@@ -905,7 +918,9 @@ def main():
                         "notes": notes,
                     }
                     temp.update(streamlit_inputs)
-                    write_user_inputs(temp)
+                    if expander_option == "PA DB":
+                        filename = "pa_db_user_inputs.json"
+                    write_user_inputs(temp, filename)
 
                 # Start trade processing
                 execute(validated_input, exec_func)
@@ -1578,7 +1593,7 @@ def load_input_from_json(filename="user_inputs.json"):
         return {}
 
 
-def write_user_inputs(user_input):
+def write_user_inputs(user_input, filename="user_inputs.json"):
     """
     Write validated user inputs to a json file.
 
@@ -1586,7 +1601,6 @@ def write_user_inputs(user_input):
         user_input (dict): Validated input data.
     """
     try:
-        filename = "user_inputs.json"
         if os.path.isfile(filename) and os.path.getsize(filename) > 0:
             # Load existing data
             existing_data = load_input_from_json(filename)
