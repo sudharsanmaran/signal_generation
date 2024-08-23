@@ -47,6 +47,8 @@ class TradeExitType(Enum):
     END = "EOD"
     CYCLE_CHANGE = "CC"
     TP = "TP"
+    BB = "BB"
+    EB = "EB"
 
 
 class TradeType(Enum):
@@ -184,6 +186,7 @@ class OutputColumn(Enum):
     SIGNAL_NUMBER = "SG_Signal Number"
     ENTRY_DATETIME = "SG_Entry Datetime"
     ENTRY_ID = "SG_Entry ID"
+    ENTRY_TYPE = "SG_Entry Type"
     EXIT_ID = "SG_Exit ID"
     EXIT_DATETIME = "SG_Exit Datetime"
     EXIT_TYPE = "SG_Exit Type"

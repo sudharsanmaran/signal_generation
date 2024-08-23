@@ -142,7 +142,7 @@ def get_base_df(validated_data, strategy_df, strategy_pair_str, instrument):
     write_dataframe_to_csv(
         filtered_df,
         SG_CYCLE_OUTPUT_FOLDER,
-        f"filtered_df_{instrument}_{strategy_pair_str}.csv".replace(":","-"),
+        f"filtered_df_{instrument}_{strategy_pair_str}.csv".replace(":", "-"),
     )
 
     return filtered_df
@@ -163,19 +163,19 @@ def formulate_files_to_read(kwargs):
     kwargs["name"] += instrument
     close_time_frames_1 = kwargs.get("close_time_frames_1")
     kwargs["name"] += (
-        f'_closeTF_{"-".join(map(lambda x : str(x),close_time_frames_1))}'
+        f'_closeTF_{"-".join(map(lambda x: str(x), close_time_frames_1))}'
         if close_time_frames_1
         else ""
     )
     bb_time_frames_1 = kwargs.get("bb_time_frames_1")
     kwargs["name"] += (
-        f'_bb1TF_{"-".join(map(lambda x : str(x),bb_time_frames_1))}'
+        f'_bb1TF_{"-".join(map(lambda x: str(x), bb_time_frames_1))}'
         if bb_time_frames_1
         else ""
     )
     bb_time_frames_2 = kwargs.get("bb_time_frames_2")
     kwargs["name"] += (
-        f'_bb2TF_{"-".join(map(lambda x : str(x),bb_time_frames_2))}'
+        f'_bb2TF_{"-".join(map(lambda x: str(x), bb_time_frames_2))}'
         if bb_time_frames_2
         else ""
     )
@@ -283,7 +283,8 @@ def formulate_files_to_read(kwargs):
                     "file_path": os.path.join(
                         os.getenv("FRACTAL_DB_PATH"),
                         instrument,
-                        f"{instrument}_TF_{kwargs.get('fractal_count_tf')}.csv",
+                        f"{instrument}_TF_{kwargs.get(
+                            'fractal_count_tf')}.csv",
                     ),
                 }
             }
@@ -304,7 +305,8 @@ def formulate_files_to_read(kwargs):
                     "file_path": os.path.join(
                         os.getenv("FRACTAL_DB_PATH"),
                         instrument,
-                        f"{instrument}_TF_{kwargs.get('fractal_count_tf')}.csv",
+                        f"{instrument}_TF_{kwargs.get(
+                            'fractal_count_tf')}.csv",
                     ),
                     "rename": {
                         col: name
@@ -541,7 +543,7 @@ def update_cycle_number_by_condition(
                 current_cycle += 1
                 end_idx = end_indices[end_indices > start_idx].min()
                 if not pd.isna(end_idx):
-                    in_cycle.loc[start_idx : end_idx - 1] = True
+                    in_cycle.loc[start_idx: end_idx - 1] = True
                     cycle_counter.loc[start_idx:end_idx] = current_cycle
                 else:
                     in_cycle.loc[start_idx:] = True
@@ -962,7 +964,8 @@ def update_fractal_cycle_id(kwargs, df, bb_cycle_col, end_condition_col):
             )
             & (
                 df[
-                    f"count_P_1_FRACTAL_CONFIRMED_LONG_{kwargs.get('fractal_sd')}"
+                    f"count_P_1_FRACTAL_CONFIRMED_LONG_{
+                        kwargs.get('fractal_sd')}"
                 ]
                 > kwargs.get("fractal_cycle_start")
             )
@@ -976,7 +979,8 @@ def update_fractal_cycle_id(kwargs, df, bb_cycle_col, end_condition_col):
             )
             & (
                 df[
-                    f"count_P_1_FRACTAL_CONFIRMED_SHORT_{kwargs.get('fractal_sd')}"
+                    f"count_P_1_FRACTAL_CONFIRMED_SHORT_{
+                        kwargs.get('fractal_sd')}"
                 ]
                 > kwargs.get("fractal_cycle_start")
             )
@@ -1152,7 +1156,8 @@ def update_last_state(row, state, key, market_direction):
         and market_direction
         and row[fractal_column_dict[key][market_direction]]
     ):
-        state[row[Trade.current_cycle]].append((row.name, row["Close"]))
+        state[(row['group_id'], row[Trade.current_cycle])
+              ].append((row.name, row["Close"]))
 
 
 def is_cycle_entry_fractal(row, state, market_direction, key):
@@ -1169,7 +1174,7 @@ def is_cycle_entry_fractal(row, state, market_direction, key):
     """
     if (
         market_direction
-        and len(state[row[Trade.current_cycle]])
+        # and len(state[(row['group_id'], row[Trade.current_cycle])])
         and row[confirm_fractal_column_dict[key][market_direction]]
     ):
         return True
@@ -1211,9 +1216,9 @@ def check_cycle_entry_condition(row: pd.Series, state: dict) -> bool:
         bool: True if the entry condition is met, False otherwise.
     """
     if not is_trade_start_time_crossed(row):
-        return False, None
+        return False, None, None
 
-    market_direction = eval(row["market_direction"])
+    market_direction = row["market_direction"]
     if (
         pd.isna(market_direction)
         or market_direction == MarketDirection.UNKNOWN
@@ -1221,36 +1226,52 @@ def check_cycle_entry_condition(row: pd.Series, state: dict) -> bool:
         market_direction = None
 
     if is_initial_cycles(row):
-        return False, None
-
-    # clear the state if the cycle changes
-    if row[Trade.current_cycle] != row["previous_cycle_id"]:
-        state[row["previous_cycle_id"]].clear()
+        return False, None, None
 
     # update state for the cycle
-    update_last_state(row, state, "entry", market_direction)
+    # update_last_state(row, state, "entry", market_direction)
 
     if (
         not Trade.allowed_direction == MarketDirection.ALL
         and not market_direction == Trade.allowed_direction
     ):
-        return False, None
+        # clear the state if the cycle changes
+        # clear_state(row, state)
+        return False, None, None
 
     if (
         Trade.type == TradeType.INTRADAY
         and row.name.time() >= Trade.trade_end_time
     ):
-        return False, None
+        # clear the state if the cycle changes
+        # clear_state(row, state)
+        return False, None, None
 
+    is_fractal_entry = False
     if Trade.check_entry_fractal:
         is_fractal_entry = is_cycle_entry_fractal(
             row, state, market_direction, "entry"
         )
 
-    if Trade.check_entry_fractal:
-        return is_fractal_entry, market_direction
+    is_cycle_change_entry = False
+    if row[Trade.current_cycle] != row["previous_cycle_id"]:
+        is_cycle_change_entry = True
 
-    return False, None
+    # clear the state if the cycle changes
+    # clear_state(row, state)
+
+    if is_cycle_change_entry:
+        return is_cycle_change_entry, market_direction, TradeExitType.CYCLE_CHANGE
+
+    if Trade.check_entry_fractal:
+        return is_fractal_entry, market_direction, TradeExitType.FRACTAL
+
+    return False, None, None
+
+
+def clear_state(row, state):
+    if row[Trade.current_cycle] != row["previous_cycle_id"]:
+        state[row["previous_cycle_id"]].clear()
 
 
 def is_tp_exit(row, exit_state):
@@ -1258,17 +1279,14 @@ def is_tp_exit(row, exit_state):
     if (
         row[TargetProfitColumns.TP_END.value]
         == "YES"
-        # and exit_state.get("previous_tp", None) == "NO"
     ):
         is_tp_exit = True
-
-    # exit_state["previous_tp"] = row[TargetProfitColumns.TP_END.value]
 
     return is_tp_exit
 
 
 def check_cycle_exit_signals(row, exit_state, entry_state):
-    market_direction = eval(row["exit_market_direction"])
+    market_direction = row["exit_market_direction"]
     if (
         pd.isna(market_direction)
         or market_direction == MarketDirection.UNKNOWN

@@ -7,7 +7,7 @@ The `data_reader.py` module provided is responsible for reading and merging vari
   - **Args**: `all_dfs` (list of pandas DataFrames).
   - **Returns**: Merged DataFrame.
 - **`read_data` Function**: Reads data from various CSV files based on the provided parameters and returns a list of DataFrames.
-  - **Args**: 
+  - **Args**:
     - Various parameters specifying the instrument, portfolio and strategy IDs, date range, file numbers, column names, and flags indicating whether to read certain data.
   - **Returns**: List of DataFrames containing the read data.
   - **Function Details**:
@@ -163,9 +163,9 @@ def update_exit_fractal_file(
             f"{instrument}_TF_{exit_fractal_file_number}.csv",
         ),
         "index_col": index,
-        "cols": [index, *exit_fractal_columns],
+        "cols": [index, "e_dt", *exit_fractal_columns],
         "dtype": {col: "boolean" for col in entry_fractal_columns},
-        "rename": {col: f"exit_{col}" for col in entry_fractal_columns},
+        "rename": {col: f"exit_{col}" for col in (entry_fractal_columns + ["e_dt"])},
     }
 
 
@@ -180,9 +180,9 @@ def update_entry_fractal_file(
             f"{instrument}_TF_{entry_fractal_file_number}.csv",
         ),
         "index_col": index,
-        "cols": [index, *entry_fractal_columns],
+        "cols": [index, "e_dt", *entry_fractal_columns],
         "dtype": {col: "boolean" for col in entry_fractal_columns},
-        "rename": {col: f"entry_{col}" for col in entry_fractal_columns},
+        "rename": {col: f"entry_{col}" for col in (entry_fractal_columns + ["e_dt"])},
     }
 
 

@@ -8,8 +8,9 @@ from source.validation.validate_trade_management import TradingConfiguration
 class PAOutput(FractalInput, BollingerBandInput, TradingConfiguration):
     pa_file: str
     cycle_to_consider: CycleType
-    tp_percentage: float
-    tp_method: str
+    calculate_tp: bool = False
+    tp_percentage: float = 0.0
+    tp_method: str = 1
     trade_type: TradeType
     allowed_direction: MarketDirection
     trade_start_time: Optional[time] = None

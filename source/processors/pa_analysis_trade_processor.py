@@ -72,12 +72,14 @@ def process_pa_output(validated_data, *args):
                     "file_path": os.path.join(
                         bb_path,
                         instrument,
-                        f"{instrument}_TF_{validated_data['bb_file_number']}.csv",
+                        f"{instrument}_TF_{
+                            validated_data['bb_file_number']}.csv",
                     ),
                     "index_col": "dt",
                     "cols": [
                         index,
-                        f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper()}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}',
+                        f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper(
+                        )}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}',
                     ],
                     "rename": {
                         f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper()}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}': f"bb_{validated_data['bb_band_column']}"
@@ -87,16 +89,6 @@ def process_pa_output(validated_data, *args):
         )
 
     cycle_cols = get_cycle_columns(pa_df)
-
-    update_target_profit_analysis(
-        pa_df,
-        validated_data.get("tp_percentage"),
-        validated_data.get("tp_method"),
-        cycle_col_name=cycle_cols[CycleType.MTM_CYCLE],
-        close_col_name=cycle_cols[CycleType.FIRST_CYCLE].replace(
-            "cycle_no", "close_to"
-        ),
-    )
 
     cols = [
         "Open",
@@ -108,8 +100,29 @@ def process_pa_output(validated_data, *args):
         "group_id",
         "signal_category",
         cycle_cols[validated_data["cycle_to_consider"]],
-        TargetProfitColumns.TP_END.value,
     ]
+
+    # covert market direction to MarketDirection enum
+    market_direction_map = {
+        "MarketDirection.LONG": MarketDirection.LONG,
+        "MarketDirection.SHORT": MarketDirection.SHORT,
+    }
+
+    pa_df["market_direction"] = pa_df["market_direction"].map(
+        market_direction_map
+    )
+
+    if validated_data["calculate_tp"]:
+        update_target_profit_analysis(
+            pa_df,
+            validated_data.get("tp_percentage"),
+            validated_data.get("tp_method"),
+            cycle_col_name=cycle_cols[CycleType.MTM_CYCLE],
+            close_col_name=cycle_cols[CycleType.FIRST_CYCLE].replace(
+                "cycle_no", "close_to"
+            ),
+        )
+        cols.append(TargetProfitColumns.TP_END.value)
 
     merged_df = pa_df[cols]
 

@@ -276,11 +276,11 @@ def check_entry_conditions(row, state):
     """
 
     if not is_trade_start_time_crossed(row):
-        return False, None
+        return False, None, None
 
     if Trade.no_of_rows_to_skip:
         Trade.no_of_rows_to_skip -= 1
-        return False, None
+        return False, None, None
 
     market_direction = get_market_direction(
         row,
@@ -290,7 +290,7 @@ def check_entry_conditions(row, state):
     )
 
     if not market_direction:
-        return False, None
+        return False, None, None
 
     previous_direction = state.get(MarketDirection.PREVIOUS, None)
     state[MarketDirection.PREVIOUS] = market_direction
@@ -311,13 +311,13 @@ def check_entry_conditions(row, state):
         not Trade.allowed_direction == MarketDirection.ALL
         and not market_direction == Trade.allowed_direction
     ):
-        return False, None
+        return False, None, None
 
     if (
         Trade.type == TradeType.INTRADAY
         and row.name.time() >= Trade.trade_end_time
     ):
-        return False, None
+        return False, None, None
 
     if Trade.check_entry_fractal:
         is_fractal_entry = check_fractal_conditions(
@@ -329,15 +329,15 @@ def check_entry_conditions(row, state):
             )
 
     if Trade.check_entry_fractal and Trade.check_bb_band:
-        return is_fractal_entry and is_bb_band_entry, market_direction
+        return is_fractal_entry and is_bb_band_entry, market_direction, TradeExitType.FRACTAL
     elif Trade.check_entry_fractal:
-        return is_fractal_entry, market_direction
+        return is_fractal_entry, market_direction, TradeExitType.FRACTAL
     elif Trade.check_bb_band:
-        return is_bb_band_entry, market_direction
+        return is_bb_band_entry, market_direction, TradeExitType.BB
     elif Trade.check_entry_based:
-        return is_entry, market_direction
+        return is_entry, market_direction, TradeExitType.EB
 
-    return False, None
+    return False, None, None
 
 
 def is_trade_end_time_reached(row):
@@ -621,18 +621,26 @@ def process_trade(
 
     active_trades, completed_trades = [], []
     for index, row in merged_df.iterrows():
-        is_entry, direction = entry_func(row, entry_state)
+        is_entry, direction, entry_type = entry_func(row, entry_state)
         is_exit, exit_type = exit_func(row, exit_state, entry_state)
         if is_exit:
+            exit_datetime = row.name
+            if exit_type == TradeExitType.FRACTAL:
+                exit_datetime = row['exit_e_dt']
             for trade in active_trades[:]:
-                trade.add_exit(row.name, row["Close"], exit_type)
+                trade.add_exit(
+                    exit_datetime, row["Close"], exit_type)
                 if trade.is_trade_closed():
                     completed_trades.append(trade)
                     active_trades.remove(trade)
         if is_entry:
+            entry_datetime = index
+            if entry_type == TradeExitType.FRACTAL:
+                entry_datetime = row['entry_e_dt']
             trade = Trade(
                 entry_signal=direction,
-                entry_datetime=index,
+                entry_datetime=entry_datetime,
+                entry_type=entry_type,
                 entry_price=row["Close"],
                 signal_count=exit_state["signal_count"],
             )

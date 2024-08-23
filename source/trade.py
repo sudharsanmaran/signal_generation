@@ -70,7 +70,7 @@ class Trade:
     calculate_tp: bool = False
 
     def __init__(
-        self, entry_signal, entry_datetime, entry_price, signal_count
+        self, entry_signal, entry_datetime, entry_price, signal_count, entry_type
     ):
         """
         Initialize a Trade instance with entry details.
@@ -88,6 +88,7 @@ class Trade:
         self.signal_count = signal_count
         self.entry_datetime = entry_datetime
         self.entry_price = entry_price
+        self.entry_type = entry_type
         self.exits = []
         self.trade_closed = False
         self.exit_id_counter = 0
@@ -141,6 +142,7 @@ class Trade:
                             "exit_datetime": exit_datetime,
                             "exit_price": exit_price,
                             "exit_type": exit_type,
+                            "entry_type": self.entry_type,
                             "pnl": self.calculate_pnl(exit_price),
                         }
                     )
@@ -151,6 +153,7 @@ class Trade:
                         "exit_datetime": exit_datetime,
                         "exit_price": exit_price,
                         "exit_type": exit_type,
+                        "entry_type": self.entry_type,
                         "pnl": self.calculate_pnl(exit_price),
                     }
                 )
@@ -191,6 +194,7 @@ class Trade:
                 OutputColumn.SIGNAL_NUMBER.value: self.signal_count,
                 OutputColumn.ENTRY_DATETIME.value: self.entry_datetime,
                 OutputColumn.ENTRY_ID.value: self.entry_id,
+                OutputColumn.ENTRY_TYPE.value: exit["entry_type"].value,
                 OutputColumn.EXIT_ID.value: exit["exit_id"],
                 OutputColumn.EXIT_DATETIME.value: exit["exit_datetime"],
                 OutputColumn.EXIT_TYPE.value: exit["exit_type"].value,
@@ -265,9 +269,11 @@ def initialize(validated_input, strategy_pair=None):
     )
 
     if Trade.check_bb_band:
-        Trade.bb_band_column = f"P_{validated_input['parameter_id']}_{validated_input.get('bb_band_column').upper()}_BAND_{validated_input['period']}_{validated_input.get('bb_band_sd')}"
+        Trade.bb_band_column = f"P_{validated_input['parameter_id']}_{validated_input.get(
+            'bb_band_column').upper()}_BAND_{validated_input['period']}_{validated_input.get('bb_band_sd')}"
     if Trade.check_trail_bb_band:
-        Trade.trail_bb_band_column = f"P_{validated_input['parameter_id']}_{validated_input.get('trail_bb_band_column').upper()}_BAND_{validated_input['period']}_{validated_input.get('trail_bb_band_sd')}"
+        Trade.trail_bb_band_column = f"P_{validated_input['parameter_id']}_{validated_input.get(
+            'trail_bb_band_column').upper()}_BAND_{validated_input['period']}_{validated_input.get('trail_bb_band_sd')}"
 
     # Initialize trail compare functions with default values
     Trade.trail_compare_functions = {
