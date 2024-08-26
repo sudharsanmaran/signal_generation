@@ -111,6 +111,9 @@ def process_pa_output(validated_data, *args):
     pa_df["market_direction"] = pa_df["market_direction"].map(
         market_direction_map
     )
+    pa_df["exit_market_direction"] = pa_df["exit_market_direction"].map(
+        market_direction_map
+    )
 
     if validated_data["calculate_tp"]:
         update_target_profit_analysis(
