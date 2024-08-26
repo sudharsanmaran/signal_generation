@@ -42,14 +42,15 @@ def get_min_max_idx(
 
     except ValueError:
         print(
-            f"can't find data for min and max while following subsequent calculation rule... for grp: {group_id} cycle no: {cycle}"
+            f"can't find data for min and max while following subsequent calculation rule... for grp: {
+                group_id} cycle no: {cycle}"
         )
 
     return min_idx, max_idx, cycle_min, cycle_max
 
 
 def get_next_cycle_first_row(
-    group_data, cycle, cycle_col, groups, group_idx, cycle_start=1
+    group_data, cycle, cycle_col, groups, group_idx, cycle_start=1, cycle_data=None
 ):
     """
     Retrieves the first row of the next cycle considering both the current group and the next group.
@@ -64,27 +65,35 @@ def get_next_cycle_first_row(
     Returns:
     Series: The first row of the next cycle, or None if it doesn't exist.
     """
-    # Get the data for the next cycle in the current group
-    next_cycle_data = group_data[group_data[cycle_col] == cycle + 1]
-
-    if next_cycle_data.empty:
-        # If the next cycle is not found in the current group, check the next group
-        if group_idx + 1 < len(groups):
-            next_group_id, next_group_data = groups[group_idx + 1]
-            next_cycle_data = next_group_data[
-                next_group_data[cycle_col] == cycle_start
-            ]
-            if not next_cycle_data.empty:
-                return next_cycle_data.iloc[0]
-            # If next cycle in the next group is not found, try the second cycle
-            next_next_cycle_data = next_group_data[
-                next_group_data[cycle_col] == cycle_start + 1
-            ]
-            if not next_next_cycle_data.empty:
-                return next_next_cycle_data.iloc[0]
+    # Check if cycle_data is provided
+    if cycle_data is not None:
+        last_index_position = group_data.index.get_loc(cycle_data.index[-1])
     else:
-        # Return the first row of the next cycle in the current group
-        return next_cycle_data.iloc[0]
+        last_index_position = -1  # Start before the first row
+
+    # Check if there is a next row in the current group
+    if last_index_position + 1 < len(group_data):
+        next_row = group_data.iloc[last_index_position + 1]
+        if next_row[cycle_col] == cycle + 1 or next_row[cycle_col] == 0:
+            return next_row
+
+    # If the next cycle is not found in the current group, check the next group
+    if group_idx + 1 < len(groups):
+        next_group_id, next_group_data = groups[group_idx + 1]
+        next_cycle_data = next_group_data[
+            (next_group_data[cycle_col] == cycle_start) | (
+                next_group_data[cycle_col] == 0)
+        ]
+        if not next_cycle_data.empty:
+            return next_cycle_data.iloc[0]
+
+        # If next cycle in the next group is not found, try the second cycle
+        next_next_cycle_data = next_group_data[
+            (next_group_data[cycle_col] == cycle_start +
+             1) | (next_group_data[cycle_col] == 0)
+        ]
+        if not next_next_cycle_data.empty:
+            return next_next_cycle_data.iloc[0]
 
     # Return None if no next cycle data is found
     return None
@@ -234,7 +243,7 @@ def update_MTM_CTC_cols(df, validated_data):
                     continue
 
                 next_cycle_first_row = get_next_cycle_first_row(
-                    group_data, cycle, cycle_col, groups, group_idx
+                    group_data, cycle, cycle_col, groups, group_idx, cycle_data=cycle_data
                 )
 
                 if next_cycle_first_row is not None:
