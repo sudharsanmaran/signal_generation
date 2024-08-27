@@ -227,7 +227,8 @@ def process_pa_output(validated_data, *args):
 
     Trade.current_cycle = cycle_cols[validated_data["cycle_to_consider"]]
 
-    file_name = validated_data["pa_file"]
+    file_name = "_".join(validated_data["pa_file"].split("_")[:-2]) + ".csv"
+    validated_data["file_name"] = file_name
 
     entry_state = defaultdict(deque)
 
