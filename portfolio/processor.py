@@ -49,7 +49,7 @@ def process_portfolio(validated_data: InputData):
 
             update_common_record(
                 pnl_dict, company_row,
-                pd.Timestamp(f"{group_id} 15:30:00"), ticker
+                pd.Timestamp(f"{group_id} 09:15:00"), ticker
             )
             process_out_of_list_exit(
                 company, pnl_dict,
@@ -76,6 +76,9 @@ def process_portfolio(validated_data: InputData):
             entry_id = 0
             for name, row in sg_df.iterrows():
 
+                if row["DATETIME"] < pd.Timestamp("2023-03-17 13:20:00"):
+                    a = 1
+
                 update_common_record(
                     pnl_dict, company_row, row['DATETIME'],
                     row[OutputColumn.INSTRUMENT.value]
@@ -100,7 +103,7 @@ def process_portfolio(validated_data: InputData):
     pnl_df = pd.DataFrame(pnl_dict)
 
     # sort based on datetime
-    pnl_df = pnl_df.sort_values(by='DATETIME').reset_index(drop=True)
+    # pnl_df = pnl_df.sort_values(by='DATETIME').reset_index(drop=True)
 
     write_dataframe_to_csv(
         pnl_df, PORTFOLIO_PNL_OUTPUT_FOLDER,
@@ -159,7 +162,7 @@ def construct_company_signal_dictionary(validated_data):
         df_exit = df_exit.drop_duplicates(subset=['DATETIME'])
 
         # Concatenate the entry and exit DataFrames back together
-        df_cleaned = pd.concat([df_entry, df_exit]).sort_values(
+        df_cleaned = pd.concat([df_exit, df_entry]).sort_values(
             by='DATETIME').reset_index(drop=True)
 
         company_sg_df_map[company] = df_cleaned
@@ -192,12 +195,17 @@ def process_out_of_list_exit(company, pnl_dict, cum_value):
     except IndexError:
         cum_value = 0
 
+    try:
+        cum_volume = pnl_dict["CUM_VOLUME"][-1]
+    except IndexError:
+        cum_volume = 0
+
     pnl_dict["PROFIT_LOSS"].append(
         pnl_dict["SELL_VALUE"][-1] - cum_value)
 
     pnl_dict["WEIGHTED_AVG"].append(0)
     pnl_dict["CUM_VALUE"].append(cum_value)
-    pnl_dict["CUM_VOLUME"].append(cum_value)
+    pnl_dict["CUM_VOLUME"].append(cum_volume)
 
     pnl_dict["TP_VOLUME_TO_SOLD"].append(0)
     pnl_dict["TP_REMAINING_VOLUME"].append(0)
@@ -368,9 +376,13 @@ def process_exit(name, row, pnl_dict, configs: Configs):
                     pnl_dict["TP_REMAINING_VOLUME"][idx - 1]
                 )
 
-            pnl_dict["TP_REMAINING_VOLUME"][idx] = (
-                pnl_dict["TP_VOLUME_TO_SOLD"][idx] - pnl_dict["VOLUME"][idx]
-            )
+            try:
+                pnl_dict["TP_REMAINING_VOLUME"][idx] = (
+                    pnl_dict["TP_VOLUME_TO_SOLD"][idx] -
+                    pnl_dict["VOLUME"][idx]
+                )
+            except Exception:
+                a = 1
 
             pnl_dict["TP_NEED_TO_SELL"][idx] = (
                 pnl_dict["TP_REMAINING_VOLUME"][idx] * -
@@ -390,9 +402,14 @@ def process_exit(name, row, pnl_dict, configs: Configs):
 
             idx += 1
 
-        pnl_dict["WEIGHTED_AVG"][-1] = rem_price
-        pnl_dict["CUM_VALUE"][-1] = rem_volume * rem_price
-        pnl_dict["CUM_VOLUME"][-1] = rem_volume
+        if rem_volume > 0 and rem_price > 0:
+            pnl_dict["WEIGHTED_AVG"][-1] = rem_price
+            pnl_dict["CUM_VALUE"][-1] = rem_volume * rem_price
+            pnl_dict["CUM_VOLUME"][-1] = rem_volume
+        else:
+            pnl_dict["WEIGHTED_AVG"][-1] = pnl_dict["WEIGHTED_AVG"][-2]
+            pnl_dict["CUM_VALUE"][-1] = pnl_dict["CUM_VALUE"][-2]
+            pnl_dict["CUM_VOLUME"][-1] = pnl_dict["CUM_VOLUME"][-2]
 
 
 def update_company_base_df(company_df, configs: Configs):
