@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import List, Literal
 import pandas as pd
 from pydantic import BaseModel, ConfigDict
 
@@ -21,8 +21,10 @@ class Configs(BaseModel):
 
 class InputData(SignalGenFiles):
     companies_data: CompaniesInput
-    configs: Configs
+    company_lists: List[str]
     companies_df: pd.DataFrame
+    company_tickers: pd.DataFrame
+    configs: Configs
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 

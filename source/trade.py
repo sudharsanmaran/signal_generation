@@ -190,7 +190,7 @@ class Trade:
                 OutputColumn.INSTRUMENT.value: instrument,
                 OutputColumn.PORTFOLIOS.value: portfolio_pair,
                 OutputColumn.STRATEGY_IDS.value: strategy_pair,
-                OutputColumn.SIGNAL.value: self.entry_signal.value,
+                OutputColumn.SIGNAL.value: self.entry_signal.value if self.entry_signal else "NA",
                 OutputColumn.SIGNAL_NUMBER.value: self.signal_count,
                 OutputColumn.ENTRY_DATETIME.value: self.entry_datetime,
                 OutputColumn.ENTRY_ID.value: self.entry_id,

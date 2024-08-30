@@ -1,6 +1,3 @@
-import logging
-import streamlit as st
-
 from portfolio.data_reader import (
     get_signal_gen_files,
     read_company_data,
@@ -9,12 +6,9 @@ from portfolio.data_reader import (
 )
 from portfolio.processor import process_portfolio
 from portfolio.validation import validate_companies_input, validate_input_data
+import logging
+import streamlit as st
 
-# Configure the logger
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
 logger = logging.getLogger(__name__)
 
 
@@ -33,31 +27,32 @@ def main():
         st.session_state["company_sg_map"] = manage_signal_gen_files(
             company_lists
         )
-        st.session_state["configs"] = manage_configs()
+
+    configs = manage_configs()
 
     required_fields = [
         "company_lists",
         "companies_data",
         "company_sg_map",
-        "configs",
     ]
 
     if all(field in st.session_state for field in required_fields):
         submit = st.button("Submit")
         if submit:
-            try:
-                validated_data = validate_input_data(
-                    {
-                        "company_lists": st.session_state["company_lists"],
-                        "companies_data": st.session_state["companies_data"],
-                        "company_sg_map": st.session_state["company_sg_map"],
-                        "configs": st.session_state["configs"],
-                        "companies_df": st.session_state["companies_df"],
-                    }
-                )
-                process_portfolio(validated_data)
-            except Exception as e:
-                st.error(e)
+            # try:
+            validated_data = validate_input_data(
+                {
+                    "company_lists": st.session_state["company_lists"],
+                    "companies_data": st.session_state["companies_data"],
+                    "company_sg_map": st.session_state["company_sg_map"],
+                    "configs": configs,
+                    "companies_df": st.session_state["companies_df"],
+                    "company_tickers": st.session_state["ticker_df"],
+                }
+            )
+            process_portfolio(validated_data)
+            # except Exception as e:
+            #     st.error(e)
     else:
         st.warning("Please fill out all required fields.")
 
@@ -90,6 +85,7 @@ def manage_signal_gen_files(company_lists):
     """Handles signal generation files selection for each company."""
     if "company_sg_map" not in st.session_state:
         ticker_df = read_company_tickers()
+        st.session_state["ticker_df"] = ticker_df
         signal_gen_files = get_signal_gen_files()
         company_signal_gen_files = {}
 

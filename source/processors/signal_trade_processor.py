@@ -625,8 +625,8 @@ def process_trade(
         is_exit, exit_type = exit_func(row, exit_state, entry_state)
         if is_exit:
             exit_datetime = row.name
-            if exit_type == TradeExitType.FRACTAL:
-                exit_datetime = row['exit_e_dt']
+            # if exit_type == TradeExitType.FRACTAL:
+            #     exit_datetime = row['exit_e_dt']
             for trade in active_trades[:]:
                 trade.add_exit(
                     exit_datetime, row["Close"], exit_type)
@@ -635,8 +635,8 @@ def process_trade(
                     active_trades.remove(trade)
         if is_entry:
             entry_datetime = index
-            if entry_type == TradeExitType.FRACTAL:
-                entry_datetime = row['entry_e_dt']
+            # if entry_type == TradeExitType.FRACTAL:
+            #     entry_datetime = row['entry_e_dt']
             trade = Trade(
                 entry_signal=direction,
                 entry_datetime=entry_datetime,

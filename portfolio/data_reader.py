@@ -8,6 +8,7 @@ from portfolio.constants import (
     TICKER_FILE_PATH,
 )
 from portfolio.validation import CompaniesInput
+from source.constants import OutputColumn
 
 
 logger = logging.getLogger(__name__)
@@ -35,8 +36,9 @@ def read_company_data(company_data: CompaniesInput) -> pd.DataFrame:
         f"{company_data.parameter_id}_result.csv",
     )
     df = read_csv_file(file_path)
-    if not df.empty:
-        df["Date"] = pd.to_datetime(df["Date"])
+    df['Date'] = pd.to_datetime(df['Date'])
+    if df.empty:
+        raise ValueError(f"Company Data not found for {company_data}")
     return df
 
 
@@ -75,4 +77,9 @@ def get_signal_gen_files() -> list:
 
 def read_signal_gen_file(file_name: str) -> pd.DataFrame:
     file_path = os.path.join(SIGNAL_GEN_FILES_PATH, file_name)
-    return read_csv_file(file_path)
+    df = read_csv_file(file_path)
+    for col in [
+        OutputColumn.ENTRY_DATETIME.value, OutputColumn.EXIT_DATETIME.value
+    ]:
+        df[col] = pd.to_datetime(df[col])
+    return df

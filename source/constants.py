@@ -49,6 +49,7 @@ class TradeExitType(Enum):
     TP = "TP"
     BB = "BB"
     EB = "EB"
+    OUT_OF_LIST = "OOL"
 
 
 class TradeType(Enum):
@@ -139,6 +140,12 @@ VOLUME_OUTPUT_FOLDER = str(BASE_OUTPUT_FOLDER / VOLUME / "volume_outputs")
 VOLUME_OUTPUT_SUMMARY_FOLDER = str(
     BASE_OUTPUT_FOLDER / VOLUME / "volume_summary_outputs"
 )
+
+PORTFOLIO_OUTPUT_FOLDER = "portfolio"
+PORTFOLIO_COMPANY_OUTPUT_FOLDER = str(
+    BASE_OUTPUT_FOLDER / PORTFOLIO_OUTPUT_FOLDER / "company")
+PORTFOLIO_PNL_OUTPUT_FOLDER = str(
+    BASE_OUTPUT_FOLDER / PORTFOLIO_OUTPUT_FOLDER / "pnl")
 
 # Define the percentage of available CPU to be used
 cpu_percent_to_use = 0.8  # You can adjust this percentage as needed
