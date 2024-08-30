@@ -3,6 +3,7 @@ import logging
 from typing import Dict, List
 
 import pandas as pd
+from portfolio.constants import PNLSummaryCols
 from portfolio.data_reader import read_signal_gen_file
 from portfolio.validation import Configs, InputData
 from source.constants import (
@@ -42,10 +43,7 @@ def process_portfolio(validated_data: InputData):
         for company in out_of_list:
             company_row = prev_group_df.loc[company]
 
-            try:
-                ticker = validated_data.company_tickers.loc[company]["Ticker Symbol"]
-            except KeyError:
-                ticker = "NA"
+            ticker = fetch_ticker(validated_data.company_tickers, company)
 
             update_common_record(
                 pnl_dict, company_row,
@@ -105,11 +103,93 @@ def process_portfolio(validated_data: InputData):
     # sort based on datetime
     # pnl_df = pnl_df.sort_values(by='DATETIME').reset_index(drop=True)
 
+    # pnl_df.set_index('DATETIME', inplace=True)
+
+    summary_df = formulate_daily_pnl_summary(
+        validated_data.companies_df, pnl_df, validated_data.company_tickers
+    )
+
     write_dataframe_to_csv(
         pnl_df, PORTFOLIO_PNL_OUTPUT_FOLDER,
         f"{validated_data.companies_data.segment}_{
             validated_data.companies_data.parameter_id}_pnl.csv"
     )
+
+
+def fetch_ticker(company_tickers, company):
+    try:
+        ticker = company_tickers.loc[company]["Ticker Symbol"]
+    except KeyError:
+        ticker = "NA"
+    return ticker
+
+
+def formulate_daily_pnl_summary(company_df, pnl_df, company_tickers):
+
+    pnl_df['Date'] = pnl_df['DATETIME'].dt.date
+    pnl_df.set_index('Date', inplace=True)
+
+    summary_dict = defaultdict(list)
+    for date, group in company_df.groupby('Date'):
+        group.index = group['Name of Company']
+        for company in group.index:
+            ticker = fetch_ticker(company_tickers, company)
+            pnl_mask = (pnl_df.index == date.date()) & (
+                pnl_df['COMPANY'] == ticker)
+            pnl = pnl_df.loc[pnl_mask]
+
+            if pnl.empty:
+                logger.error(
+                    f"{formulate_daily_pnl_summary.__name__}: no pnl found for {company} on {date}")
+
+            summary_dict[PNLSummaryCols.DATE.value].append(date)
+            summary_dict[PNLSummaryCols.COMPANY.value].append(ticker)
+
+            for type, group in pnl.groupby('TYPE'):
+                if type == "ENTRY":
+                    populate_entry_data(summary_dict, group)
+                elif type == "EXIT":
+                    pass
+
+    return pd.DataFrame(summary_dict)
+
+
+def populate_exit_data(summary_dict, group: pd.DataFrame):
+    if group.empty:
+        summary_values = {
+            PNLSummaryCols.EXITS.value: "NO",
+            PNLSummaryCols.OPEN_POSITION.value: "NO",
+            PNLSummaryCols.TRADE_ID.value: 0,
+            PNLSummaryCols.OPEN_VOLUME.value: 0,
+            PNLSummaryCols.OPEN_EXPOSURE_COST.value: 0,
+            PNLSummaryCols.OPEN_EXPOSURE_PERCENT.value: 0,
+        }
+
+
+def populate_entry_data(summary_dict, group: pd.DataFrame):
+    if group.empty:
+        summary_values = default_entry_data()
+    else:
+        summary_values = {
+            PNLSummaryCols.INITIATED_POSITION.value: "YES",
+            PNLSummaryCols.NO_OF_ENTRIES_FOR_THE_DAY.value: group["ENTRY_ID"].ne("").sum(),
+            PNLSummaryCols.WEIGHTED_AVERAGE_PRICE.value: group['WEIGHTED_AVG'].iloc[-1],
+            PNLSummaryCols.TOTAL_VOLUME.value: group['CUM_VOLUME'].iloc[-1],
+            PNLSummaryCols.TOTAL_AMOUNT.value: group['CUM_VALUE'].iloc[-1],
+        }
+
+    for key, value in summary_values.items():
+        summary_dict[key].append(value)
+
+
+def default_entry_data():
+    return {
+        PNLSummaryCols.INITIATED_POSITION.value: "NO",
+        PNLSummaryCols.NO_OF_ENTRIES_FOR_THE_DAY.value: 0,
+        PNLSummaryCols.WEIGHTED_AVERAGE_PRICE.value: 0,
+        PNLSummaryCols.TOTAL_VOLUME.value: 0,
+        PNLSummaryCols.TOTAL_AMOUNT.value: 0,
+    }
 
 
 def update_common_record(pnl_dict, company_row, date_time, instrument):
@@ -221,6 +301,8 @@ def process_entry(
     logger.info(f"{process_entry.__name__}: Processing entry for {
                 name} at {row['DATETIME']}")
 
+    pnl_dict["TYPE"] = "ENTRY"
+
     exit_cols = [
         'EXIT_ID', 'EXIT_TYPE', 'SELL_PRICE',
         'VOLUME_TO_SOLD', 'SELL_VALUE', 'PROFIT_LOSS'
@@ -315,6 +397,8 @@ def volume_portfolio_metrics(pnl_dict, method=1):
 def process_exit(name, row, pnl_dict, configs: Configs):
     logger.info(f"{process_exit.__name__}: Processing exit for {
                 name} at {row['DATETIME']}")
+
+    pnl_dict["TYPE"] = "EXIT"
 
     entry_cols = [
         'ENTRY_ID', 'ENTRY_TYPE', 'PURCHASE_PRICE',

@@ -1,3 +1,4 @@
+from enum import Enum
 import logging
 import os
 from dotenv import load_dotenv
@@ -35,6 +36,23 @@ def initialize_paths():
     SIGNAL_GEN_FILES_PATH = SG_CYCLE_OUTPUT_FOLDER
     COMPANIES_INFO_PATH = get_env_variable("COMPANIES_INFO_PATH")
     TICKER_FILE_PATH = get_env_variable("TICKER_FILE_PATH")
+
+
+class PNLSummaryCols(Enum):
+    DATE = "Date"
+    COMPANY = "Company"
+    OPEN_POSITION = "Open Position"
+    INITIATED_POSITION = "Initiated Position"
+    TRADE_ID = "Trade ID"
+    NO_OF_ENTRIES_FOR_THE_DAY = "No. of Enteries for the day"
+    WEIGHTED_AVERAGE_PRICE = "Weighted Average Price"
+    TOTAL_VOLUME = "Total Volume"
+    ALLOWED_EXPOSURE = "Allowed Exposure"
+    TOTAL_AMOUNT = "Total Amount"
+    EXITS = "Exits"
+    OPEN_VOLUME = "Open Volume"
+    OPEN_EXPOSURE_COST = "Open Exposure (Cost)"
+    OPEN_EXPOSURE_PERCENT = "Open Exposure %"
 
 
 try:
