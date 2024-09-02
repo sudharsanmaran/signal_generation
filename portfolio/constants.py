@@ -53,6 +53,15 @@ class PNLSummaryCols(Enum):
     OPEN_VOLUME = "Open Volume"
     OPEN_EXPOSURE_COST = "Open Exposure (Cost)"
     OPEN_EXPOSURE_PERCENT = "Open Exposure %"
+    CLOSING_PRICE = "Closing Price"
+    PORTFOLIO_VALUE = "Portfolio Value"
+    MTM_REALIZED = "MTM Realized"
+    MTM_UNREALIZED = "MTM Unrealized"
+    PERCENT_OF_OPEN_POSITION = "% of Open Position"
+    MTM_UNREALIZED_BY_CAPITAL = "MTM Unrealized by Capital"
+    MTM_UNREALIZED_BY_EXPOSURE = "MTM Unrealized by Exposure"
+    MTM_REALIZED_BY_CAPITAL = "MTM Realized by Capital"
+    MTM_REALIZED_BY_EXPOSURE = "MTM Realized by Exposure"
 
 
 try:
