@@ -20,12 +20,99 @@ logger = logging.getLogger(__name__)
 
 
 def process_portfolio(validated_data: InputData):
-
     pd.set_option("display.max_rows", None)
 
     update_company_base_df(validated_data.companies_df, validated_data.configs)
-
     company_sg_df_map = construct_company_signal_dictionary(validated_data)
+    pnl_df = formulate_PNL_df(validated_data, company_sg_df_map)
+    summary_df = formulate_daily_pnl_summary(validated_data, pnl_df)
+    update_company_summary(validated_data, summary_df)
+
+    write_dataframe_to_csv(
+        pnl_df,
+        PORTFOLIO_PNL_OUTPUT_FOLDER,
+        f"{validated_data.companies_data.segment}_{validated_data.companies_data.parameter_id}_pnl.csv",
+    )
+
+    write_dataframe_to_csv(
+        summary_df,
+        PORTFOLIO_SUMMARY_OUTPUT_FOLDER,
+        f"{validated_data.companies_data.segment}_{validated_data.companies_data.parameter_id}_day_summary.csv",
+    )
+
+    write_dataframe_to_csv(
+        validated_data.companies_df,
+        PORTFOLIO_COMPANY_OUTPUT_FOLDER,
+        f"{validated_data.companies_data.segment}_{validated_data.companies_data.parameter_id}_company_base.csv",
+    )
+
+
+def update_company_summary(
+    validated_data: InputData, summary_df: pd.DataFrame
+) -> None:
+
+    def populate_company_entry_data() -> None:
+
+        if entry_row.empty:
+            logger.error(
+                f"{update_company_summary.__name__}: no entry found for {company} on {company_row['Date']}"
+            )
+            return
+
+        validated_data.companies_df.loc[
+            name, PNLSummaryCols.OPEN_EXPOSURE_COST.value
+        ] = entry_row[PNLSummaryCols.OPEN_EXPOSURE_COST.value].iloc[0]
+
+        validated_data.companies_df.loc[
+            name, PNLSummaryCols.OPEN_EXPOSURE_PERCENT.value
+        ] = entry_row[PNLSummaryCols.OPEN_EXPOSURE_PERCENT.value].iloc[0]
+
+        validated_data.companies_df.loc[
+            name, PNLSummaryCols.PORTFOLIO_VALUE.value
+        ] = entry_row[PNLSummaryCols.PORTFOLIO_VALUE.value].iloc[0]
+
+        validated_data.companies_df.loc[
+            name, PNLSummaryCols.MTM_UNREALIZED
+        ] = entry_row[PNLSummaryCols.MTM_UNREALIZED.value].iloc[0]
+
+        validated_data.companies_df.loc[
+            name, PNLSummaryCols.MTM_UNREALIZED_BY_CAPITAL.value
+        ] = entry_row[PNLSummaryCols.MTM_UNREALIZED_BY_CAPITAL.value].iloc[0]
+
+    def populate_company_exit_data() -> None:
+
+        if exit_row.empty:
+            logger.error(
+                f"{update_company_summary.__name__}: no exit found for {company} on {company_row['Date']}"
+            )
+            return
+        validated_data.companies_df.loc[
+            name, PNLSummaryCols.MTM_REALIZED.value
+        ] = exit_row[PNLSummaryCols.MTM_REALIZED.value].iloc[0]
+
+        validated_data.companies_df.loc[
+            name, PNLSummaryCols.MTM_REALIZED_BY_CAPITAL.value
+        ] = exit_row[PNLSummaryCols.MTM_REALIZED_BY_CAPITAL.value].iloc[0]
+
+    for name, company_row in validated_data.companies_df.iterrows():
+        company = company_row["Name of Company"]
+        ticker = fetch_ticker(validated_data.company_tickers, company)
+        company_summary = summary_df[
+            (summary_df["Company"] == ticker)
+            & (summary_df["Date"] == company_row["Date"])
+        ]
+
+        entry_row = company_summary.loc[
+            company_summary[PNLSummaryCols.INITIATED_POSITION.value] == "YES"
+        ]
+        exit_row = company_summary.loc[
+            company_summary[PNLSummaryCols.EXITS.value] == "YES"
+        ]
+        populate_company_entry_data()
+        populate_company_exit_data()
+
+
+def formulate_PNL_df(validated_data, company_sg_df_map):
 
     pnl_dict = defaultdict(list)
     out_of_list, prev_day_companies = set(), set()
@@ -80,9 +167,6 @@ def process_portfolio(validated_data: InputData):
             entry_id = 0
             for name, row in sg_df.iterrows():
 
-                if row["DATETIME"] < pd.Timestamp("2023-03-17 13:20:00"):
-                    a = 1
-
                 update_common_record(
                     pnl_dict,
                     company_row,
@@ -107,31 +191,8 @@ def process_portfolio(validated_data: InputData):
                 if sg_df.index[-1] == name:
                     prev_day_companies_pnl[company] = pnl_dict["CUM_VALUE"][-1]
 
-    # find diff length in pnl_dict list
-    for key in pnl_dict:
-        if len(pnl_dict[key]) != len(pnl_dict["DATETIME"]):
-            a = 1
-
     pnl_df = pd.DataFrame(pnl_dict)
-
-    # sort based on datetime
-    # pnl_df = pnl_df.sort_values(by='DATETIME').reset_index(drop=True)
-
-    # pnl_df.set_index('DATETIME', inplace=True)
-
-    summary_df = formulate_daily_pnl_summary(validated_data, pnl_df)
-
-    write_dataframe_to_csv(
-        pnl_df,
-        PORTFOLIO_PNL_OUTPUT_FOLDER,
-        f"{validated_data.companies_data.segment}_{validated_data.companies_data.parameter_id}_pnl.csv",
-    )
-
-    write_dataframe_to_csv(
-        summary_df,
-        PORTFOLIO_SUMMARY_OUTPUT_FOLDER,
-        f"{validated_data.companies_data.segment}_{validated_data.companies_data.parameter_id}_day_summary.csv",
-    )
+    return pnl_df
 
 
 def fetch_ticker(company_tickers, company):
@@ -300,11 +361,6 @@ def formulate_daily_pnl_summary(
                     populate_entry_data(group)
                 elif type == "EXIT":
                     populate_exit_data(group)
-
-    # find diff length in pnl_dict list
-    for key in summary_dict:
-        if len(summary_dict[key]) != len(summary_dict["Date"]):
-            a = 1
 
     return pd.DataFrame(summary_dict)
 
