@@ -39,7 +39,6 @@ def main():
     if all(field in st.session_state for field in required_fields):
         submit = st.button("Submit")
         if submit:
-            # try:
             validated_data = validate_input_data(
                 {
                     "company_lists": st.session_state["company_lists"],
@@ -51,8 +50,7 @@ def main():
                 }
             )
             process_portfolio(validated_data)
-            # except Exception as e:
-            #     st.error(e)
+
     else:
         st.warning("Please fill out all required fields.")
 
@@ -60,61 +58,54 @@ def main():
 def manage_company_info():
     """Handles input for company segment and parameter ID."""
 
-    if "companies_data" not in st.session_state:
-        with st.expander("Companies Info", expanded=True):
-            segment = st.selectbox("Segment", ["Cash", "Future", "Options"])
-            parameter_id = st.number_input("Parameter ID", value=1)
+    with st.expander("Companies Info", expanded=True):
+        segment = st.selectbox("Segment", ["Cash", "Future", "Options"])
+        parameter_id = st.number_input("Parameter ID", value=1)
 
-            if segment and parameter_id:
-                if st.button("Get companies data"):
-                    try:
-                        companies_data = validate_companies_input(
-                            {"segment": segment, "parameter_id": parameter_id}
-                        )
-                        return companies_data
-                    except Exception as e:
-                        st.error(e)
-            else:
-                st.warning("Please fill out all required fields.")
-    else:
-        st.write("Companies data already retrieved.")
+        if segment and parameter_id:
+            if st.button("Get companies data"):
+                try:
+                    companies_data = validate_companies_input(
+                        {"segment": segment, "parameter_id": parameter_id}
+                    )
+                    return companies_data
+                except Exception as e:
+                    st.error(e)
+        else:
+            st.warning("Please fill out all required fields.")
+
     return None
 
 
 def manage_signal_gen_files(company_lists):
     """Handles signal generation files selection for each company."""
-    if "company_sg_map" not in st.session_state:
-        ticker_df = read_company_tickers()
-        st.session_state["ticker_df"] = ticker_df
-        signal_gen_files = get_signal_gen_files()
-        company_signal_gen_files = {}
 
-        with st.expander("Signal Gen Files", expanded=True):
-            for company in company_lists:
-                st.write(company)
-                ticker = (
-                    ticker_df.loc[company, "Ticker Symbol"]
-                    if company in ticker_df.index
-                    else None
-                )
-                if ticker:
-                    options = [
-                        file for file in signal_gen_files if ticker in file
-                    ]
-                    if options:
-                        signal_gen_file = st.selectbox(
-                            f"{company} Signal Gen File", options
-                        )
-                        company_signal_gen_files[company] = signal_gen_file
-                    else:
-                        st.error(f"No signal gen file found for {company}")
+    ticker_df = read_company_tickers()
+    st.session_state["ticker_df"] = ticker_df
+    signal_gen_files = get_signal_gen_files()
+    company_signal_gen_files = {}
+
+    with st.expander("Signal Gen Files", expanded=True):
+        for company in company_lists:
+            st.write(company)
+            ticker = (
+                ticker_df.loc[company, "Ticker Symbol"]
+                if company in ticker_df.index
+                else None
+            )
+            if ticker:
+                options = [file for file in signal_gen_files if ticker in file]
+                if options:
+                    signal_gen_file = st.selectbox(
+                        f"{company} Signal Gen File", options
+                    )
+                    company_signal_gen_files[company] = signal_gen_file
                 else:
-                    st.error(f"{company} not found in ticker file.")
+                    st.error(f"No signal gen file found for {company}")
+            else:
+                st.error(f"{company} not found in ticker file.")
 
-        return company_signal_gen_files
-    else:
-        st.write("Signal Gen Files already selected.")
-    return st.session_state["company_sg_map"]
+    return company_signal_gen_files
 
 
 def manage_configs():

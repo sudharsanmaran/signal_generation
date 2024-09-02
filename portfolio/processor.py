@@ -19,8 +19,7 @@ from source.utils import make_round, write_dataframe_to_csv
 logger = logging.getLogger(__name__)
 
 
-def process_portfolio(validated_data: InputData):
-    pd.set_option("display.max_rows", None)
+def process_portfolio(validated_data: InputData) -> None:
 
     update_company_base_df(validated_data.companies_df, validated_data.configs)
     company_sg_df_map = construct_company_signal_dictionary(validated_data)
@@ -94,6 +93,17 @@ def update_company_summary(
             name, PNLSummaryCols.MTM_REALIZED_BY_CAPITAL.value
         ] = exit_row[PNLSummaryCols.MTM_REALIZED_BY_CAPITAL.value].iloc[0]
 
+    def populate_daily_summary_for_all_companies() -> None:
+        for _, group in validated_data.companies_df.groupby("Date"):
+            start_index = group.index[0]
+            mtm_sum = group[PNLSummaryCols.MTM_REALIZED.value].sum()
+            validated_data.companies_df.loc[start_index, "Realised Gain"] = (
+                mtm_sum
+            )
+            validated_data.companies_df.loc[start_index, "Closing Capital"] = (
+                mtm_sum + validated_data.configs.capital
+            )
+
     for name, company_row in validated_data.companies_df.iterrows():
         company = company_row["Name of Company"]
         ticker = fetch_ticker(validated_data.company_tickers, company)
@@ -110,6 +120,8 @@ def update_company_summary(
         ]
         populate_company_entry_data()
         populate_company_exit_data()
+
+    populate_daily_summary_for_all_companies()
 
 
 def formulate_PNL_df(validated_data, company_sg_df_map):
@@ -676,13 +688,9 @@ def process_exit(name, row, pnl_dict: dict[List], configs: Configs):
                     "TP_REMAINING_VOLUME"
                 ][idx - 1]
 
-            try:
-                pnl_dict["TP_REMAINING_VOLUME"][idx] = (
-                    pnl_dict["TP_VOLUME_TO_SOLD"][idx]
-                    - pnl_dict["VOLUME"][idx]
-                )
-            except Exception:
-                a = 1
+            pnl_dict["TP_REMAINING_VOLUME"][idx] = (
+                pnl_dict["TP_VOLUME_TO_SOLD"][idx] - pnl_dict["VOLUME"][idx]
+            )
 
             pnl_dict["TP_NEED_TO_SELL"][idx] = (
                 pnl_dict["TP_REMAINING_VOLUME"][idx] * -1
