@@ -383,7 +383,7 @@ def update_common_record(pnl_dict, company_row, date_time, instrument):
     pnl_dict["UNIQUE_ID"].append(company_row["Unique ID"])
 
 
-def construct_company_signal_dictionary(validated_data):
+def construct_company_signal_dictionary(validated_data: InputData) -> Dict:
     company_sg_df_map = {}
     for company in validated_data.company_lists:
         if company not in validated_data.company_sg_map:
@@ -721,7 +721,8 @@ def process_exit(name, row, pnl_dict: dict[List], configs: Configs):
             pnl_dict["CUM_VOLUME"][-1] = pnl_dict["CUM_VOLUME"][-2]
 
 
-def update_company_base_df(company_df, configs: Configs):
+def update_company_base_df(company_df: pd.DataFrame, configs: Configs):
+    """Update the company base DataFrame with the required columns"""
     assign_unique_ids(company_df)
     update_risk_per_stock(company_df)
     update_category_risk_total(company_df)

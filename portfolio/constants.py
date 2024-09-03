@@ -70,3 +70,4 @@ try:
     logger.info("Paths initialized successfully")
 except ImproperEnvConfigError as e:
     logger.error(f"Configuration error: {e}")
+    raise e
