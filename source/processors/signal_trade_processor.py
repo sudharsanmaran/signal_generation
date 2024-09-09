@@ -329,7 +329,11 @@ def check_entry_conditions(row, state):
             )
 
     if Trade.check_entry_fractal and Trade.check_bb_band:
-        return is_fractal_entry and is_bb_band_entry, market_direction, TradeExitType.FRACTAL
+        return (
+            is_fractal_entry and is_bb_band_entry,
+            market_direction,
+            TradeExitType.FRACTAL,
+        )
     elif Trade.check_entry_fractal:
         return is_fractal_entry, market_direction, TradeExitType.FRACTAL
     elif Trade.check_bb_band:
@@ -628,8 +632,7 @@ def process_trade(
             # if exit_type == TradeExitType.FRACTAL:
             #     exit_datetime = row['exit_e_dt']
             for trade in active_trades[:]:
-                trade.add_exit(
-                    exit_datetime, row["Close"], exit_type)
+                trade.add_exit(exit_datetime, row["Close"], exit_type)
                 if trade.is_trade_closed():
                     completed_trades.append(trade)
                     active_trades.remove(trade)

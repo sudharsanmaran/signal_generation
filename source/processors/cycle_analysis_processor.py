@@ -42,15 +42,20 @@ def get_min_max_idx(
 
     except ValueError:
         print(
-            f"can't find data for min and max while following subsequent calculation rule... for grp: {
-                group_id} cycle no: {cycle}"
+            f"can't find data for min and max while following subsequent calculation rule... for grp: {group_id} cycle no: {cycle}"
         )
 
     return min_idx, max_idx, cycle_min, cycle_max
 
 
 def get_next_cycle_first_row(
-    group_data, cycle, cycle_col, groups, group_idx, cycle_start=1, cycle_data=None
+    group_data,
+    cycle,
+    cycle_col,
+    groups,
+    group_idx,
+    cycle_start=1,
+    cycle_data=None,
 ):
     """
     Retrieves the first row of the next cycle considering both the current group and the next group.
@@ -81,16 +86,16 @@ def get_next_cycle_first_row(
     if group_idx + 1 < len(groups):
         next_group_id, next_group_data = groups[group_idx + 1]
         next_cycle_data = next_group_data[
-            (next_group_data[cycle_col] == cycle_start) | (
-                next_group_data[cycle_col] == 0)
+            (next_group_data[cycle_col] == cycle_start)
+            | (next_group_data[cycle_col] == 0)
         ]
         if not next_cycle_data.empty:
             return next_cycle_data.iloc[0]
 
         # If next cycle in the next group is not found, try the second cycle
         next_next_cycle_data = next_group_data[
-            (next_group_data[cycle_col] == cycle_start +
-             1) | (next_group_data[cycle_col] == 0)
+            (next_group_data[cycle_col] == cycle_start + 1)
+            | (next_group_data[cycle_col] == 0)
         ]
         if not next_next_cycle_data.empty:
             return next_next_cycle_data.iloc[0]
@@ -243,7 +248,12 @@ def update_MTM_CTC_cols(df, validated_data):
                     continue
 
                 next_cycle_first_row = get_next_cycle_first_row(
-                    group_data, cycle, cycle_col, groups, group_idx, cycle_data=cycle_data
+                    group_data,
+                    cycle,
+                    cycle_col,
+                    groups,
+                    group_idx,
+                    cycle_data=cycle_data,
                 )
 
                 if next_cycle_first_row is not None:

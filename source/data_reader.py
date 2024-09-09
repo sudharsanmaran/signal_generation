@@ -182,7 +182,9 @@ def update_exit_fractal_file(
         "index_col": index,
         "cols": [index, "e_dt", *exit_fractal_columns],
         "dtype": {col: "boolean" for col in entry_fractal_columns},
-        "rename": {col: f"exit_{col}" for col in (entry_fractal_columns + ["e_dt"])},
+        "rename": {
+            col: f"exit_{col}" for col in (entry_fractal_columns + ["e_dt"])
+        },
     }
 
 
@@ -216,7 +218,9 @@ def update_entry_fractal_file(
         "index_col": index,
         "cols": [index, "e_dt", *entry_fractal_columns],
         "dtype": {col: "boolean" for col in entry_fractal_columns},
-        "rename": {col: f"entry_{col}" for col in (entry_fractal_columns + ["e_dt"])},
+        "rename": {
+            col: f"entry_{col}" for col in (entry_fractal_columns + ["e_dt"])
+        },
     }
 
 

@@ -131,8 +131,7 @@ def main():
                         start = time.time()
                         process_volatile(validated_data=validated_input)
                         st.success(
-                            f"Data processed successfully, time taken: {
-                                time.time()-start}"
+                            f"Data processed successfully, time taken: {time.time()-start}"
                         )
                     # except Exception as e:
                     #     st.write(f"Error: {e}")

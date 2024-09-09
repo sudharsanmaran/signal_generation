@@ -36,7 +36,7 @@ def read_company_data(company_data: CompaniesInput) -> pd.DataFrame:
         f"{company_data.parameter_id}_result.csv",
     )
     df = read_csv_file(file_path)
-    df['Date'] = pd.to_datetime(df['Date'])
+    df["Date"] = pd.to_datetime(df["Date"])
     if df.empty:
         raise ValueError(f"Company Data not found for {company_data}")
     return df
@@ -79,7 +79,8 @@ def read_signal_gen_file(file_name: str) -> pd.DataFrame:
     file_path = os.path.join(SIGNAL_GEN_FILES_PATH, file_name)
     df = read_csv_file(file_path)
     for col in [
-        OutputColumn.ENTRY_DATETIME.value, OutputColumn.EXIT_DATETIME.value
+        OutputColumn.ENTRY_DATETIME.value,
+        OutputColumn.EXIT_DATETIME.value,
     ]:
         df[col] = pd.to_datetime(df[col])
     return df

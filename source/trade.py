@@ -269,11 +269,9 @@ def initialize(validated_input, strategy_pair=None):
     )
 
     if Trade.check_bb_band:
-        Trade.bb_band_column = f"P_{validated_input['parameter_id']}_{validated_input.get(
-            'bb_band_column').upper()}_BAND_{validated_input['period']}_{validated_input.get('bb_band_sd')}"
+        Trade.bb_band_column = f"P_{validated_input['parameter_id']}_{validated_input.get('bb_band_column').upper()}_BAND_{validated_input['period']}_{validated_input.get('bb_band_sd')}"
     if Trade.check_trail_bb_band:
-        Trade.trail_bb_band_column = f"P_{validated_input['parameter_id']}_{validated_input.get(
-            'trail_bb_band_column').upper()}_BAND_{validated_input['period']}_{validated_input.get('trail_bb_band_sd')}"
+        Trade.trail_bb_band_column = f"P_{validated_input['parameter_id']}_{validated_input.get('trail_bb_band_column').upper()}_BAND_{validated_input['period']}_{validated_input.get('trail_bb_band_sd')}"
 
     # Initialize trail compare functions with default values
     Trade.trail_compare_functions = {

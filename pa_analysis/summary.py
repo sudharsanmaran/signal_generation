@@ -338,7 +338,7 @@ def update_MTM_cycle_summary(
     write_dataframe_to_csv(
         result_df,
         f"{PA_ANALYSIS_SUMMARY_FOLDER}/MTM_cycle_summary",
-        f"{file[:-4]}_MTM_cycle_summary.csv".replace(":","-"),
+        f"{file[:-4]}_MTM_cycle_summary.csv".replace(":", "-"),
     )
     return result
 
@@ -659,7 +659,7 @@ def update_first_cycle_summary(
     write_dataframe_to_csv(
         result_df,
         f"{PA_ANALYSIS_SUMMARY_FOLDER}/first_cycle_summary",
-        f"{file[:-4]}_first_cycle_summary.csv".replace(":","-"),
+        f"{file[:-4]}_first_cycle_summary.csv".replace(":", "-"),
     )
     return result
 
@@ -790,7 +790,7 @@ def update_basic_analysis_summary(
     write_dataframe_to_csv(
         result_df,
         f"{PA_ANALYSIS_SUMMARY_FOLDER}/basic_analysis_summary",
-        f"{file[:-4]}_basic_analysis_summary.csv".replace(":","-"),
+        f"{file[:-4]}_basic_analysis_summary.csv".replace(":", "-"),
     )
     return
 

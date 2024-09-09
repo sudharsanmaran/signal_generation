@@ -283,8 +283,7 @@ def formulate_files_to_read(kwargs):
                     "file_path": os.path.join(
                         os.getenv("FRACTAL_DB_PATH"),
                         instrument,
-                        f"{instrument}_TF_{kwargs.get(
-                            'fractal_count_tf')}.csv",
+                        f"{instrument}_TF_{kwargs.get('fractal_count_tf')}.csv",
                     ),
                 }
             }
@@ -305,8 +304,7 @@ def formulate_files_to_read(kwargs):
                     "file_path": os.path.join(
                         os.getenv("FRACTAL_DB_PATH"),
                         instrument,
-                        f"{instrument}_TF_{kwargs.get(
-                            'fractal_count_tf')}.csv",
+                        f"{instrument}_TF_{kwargs.get('fractal_count_tf')}.csv",
                     ),
                     "rename": {
                         col: name
@@ -543,7 +541,7 @@ def update_cycle_number_by_condition(
                 current_cycle += 1
                 end_idx = end_indices[end_indices > start_idx].min()
                 if not pd.isna(end_idx):
-                    in_cycle.loc[start_idx: end_idx - 1] = True
+                    in_cycle.loc[start_idx : end_idx - 1] = True
                     cycle_counter.loc[start_idx:end_idx] = current_cycle
                 else:
                     in_cycle.loc[start_idx:] = True
@@ -964,8 +962,7 @@ def update_fractal_cycle_id(kwargs, df, bb_cycle_col, end_condition_col):
             )
             & (
                 df[
-                    f"count_P_1_FRACTAL_CONFIRMED_LONG_{
-                        kwargs.get('fractal_sd')}"
+                    f"count_P_1_FRACTAL_CONFIRMED_LONG_{kwargs.get('fractal_sd')}"
                 ]
                 > kwargs.get("fractal_cycle_start")
             )
@@ -979,8 +976,7 @@ def update_fractal_cycle_id(kwargs, df, bb_cycle_col, end_condition_col):
             )
             & (
                 df[
-                    f"count_P_1_FRACTAL_CONFIRMED_SHORT_{
-                        kwargs.get('fractal_sd')}"
+                    f"count_P_1_FRACTAL_CONFIRMED_SHORT_{kwargs.get('fractal_sd')}"
                 ]
                 > kwargs.get("fractal_cycle_start")
             )
@@ -1156,8 +1152,9 @@ def update_last_state(row, state, key, market_direction):
         and market_direction
         and row[fractal_column_dict[key][market_direction]]
     ):
-        state[(row['group_id'], row[Trade.current_cycle])
-              ].append((row.name, row["Close"]))
+        state[(row["group_id"], row[Trade.current_cycle])].append(
+            (row.name, row["Close"])
+        )
 
 
 def is_cycle_entry_fractal(row, state, market_direction, key):
@@ -1261,7 +1258,11 @@ def check_cycle_entry_condition(row: pd.Series, state: dict) -> bool:
     # clear_state(row, state)
 
     if is_cycle_change_entry:
-        return is_cycle_change_entry, market_direction, TradeExitType.CYCLE_CHANGE
+        return (
+            is_cycle_change_entry,
+            market_direction,
+            TradeExitType.CYCLE_CHANGE,
+        )
 
     if Trade.check_entry_fractal:
         return is_fractal_entry, market_direction, TradeExitType.FRACTAL
@@ -1276,10 +1277,7 @@ def clear_state(row, state):
 
 def is_tp_exit(row, exit_state):
     is_tp_exit = False
-    if (
-        row[TargetProfitColumns.TP_END.value]
-        == "YES"
-    ):
+    if row[TargetProfitColumns.TP_END.value] == "YES":
         is_tp_exit = True
 
     return is_tp_exit

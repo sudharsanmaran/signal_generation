@@ -183,7 +183,9 @@ def process(validated_data: dict):
     write_dataframe_to_csv(
         df,
         VOLUME_OUTPUT_FOLDER,
-        f"{validated_data['instrument']}_ZS_{validated_data[AVG_ZSCORE_SUM_THRESHOLD]}_CD_{validated_data[CYCLE_DURATION]}_{df.index[0]}_{df.index[-1]}.csv".replace(":","-"),
+        f"{validated_data['instrument']}_ZS_{validated_data[AVG_ZSCORE_SUM_THRESHOLD]}_CD_{validated_data[CYCLE_DURATION]}_{df.index[0]}_{df.index[-1]}.csv".replace(
+            ":", "-"
+        ),
     )
 
 

@@ -73,14 +73,12 @@ def process_pa_output(validated_data, *args):
                     "file_path": os.path.join(
                         bb_path,
                         instrument,
-                        f"{instrument}_TF_{
-                            validated_data['bb_file_number']}.csv",
+                        f"{instrument}_TF_{validated_data['bb_file_number']}.csv",
                     ),
                     "index_col": "dt",
                     "cols": [
                         index,
-                        f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper(
-                        )}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}',
+                        f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper()}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}',
                     ],
                     "rename": {
                         f'P_{validated_data["parameter_id"]}_{validated_data["bb_band_column"].upper()}_BAND_{validated_data["period"]}_{validated_data["bb_band_sd"]}': f"bb_{validated_data['bb_band_column']}"
@@ -252,9 +250,7 @@ def process_pa_output(validated_data, *args):
 
     if Trade.trigger_trade_management:
         print("Trade Management Triggered")
-        generate_tradesheet(
-            validated_data, output_df, "PA DB", instrument
-        )
+        generate_tradesheet(validated_data, output_df, "PA DB", instrument)
 
 
 def get_cycle_columns(merged_df):
