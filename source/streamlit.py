@@ -1110,7 +1110,7 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
         close_time_frames_1 = st.multiselect(
             "Close Time Frame",
             TIMEFRAME_OPTIONS,
-            default=saved_inputs.get("close_time_frames_1", [2]),
+            default=saved_inputs.get("close_time_frames_1", [60]),
         )
 
         if close_time_frames_1:
@@ -1246,7 +1246,7 @@ def set_fractal_inputs(streamlit_inputs, saved_inputs):
     streamlit_inputs["fractal_cycle"] = fractal_cycle
     if fractal_cycle:
         fractal_sd = st.number_input(
-            "Fractal SD",
+            "Fractal Period",
             min_value=1,
             step=1,
             value=saved_inputs.get("fractal_sd", 2),
@@ -1279,7 +1279,7 @@ def set_fractal_inputs(streamlit_inputs, saved_inputs):
     streamlit_inputs["fractal_count"] = fractal_count
     if fractal_count:
         fractal_count_sd = st.number_input(
-            "Fractal Count SD",
+            "Fractal Count Period",
             min_value=1,
             step=1,
             value=saved_inputs.get("fractal_count_sd", 2),

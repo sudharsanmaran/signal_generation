@@ -14,8 +14,8 @@ from source.constants import (
 from source.data_reader import (
     merge_all_df,
     read_files,
-    update_entry_fractal_file,
-    update_exit_fractal_file,
+    update_entry_fractal_file_with_period,
+    update_exit_fractal_file_with_period,
 )
 from source.processors.cycle_analysis_processor import (
     update_target_profit_analysis,
@@ -25,7 +25,6 @@ from source.processors.cycle_trade_processor import (
     check_cycle_exit_signals,
 )
 from source.processors.signal_trade_processor import (
-    get_market_direction,
     process_trade,
 )
 from source.trade import Trade, initialize
@@ -48,19 +47,21 @@ def process_pa_output(validated_data, *args):
     bb_path = os.getenv("BB_DB_PATH")
 
     file_details = {
-        "entry_fractal": update_entry_fractal_file(
+        "entry_fractal": update_entry_fractal_file_with_period(
             instrument,
             validated_data["entry_fractal_file_number"],
             validated_data["check_entry_fractal"],
             fractal_path,
             index,
+            period=validated_data["entry_fractal_period"]
         ),
-        "exit_fractal": update_exit_fractal_file(
+        "exit_fractal": update_exit_fractal_file_with_period(
             instrument,
             validated_data["exit_fractal_file_number"],
             validated_data["check_exit_fractal"],
             fractal_path,
             index,
+            period=validated_data["exit_fractal_period"],
         ),
     }
 

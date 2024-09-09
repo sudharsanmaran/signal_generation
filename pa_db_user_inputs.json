@@ -1,8 +1,8 @@
 {
     "": {
-        "timestamp": "2024-08-28 18:29:01",
+        "timestamp": "2024-09-05 15:32:38",
         "notes": "",
-        "pa_file": "ACC_closeTF_7_bb1TF_7_2023-02-15 14-14-00_2024-04-04 15-14-00.csv",
+        "pa_file": "PIIND_closeTF_60_bb1TF_60_2023-02-21 09-15-00_2024-05-02 09-15-00.csv",
         "calculate_fractal_analysis": false,
         "cycle_to_consider": "First Cycle",
         "allowed_direction": "all",
@@ -13,7 +13,10 @@
         "entry_fractal_file_number": "1",
         "entry_fractal_period": 5,
         "check_bb_band": false,
-        "check_exit_fractal": false,
+        "check_exit_fractal": true,
+        "exit_fractal_file_number": "2",
+        "fractal_exit_count": "ALL",
+        "exit_fractal_period": 5,
         "calculate_tp": true,
         "tp_method": "1",
         "tp_percentage": 0.5,

@@ -561,6 +561,9 @@ def analyze_cycles(df, time_frame, kwargs):
                 group_data[cycle_col] > 0, cycle_col
             ].unique()
 
+            if not len(unique_cycles):
+                print(f"No cycles found in group {group_id}")
+
             for cycle in unique_cycles:
                 cycle_analysis = {
                     "group_id": group_id,
