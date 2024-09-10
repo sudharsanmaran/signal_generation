@@ -155,6 +155,7 @@ def update_cycle_min_max(**kwargs):
     cycle_max = kwargs.get("cycle_max")
     cycle_analysis = kwargs.get("cycle_analysis")
     adjusted_cycle_data = kwargs.get("adjusted_cycle_data")
+    
     min_key = kwargs.get("min_key")
     max_key = kwargs.get("max_key")
 
