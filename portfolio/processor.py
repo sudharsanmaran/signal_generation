@@ -631,15 +631,20 @@ def process_exit(name, row, pnl_dict: dict[List], configs: Configs):
     for col in entry_cols:
         pnl_dict[col].append("")
 
+    try:
+        cum_value = pnl_dict["CUM_VALUE"][-1]
+    except IndexError:
+        cum_value = 0
+
     pnl_dict["EXIT_ID"].append(row[OutputColumn.EXIT_ID.value])
     pnl_dict["EXIT_TYPE"].append(row[OutputColumn.EXIT_TYPE.value])
     pnl_dict["SELL_PRICE"].append(row[OutputColumn.EXIT_PRICE.value])
-    pnl_dict["VOLUME_TO_SOLD"].append(pnl_dict["CUM_VOLUME"][-1])
+    pnl_dict["VOLUME_TO_SOLD"].append(cum_value)
     pnl_dict["SELL_VALUE"].append(
         pnl_dict["VOLUME_TO_SOLD"][-1] * row[OutputColumn.EXIT_PRICE.value]
     )
     pnl_dict["PROFIT_LOSS"].append(
-        pnl_dict["SELL_VALUE"][-1] - pnl_dict["CUM_VALUE"][-1]
+        pnl_dict["SELL_VALUE"][-1] - cum_value
     )
 
     tp_cols = [

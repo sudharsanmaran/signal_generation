@@ -53,8 +53,12 @@ def update_growth_percent_fractal_count(df, kwargs):
         df[f"growth_percent_{col}"] = pd.NA
         fractal_count_mask = df[f"count_{col}"] > 0
 
+        filtered_df = df.loc[fractal_count_mask]
+        if filtered_df.empty:
+            continue
+
         # Get the close value of the first row where the mask is True
-        first_close_value = df.loc[fractal_count_mask, "Close"].iloc[0]
+        first_close_value = filtered_df["Close"].iloc[0]
 
         # Calculate the growth percent
         df.loc[fractal_count_mask, f"growth_percent_{col}"] = make_round(
