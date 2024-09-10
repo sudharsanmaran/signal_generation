@@ -256,8 +256,7 @@ def read_files(
                 dtype=details.get("dtype", None),
                 index_col=details["index_col"],
             )
-            if file_name == "fractal_cycle":
-                a = 1
+
             df.index = pd.to_datetime(df.index, errors="coerce")
 
             # Filter the DataFrame for the specified date range
