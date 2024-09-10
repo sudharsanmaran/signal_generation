@@ -153,7 +153,12 @@ def read_data(
 
 
 def update_exit_fractal_file_with_period(
-    instrument, exit_fractal_file_number, read_exit_fractal, base_path, index, period=5
+    instrument,
+    exit_fractal_file_number,
+    read_exit_fractal,
+    base_path,
+    index,
+    period=5,
 ):
     return {
         "read": read_exit_fractal,
@@ -165,7 +170,9 @@ def update_exit_fractal_file_with_period(
         "index_col": index,
         "cols": [index, "e_dt", *exit_fractal_columns],
         "dtype": {col: "boolean" for col in entry_fractal_columns},
-        "rename": {col: f"exit_{col}" for col in (entry_fractal_columns + ["e_dt"])},
+        "rename": {
+            col: f"exit_{col}" for col in (entry_fractal_columns + ["e_dt"])
+        },
     }
 
 
@@ -189,7 +196,12 @@ def update_exit_fractal_file(
 
 
 def update_entry_fractal_file_with_period(
-    instrument, entry_fractal_file_number, read_entry_fractal, base_path, index, period=5
+    instrument,
+    entry_fractal_file_number,
+    read_entry_fractal,
+    base_path,
+    index,
+    period=5,
 ):
     return {
         "read": read_entry_fractal,
@@ -201,7 +213,9 @@ def update_entry_fractal_file_with_period(
         "index_col": index,
         "cols": [index, "e_dt", *entry_fractal_columns],
         "dtype": {col: "boolean" for col in entry_fractal_columns},
-        "rename": {col: f"entry_{col}" for col in (entry_fractal_columns + ["e_dt"])},
+        "rename": {
+            col: f"entry_{col}" for col in (entry_fractal_columns + ["e_dt"])
+        },
     }
 
 
@@ -242,6 +256,8 @@ def read_files(
                 dtype=details.get("dtype", None),
                 index_col=details["index_col"],
             )
+            if file_name == "fractal_cycle":
+                a = 1
             df.index = pd.to_datetime(df.index, errors="coerce")
 
             # Filter the DataFrame for the specified date range
@@ -264,7 +280,10 @@ def load_strategy_data_1(
     is_close_read, strategy_dfs = False, []
     for portfolio_id, strategy_id in strategy_pairs:
         strategy_path = os.path.join(
-            base_path, portfolio_id, instrument, f"{instrument}_STRATEGY_{strategy_id}.csv"
+            base_path,
+            portfolio_id,
+            instrument,
+            f"{instrument}_STRATEGY_{strategy_id}.csv",
         )
         columns = ["dt", f"TAG_{portfolio_id}_{strategy_id}"]
         if not is_close_read:
@@ -305,7 +324,10 @@ def load_strategy_data(
     for portfolio_id, strategy_id in zip(portfolio_ids, strategy_ids):
         # Construct the path to the strategy CSV file
         strategy_path = os.path.join(
-            base_path, portfolio_id, instrument, f"{instrument}_STRATEGY_{strategy_id}.csv"
+            base_path,
+            portfolio_id,
+            instrument,
+            f"{instrument}_STRATEGY_{strategy_id}.csv",
         )
         # Define the columns to be read from the CSV file
         columns = ["dt", f"TAG_{portfolio_id}_{strategy_id}"]
