@@ -53,7 +53,7 @@ def process_pa_output(validated_data, *args):
             validated_data["check_entry_fractal"],
             fractal_path,
             index,
-            period=validated_data["entry_fractal_period"]
+            period=validated_data["entry_fractal_period"],
         ),
         "exit_fractal": update_exit_fractal_file_with_period(
             instrument,
@@ -140,6 +140,9 @@ def process_pa_output(validated_data, *args):
 
     merged_df = merge_all_df([merged_df, *dfs.values()])
 
+    file_name = "_".join(validated_data["pa_file"].split("_")[:-2]) + ".csv"
+    validated_data["file_name"] = file_name
+
     if validated_data["calculate_fractal_analysis"]:
         fractal_analysis = {}
         fractal_analysis["Strategy"] = validated_data["pa_file"]
@@ -213,7 +216,7 @@ def process_pa_output(validated_data, *args):
         write_dataframe_to_csv(
             fractal_analysis_df,
             SG_FRACTAL_ANALYSIS_OUTPUT_FOLDER,
-            "fractal_analysis.csv",
+            file_name,
         )
 
     merged_df["previous_cycle_id"] = merged_df[
@@ -225,9 +228,6 @@ def process_pa_output(validated_data, *args):
     initialize(validated_data)
 
     Trade.current_cycle = cycle_cols[validated_data["cycle_to_consider"]]
-
-    file_name = "_".join(validated_data["pa_file"].split("_")[:-2]) + ".csv"
-    validated_data["file_name"] = file_name
 
     entry_state = defaultdict(deque)
 
