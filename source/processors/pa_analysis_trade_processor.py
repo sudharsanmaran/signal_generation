@@ -210,6 +210,7 @@ def process_pa_output(validated_data, *args):
         fractal_analysis_df.loc[start_index, "median no of fractals"] = (
             fractal_analysis_df["fractal_count"].median()
         )
+        
         for key, value in fractal_analysis.items():
             fractal_analysis_df.loc[start_index, key] = value
 
