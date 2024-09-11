@@ -259,8 +259,19 @@ def read_files(
 
             df.index = pd.to_datetime(df.index, errors="coerce")
 
-            # Filter the DataFrame for the specified date range
-            df = df.loc[start_date:end_date]
+            # Function to find the nearest date if KeyError occurs
+            def get_nearest_date(df, target_date):
+                nearest_idx = df.index.get_indexer([target_date])[0]
+                return df.index[nearest_idx]
+
+            try:
+                # Attempt to slice the DataFrame with the given date range
+                df = df.loc[start_date:end_date]
+            except KeyError:
+                # If a KeyError occurs, use the nearest available dates
+                nearest_start = get_nearest_date(df, start_date)
+                nearest_end = get_nearest_date(df, end_date)
+                df = df.loc[nearest_start:nearest_end]
 
             # Rename columns if specified
             if "rename" in details:
