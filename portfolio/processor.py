@@ -643,9 +643,7 @@ def process_exit(name, row, pnl_dict: dict[List], configs: Configs):
     pnl_dict["SELL_VALUE"].append(
         pnl_dict["VOLUME_TO_SOLD"][-1] * row[OutputColumn.EXIT_PRICE.value]
     )
-    pnl_dict["PROFIT_LOSS"].append(
-        pnl_dict["SELL_VALUE"][-1] - cum_value
-    )
+    pnl_dict["PROFIT_LOSS"].append(pnl_dict["SELL_VALUE"][-1] - cum_value)
 
     tp_cols = [
         "TP_VOLUME_TO_SOLD",
@@ -733,9 +731,6 @@ def update_company_base_df(company_df: pd.DataFrame, configs: Configs):
     update_category_risk_total(company_df)
     update_allowed_exposure(company_df, configs)
     logger.info("Company base df updated")
-    write_dataframe_to_csv(
-        company_df, PORTFOLIO_COMPANY_OUTPUT_FOLDER, "company_base.csv"
-    )
 
 
 def update_allowed_exposure(company_df, configs: Configs):
