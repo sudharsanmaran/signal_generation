@@ -464,7 +464,9 @@ def process_out_of_list_exit(company, pnl_dict, cum_value):
     pnl_dict["SELL_PRICE"].append(day_close)
     pnl_dict["VOLUME_TO_SOLD"].append(cum_value)
     pnl_dict["SELL_VALUE"].append(pnl_dict["VOLUME_TO_SOLD"][-1] * day_close)
+    pnl_dict["PROFIT_LOSS"].append(pnl_dict["SELL_VALUE"][-1] - cum_value)
 
+    # carry forward the values for future calculations
     try:
         cum_value = pnl_dict["CUM_VALUE"][-1]
     except IndexError:
@@ -474,8 +476,6 @@ def process_out_of_list_exit(company, pnl_dict, cum_value):
         cum_volume = pnl_dict["CUM_VOLUME"][-1]
     except IndexError:
         cum_volume = 0
-
-    pnl_dict["PROFIT_LOSS"].append(pnl_dict["SELL_VALUE"][-1] - cum_value)
 
     pnl_dict["WEIGHTED_AVG"].append(0)
     pnl_dict["CUM_VALUE"].append(cum_value)
@@ -629,7 +629,7 @@ def process_exit(name, row, pnl_dict: dict[List], configs: Configs):
         "PRICE_EXEDED",
     ]
     for col in entry_cols:
-        pnl_dict[col].append("")
+        pnl_dict[col].append(0)
 
     try:
         cum_value = pnl_dict["CUM_VALUE"][-1]
