@@ -7,6 +7,7 @@ from portfolio.constants import (
     SIGNAL_GEN_FILES_PATH,
     TICKER_FILE_PATH,
 )
+from portfolio.utils import fetch_ticker
 from portfolio.validation import CompaniesInput
 from source.constants import OutputColumn
 
@@ -84,3 +85,28 @@ def read_signal_gen_file(file_name: str) -> pd.DataFrame:
     ]:
         df[col] = pd.to_datetime(df[col])
     return df
+
+
+def get_company_close_price_df(
+    company_data: CompaniesInput, years_list, company_list, company_tickers
+) -> pd.DataFrame:
+    base_path = os.getenv("COMPANY_CLOSE_PRICE_PATH")
+    company_close_df_map = {}
+    if company_data.segment == "Cash":
+        for company in company_list:
+            ticker = fetch_ticker(company_tickers, company)
+            for year in years_list:
+                file_path = os.path.join(
+                    base_path, 'CM', ticker, f"{year}.csv"
+                )
+                df = read_csv_file(file_path)
+
+                if df.empty:
+                    continue
+
+                df["Date"] = pd.to_datetime(df["Date"])
+                df.set_index("Date", inplace=True)
+                company_close_df_map[(company, year)] = df
+    else:
+        raise NotImplementedError("Only CASH segment is supported")
+    return company_close_df_map
