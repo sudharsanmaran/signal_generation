@@ -143,7 +143,10 @@ def process_pa_output(validated_data, *args):
     file_name = "_".join(validated_data["pa_file"].split("_")[:-2])
     validated_data["file_name"] = file_name
 
-    if validated_data["calculate_fractal_analysis"]:
+    if (
+        validated_data["calculate_fractal_analysis"]
+        and validated_data["cycle_to_consider"]
+    ):
         fractal_analysis = {}
         fractal_analysis["Strategy"] = validated_data["pa_file"]
         fractal_analysis["Instrument"] = instrument
