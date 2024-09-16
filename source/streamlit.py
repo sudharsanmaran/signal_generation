@@ -563,7 +563,7 @@ def main():
         streamlit_inputs["calculate_fractal_analysis"] = (
             calculate_fractal_analysis
         )
-        cycle_to_consider = st.selectbox(
+        cycle_to_consider = st.multiselect(
             "Cycle to Consider",
             cycle_options,
         )
@@ -1096,7 +1096,7 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
             for cycle in CycleType
             if cycle != CycleType.PREVIOUS_CYCLE
         ]
-        cycle_to_consider = st.selectbox(
+        cycle_to_consider = st.multiselect(
             "Cycle to Consider",
             cycle_options,
         )

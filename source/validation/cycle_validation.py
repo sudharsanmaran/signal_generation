@@ -40,7 +40,7 @@ class CycleInputs(
     sds_2: List[float] = None
     check_bb_2: bool = False
 
-    cycle_to_consider: CycleType = None
+    cycle_to_consider: List[CycleType] = []
 
     @field_validator("start_date", "end_date", mode="before")
     def convert_to_datetime(cls, v):
