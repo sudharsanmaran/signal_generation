@@ -58,6 +58,28 @@ def get_base_df(validated_data, strategy_df, strategy_pair_str, instrument):
         DataFrame: The DataFrame containing the base strategy data.
     """
 
+    def get_market_direction_vectorized(
+        df, condition_key, signal_columns, market_direction_conditions
+    ):
+        # Create a default column for market direction as UNKNOWN
+        market_direction_col = np.full(len(df), MarketDirection.UNKNOWN)
+
+        # Iterate over each market direction (LONG/SHORT)
+        for direction, signals in market_direction_conditions[
+            condition_key
+        ].items():
+            # Create a boolean mask for rows matching the signals
+            mask = np.full(len(df), True)
+            for signal_col, signal_val in zip(
+                signal_columns, np.array(signals).T
+            ):
+                mask &= df[signal_col].isin(signal_val)
+
+            # Assign the market direction to matching rows
+            market_direction_col[mask] = direction
+
+        return market_direction_col
+
     # Initialize columns for results
     strategy_df["signal_change"] = False
     strategy_df["time"] = 0.0
@@ -74,30 +96,21 @@ def get_base_df(validated_data, strategy_df, strategy_pair_str, instrument):
         },
     }
 
-    def get_direction(row, key="entry"):
-        market_direction = get_market_direction(
-            row,
-            condition_key=key,
-            signal_columns=signal_columns,
-            market_direction_conditions=market_direction_conditions,
-        )
-        if market_direction:
-            return market_direction
-        return MarketDirection.UNKNOWN
-
-    def get_exit_market_direction(row):
-        return get_direction(
-            row,
-            key="exit",
-        )
-
-    # display full df
-    pd.set_option("display.max_rows", None)
-
-    strategy_df["market_direction"] = strategy_df.apply(get_direction, axis=1)
-    strategy_df["exit_market_direction"] = strategy_df.apply(
-        get_exit_market_direction, axis=1
+    # Calculate market direction in a vectorized manner
+    strategy_df["market_direction"] = get_market_direction_vectorized(
+        strategy_df,
+        condition_key="entry",
+        signal_columns=signal_columns,
+        market_direction_conditions=market_direction_conditions,
     )
+
+    strategy_df["exit_market_direction"] = get_market_direction_vectorized(
+        strategy_df,
+        condition_key="exit",
+        signal_columns=signal_columns,
+        market_direction_conditions=market_direction_conditions,
+    )
+
     strategy_df["previous_market_direction"] = strategy_df[
         "market_direction"
     ].shift(fill_value=strategy_df["market_direction"].iloc[0])

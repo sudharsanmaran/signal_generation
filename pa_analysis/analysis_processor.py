@@ -6,8 +6,6 @@ from pa_analysis.constants import OutputHeader, RankingColumns, SignalColumns
 from pa_analysis.cycle_processor import process_cycles
 from source.constants import (
     PA_ANALYSIS_FOLDER,
-    VOLATILE_OUTPUT_FOLDER,
-    VOLUME_OUTPUT_FOLDER,
     MarketDirection,
 )
 from source.data_reader import load_strategy_data_1

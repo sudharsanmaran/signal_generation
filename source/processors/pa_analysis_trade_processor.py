@@ -98,7 +98,7 @@ def process_pa_output(validated_data, *args):
         "exit_market_direction",
         "group_id",
         "signal_category",
-        cycle_cols[validated_data["cycle_to_consider"]],
+        *[cycle_cols[cycle] for cycle in validated_data["cycle_to_consider"]],
     ]
 
     # covert market direction to MarketDirection enum
@@ -220,38 +220,44 @@ def process_pa_output(validated_data, *args):
             file_name,
         )
 
-    merged_df["previous_cycle_id"] = merged_df[
-        cycle_cols[validated_data["cycle_to_consider"]]
-    ].shift(1)
+    for cycle in validated_data["cycle_to_consider"]:
 
-    write_dataframe_to_csv(merged_df, SG_CYCLE_OUTPUT_FOLDER, "merged_df.csv")
+        merged_df["previous_cycle_id"] = merged_df[cycle_cols[cycle]].shift(1)
 
-    initialize(validated_data)
+        name = file_name.split(".")[0]
+        write_dataframe_to_csv(
+            merged_df,
+            SG_CYCLE_OUTPUT_FOLDER,
+            f"merged_df_{name}_{cycle.value}.csv",
+        )
 
-    Trade.current_cycle = cycle_cols[validated_data["cycle_to_consider"]]
+        initialize(validated_data)
 
-    entry_state = defaultdict(deque)
+        Trade.current_cycle = cycle_cols[cycle]
 
-    exit_state = {
-        MarketDirection.PREVIOUS: None,
-        "signal_count": 1,
-    }
-    output_df = process_trade(
-        instrument,
-        "",
-        "",
-        merged_df,
-        entry_state,
-        exit_state,
-        entry_func=check_cycle_entry_condition,
-        exit_func=check_cycle_exit_signals,
-    )
+        entry_state = defaultdict(deque)
 
-    write_dataframe_to_csv(output_df, SG_CYCLE_OUTPUT_FOLDER, file_name)
+        exit_state = {
+            MarketDirection.PREVIOUS: None,
+            "signal_count": 1,
+        }
+        output_df = process_trade(
+            instrument,
+            "",
+            "",
+            merged_df,
+            entry_state,
+            exit_state,
+            entry_func=check_cycle_entry_condition,
+            exit_func=check_cycle_exit_signals,
+        )
+        write_dataframe_to_csv(
+            output_df, SG_CYCLE_OUTPUT_FOLDER, f"{name}_{cycle.value}.csv"
+        )
 
-    if Trade.trigger_trade_management:
-        print("Trade Management Triggered")
-        generate_tradesheet(validated_data, output_df, "PA DB", instrument)
+        if Trade.trigger_trade_management:
+            print("Trade Management Triggered")
+            generate_tradesheet(validated_data, output_df, "PA DB", instrument)
 
 
 def get_cycle_columns(merged_df):
