@@ -1,10 +1,14 @@
 {
     "": {
-        "timestamp": "2024-09-05 15:32:38",
+        "timestamp": "2024-09-16 17:48:59",
         "notes": "",
-        "pa_file": "PIIND_closeTF_60_bb1TF_60_2023-02-21 09-15-00_2024-05-02 09-15-00.csv",
-        "calculate_fractal_analysis": false,
-        "cycle_to_consider": "First Cycle",
+        "pa_file": "ATUL_closeTF_60_bb1TF_60_2023-01-24 12-14-00_2024-05-16 12-14-00.csv",
+        "calculate_fractal_analysis": true,
+        "cycle_to_consider": [
+            "First Cycle",
+            "MTM Cycle",
+            "CTC Cycle"
+        ],
         "allowed_direction": "all",
         "trade_type": "I",
         "trade_start_time": "09:15:00",

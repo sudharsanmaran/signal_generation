@@ -29,7 +29,6 @@ from source.utils import (
     format_duration,
     make_positive,
     make_round,
-    write_dict_to_csv,
 )
 from source.constants import (
     PA_ANALYSIS_CYCLE_FOLDER,
@@ -573,7 +572,12 @@ def analyze_cycles(df, time_frame, kwargs):
                     continue
 
                 next_cycle_first_row = get_next_cycle_first_row(
-                    group_data, cycle, cycle_col, groups, group_idx, cycle_data=cycle_data
+                    group_data,
+                    cycle,
+                    cycle_col,
+                    groups,
+                    group_idx,
+                    cycle_data=cycle_data,
                 )
 
                 if next_cycle_first_row is not None:
