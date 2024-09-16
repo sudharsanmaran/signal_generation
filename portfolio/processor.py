@@ -4,7 +4,10 @@ from typing import Dict, List
 
 import pandas as pd
 from portfolio.constants import PNLSummaryCols
-from portfolio.data_reader import read_signal_gen_file
+from portfolio.data_reader import (
+    get_company_close_price_df, read_signal_gen_file
+)
+from portfolio.utils import fetch_ticker
 from portfolio.validation import Configs, InputData
 from source.constants import (
     PORTFOLIO_COMPANY_OUTPUT_FOLDER,
@@ -124,8 +127,12 @@ def update_company_summary(
     populate_daily_summary_for_all_companies()
 
 
-def formulate_PNL_df(validated_data, company_sg_df_map):
-
+def formulate_PNL_df(validated_data: InputData, company_sg_df_map):
+    years_list = generate_years_list(validated_data)
+    company_close_df_map = get_company_close_price_df(
+        validated_data.companies_data, years_list,
+        validated_data.company_lists, validated_data.company_tickers
+    )
     pnl_dict = defaultdict(list)
     out_of_list, prev_day_companies = set(), set()
     prev_day_companies_pnl = {}
@@ -141,6 +148,10 @@ def formulate_PNL_df(validated_data, company_sg_df_map):
         prev_day_companies = set(group_data["Name of Company"])
 
         for company in out_of_list:
+            company_close = get_company_close_price(
+                company_close_df_map, group_id, company)
+            if company_close is None:
+                continue
             company_row = prev_group_df.loc[company]
 
             ticker = fetch_ticker(validated_data.company_tickers, company)
@@ -151,10 +162,12 @@ def formulate_PNL_df(validated_data, company_sg_df_map):
                 pd.Timestamp(f"{group_id} 09:15:00"),
                 ticker,
             )
+
             process_out_of_list_exit(
                 company,
                 pnl_dict,
                 cum_value=prev_day_companies_pnl.get(company, 0),
+                company_day_close=company_close,
             )
 
         prev_group_df = group_data
@@ -207,12 +220,28 @@ def formulate_PNL_df(validated_data, company_sg_df_map):
     return pnl_df
 
 
-def fetch_ticker(company_tickers, company):
+def get_company_close_price(company_close_df_map, group_id, company):
+    company_close_df = company_close_df_map.get(
+        (company, group_id.year))
+    if company_close_df is None:
+        logger.error(
+            f"{process_portfolio.__name__}: no closing price df found for {company} for {group_id.year}"
+        )
+        return None
+    company_close = None
     try:
-        ticker = company_tickers.loc[company]["Ticker Symbol"]
+        company_close = company_close_df.loc[group_id]["Close"]
     except KeyError:
-        ticker = "NA"
-    return ticker
+        logger.error(
+            f"{process_portfolio.__name__}: no closing price found for {company} on {group_id.date()}"
+        )
+    return company_close
+
+
+def generate_years_list(validated_data: InputData) -> List:
+    start_date = validated_data.companies_df["Date"].iloc[0]
+    end_date = validated_data.companies_df["Date"].iloc[-1]
+    return list(range(start_date.year, end_date.year + 1))
 
 
 def formulate_daily_pnl_summary(
@@ -439,7 +468,7 @@ def construct_company_signal_dictionary(validated_data: InputData) -> Dict:
     return company_sg_df_map
 
 
-def process_out_of_list_exit(company, pnl_dict, cum_value):
+def process_out_of_list_exit(company, pnl_dict, cum_value, company_day_close):
     logger.info(
         f"{process_out_of_list_exit.__name__}: Processing out of list exit for {company}"
     )
@@ -457,14 +486,16 @@ def process_out_of_list_exit(company, pnl_dict, cum_value):
     for col in entry_cols:
         pnl_dict[col].append("")
 
-    day_close = 1234
+    day_close = company_day_close
     pnl_dict["TYPE"].append("EXIT")
     pnl_dict["EXIT_ID"].append(1)  # todo: check
     pnl_dict["EXIT_TYPE"].append(TradeExitType.OUT_OF_LIST.value)
     pnl_dict["SELL_PRICE"].append(day_close)
     pnl_dict["VOLUME_TO_SOLD"].append(cum_value)
     pnl_dict["SELL_VALUE"].append(pnl_dict["VOLUME_TO_SOLD"][-1] * day_close)
+    pnl_dict["PROFIT_LOSS"].append(pnl_dict["SELL_VALUE"][-1] - cum_value)
 
+    # carry forward the values for future calculations
     try:
         cum_value = pnl_dict["CUM_VALUE"][-1]
     except IndexError:
@@ -474,8 +505,6 @@ def process_out_of_list_exit(company, pnl_dict, cum_value):
         cum_volume = pnl_dict["CUM_VOLUME"][-1]
     except IndexError:
         cum_volume = 0
-
-    pnl_dict["PROFIT_LOSS"].append(pnl_dict["SELL_VALUE"][-1] - cum_value)
 
     pnl_dict["WEIGHTED_AVG"].append(0)
     pnl_dict["CUM_VALUE"].append(cum_value)
@@ -629,7 +658,7 @@ def process_exit(name, row, pnl_dict: dict[List], configs: Configs):
         "PRICE_EXEDED",
     ]
     for col in entry_cols:
-        pnl_dict[col].append("")
+        pnl_dict[col].append(0)
 
     try:
         cum_value = pnl_dict["CUM_VALUE"][-1]
@@ -643,9 +672,7 @@ def process_exit(name, row, pnl_dict: dict[List], configs: Configs):
     pnl_dict["SELL_VALUE"].append(
         pnl_dict["VOLUME_TO_SOLD"][-1] * row[OutputColumn.EXIT_PRICE.value]
     )
-    pnl_dict["PROFIT_LOSS"].append(
-        pnl_dict["SELL_VALUE"][-1] - cum_value
-    )
+    pnl_dict["PROFIT_LOSS"].append(pnl_dict["SELL_VALUE"][-1] - cum_value)
 
     tp_cols = [
         "TP_VOLUME_TO_SOLD",
@@ -733,9 +760,6 @@ def update_company_base_df(company_df: pd.DataFrame, configs: Configs):
     update_category_risk_total(company_df)
     update_allowed_exposure(company_df, configs)
     logger.info("Company base df updated")
-    write_dataframe_to_csv(
-        company_df, PORTFOLIO_COMPANY_OUTPUT_FOLDER, "company_base.csv"
-    )
 
 
 def update_allowed_exposure(company_df, configs: Configs):

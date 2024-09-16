@@ -269,8 +269,7 @@ def update_secondary_cycle_analytics(
         FirstCycleColumns.CYCLE_DURATION.value: update_cycle_duration,
         FirstCycleColumns.DURATION_BETWEEN_MAX_MIN.value: partial(
             update_max_to_min_duration,
-            max_to_min_duration_key=f"{prefix}_{
-                FirstCycleColumns.DURATION_BETWEEN_MAX_MIN.value}",
+            max_to_min_duration_key=f"{prefix}_{FirstCycleColumns.DURATION_BETWEEN_MAX_MIN.value}",
         ),
         FirstCycleColumns.MOVE.value: update_move,
         FirstCycleColumns.MOVE_PERCENT.value: update_move_percent,
@@ -284,21 +283,17 @@ def update_secondary_cycle_analytics(
         FirstCycleColumns.POINTS_FROM_MAX_TO_CLOSE_PERCENT.value: partial(
             update_percent_with_grp_start_close,
             percent_col=f"{prefix}_{FirstCycleColumns.POINTS_FROM_MAX.value}",
-            percent_key=f"{prefix}_{
-                FirstCycleColumns.POINTS_FROM_MAX_TO_CLOSE_PERCENT.value}",
+            percent_key=f"{prefix}_{FirstCycleColumns.POINTS_FROM_MAX_TO_CLOSE_PERCENT.value}",
         ),
         FirstCycleColumns.CLOSE_TO_CLOSE_TO_CLOSE_PERCENT.value: partial(
             update_percent_with_grp_start_close,
             percent_col=f"{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}",
-            percent_key=f"{prefix}_{
-                FirstCycleColumns.CLOSE_TO_CLOSE_TO_CLOSE_PERCENT.value}",
+            percent_key=f"{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE_TO_CLOSE_PERCENT.value}",
         ),
         FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN_TO_CLOSE_PERCENT.value: partial(
             update_percent_with_grp_start_close,
-            percent_col=f"{prefix}_{
-                FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}",
-            percent_key=f"{prefix}_{
-                FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN_TO_CLOSE_PERCENT.value}",
+            percent_col=f"{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}",
+            percent_key=f"{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN_TO_CLOSE_PERCENT.value}",
         ),
     }
 
@@ -357,8 +352,7 @@ def update_secondary_cycle_analytics(
                     cycle_duration_key = (
                         f"{prefix}_{FirstCycleColumns.CYCLE_DURATION.value}"
                     )
-                    signal_start_duration_key = f"{prefix}_{
-                        FirstCycleColumns.DURATION_SIGNAL_START_TO_CYCLE_START.value}"
+                    signal_start_duration_key = f"{prefix}_{FirstCycleColumns.DURATION_SIGNAL_START_TO_CYCLE_START.value}"
                     min_key = f"{prefix}_{FirstCycleColumns.CYCLE_MIN.value}"
                     max_key = f"{prefix}_{FirstCycleColumns.CYCLE_MAX.value}"
                     max_to_min_key = (
@@ -374,8 +368,7 @@ def update_secondary_cycle_analytics(
                         f"{prefix}_{FirstCycleColumns.AVERAGE_TILL_MAX.value}"
                     )
 
-                    points_frm_avg_till_max_to_min_key = f"{prefix}_{
-                        FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}"
+                    points_frm_avg_till_max_to_min_key = f"{prefix}_{FirstCycleColumns.POINTS_FRM_AVG_TILL_MAX_TO_MIN.value}"
 
                     # get the update function
                     func = update_functions.get(key.split("_")[-1], None)
@@ -434,8 +427,7 @@ def update_secondary_cycle_analytics(
         update_cumulative_avg(
             df,
             cols=[
-                f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{
-                    prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}"
+                f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{prefix}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}"
             ],
         )
 
@@ -871,8 +863,7 @@ def analyze_cycles(df, time_frame, kwargs):
     update_cumulative_avg(
         df,
         cols=[
-            f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{
-                FirstCycleColumns.CLOSE_TO_CLOSE.value}"
+            f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}"
         ],
     )
 
@@ -933,13 +924,11 @@ def calculate_z_score(df):
         (
             df[f"{FirstCycleColumns.TRAILLING_365_DAYS.value}_return"]
             - df[
-                f"{FirstCycleColumns.CUM_AVG.value}_{
-                    FirstCycleColumns.TRAILLING_365_DAYS.value}_return"
+                f"{FirstCycleColumns.CUM_AVG.value}_{FirstCycleColumns.TRAILLING_365_DAYS.value}_return"
             ]
         )
         / df[
-            f"Cumulative Std Dev {
-                FirstCycleColumns.TRAILLING_365_DAYS.value}_return"
+            f"Cumulative Std Dev {FirstCycleColumns.TRAILLING_365_DAYS.value}_return"
         ]
     )
 
@@ -1024,8 +1013,7 @@ def update_rolling_avg_for_CTC(df, time_delta, col_name, min_periods=0):
 
     df[col_name] = make_round(
         df[
-            f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{
-                FirstCycleColumns.CLOSE_TO_CLOSE.value}"
+            f"{FirstCycleColumns.POSITIVE_NEGATIVE.value}_{FirstCycleColumns.CLOSE_TO_CLOSE.value}"
         ]
         .rolling(time_delta, min_periods=min_periods)
         .mean()
