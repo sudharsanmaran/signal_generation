@@ -39,6 +39,7 @@ def main_1():
 
     global file_name
 
+    saved_inputs = {}
     use_saved_input = st.checkbox("Use Saved Inputs", value=False)
     if use_saved_input:
 
@@ -61,7 +62,7 @@ def main_1():
         "Select Expander", ["Single Analysis", "Summary"], index=0
     )
     if expander_option == "Single Analysis":
-        streamlit_inputs, saved_inputs = {}, {}
+        streamlit_inputs = {}
         st.header("PA Analysis")
         update_volume_and_volatile_files(streamlit_inputs, saved_inputs)
         portfolio_ids_input = set_portfolio_ids(streamlit_inputs, saved_inputs)
