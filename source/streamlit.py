@@ -1532,41 +1532,65 @@ def set_trade_type(streamlit_inputs, saved_inputs):
     return trade_type, trade_start_time, trade_end_time
 
 
-def update_volume_and_volatile_files(streamlit_inputs):
-    include_volatile = st.checkbox("Include Volatile", value=False)
+def update_volume_and_volatile_files(streamlit_inputs, saved_inputs):
+    include_volatile = st.checkbox(
+        "Include Volatile", value=saved_inputs.get("include_volatile", False)
+    )
     streamlit_inputs["include_volatile"] = include_volatile
     if include_volatile:
         folder = Path(VOLATILE_OUTPUT_FOLDER)
         volatile_files = [f.name for f in folder.iterdir() if f.is_file()]
+        volatile_index = 0
+        if volatile_files:
+            volatile_index = volatile_files.index(
+                saved_inputs.get("volatile_file", volatile_files[0])
+            )
 
         selected_volatile_file = st.selectbox(
             "Select the volatile file",
             volatile_files,
-            index=0,
+            index=volatile_index,
         )
+        all_volatile_tags = ["HV", "LV"]
         volatile_tag_to_process = st.selectbox(
             "Volatile Tag to Process",
-            ["HV", "LV"],
-            index=0,
+            all_volatile_tags,
+            index=all_volatile_tags.index(
+                saved_inputs.get(
+                    "volatile_tag_to_process", all_volatile_tags[0]
+                )
+            ),
         )
         streamlit_inputs["volatile_file"] = selected_volatile_file
         streamlit_inputs["volatile_tag_to_process"] = volatile_tag_to_process
 
-    include_volume = st.checkbox("Include Volume", value=False)
+    include_volume = st.checkbox(
+        "Include Volume", value=saved_inputs.get("include_volume", False)
+    )
     streamlit_inputs["include_volume"] = include_volume
     if include_volume:
         folder = Path(VOLUME_OUTPUT_FOLDER)
-        volatile_files = [f.name for f in folder.iterdir() if f.is_file()]
+        volume_files = [f.name for f in folder.iterdir() if f.is_file()]
+        volume_index = 0
+        if volume_files:
+            volume_index = volume_files.index(
+                saved_inputs.get("volume_file", volume_files[0])
+            )
 
         selected_volume_file = st.selectbox(
             "Select the volume file",
-            volatile_files,
-            index=0,
+            volume_files,
+            index=volume_index,
         )
         streamlit_inputs["volume_file"] = selected_volume_file
 
+        all_volume_tags = ["CV", "NCV"]
         volume_tag_to_process = st.selectbox(
-            "Volume Tag to Process", ["CV", "NCV"], index=0
+            "Volume Tag to Process",
+            all_volume_tags,
+            index=all_volume_tags.index(
+                saved_inputs.get("volume_tag_to_process", all_volume_tags[0])
+            ),
         )
         streamlit_inputs["volume_tag_to_process"] = volume_tag_to_process
 

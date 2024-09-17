@@ -1,3 +1,4 @@
+from datetime import datetime
 from itertools import combinations, product
 from pathlib import Path
 import time
@@ -26,18 +27,43 @@ from source.streamlit import (
     set_start_end_datetime,
     set_strategy_pair,
     update_volume_and_volatile_files,
+    write_user_inputs,
 )
 from pa_analysis.validation import validate
 
 
+file_name = "pa_analysis_user_inputs.json"
+
+
 def main_1():
+
+    global file_name
+
+    use_saved_input = st.checkbox("Use Saved Inputs", value=False)
+    if use_saved_input:
+
+        all_user_inputs = load_input_from_json(file_name)
+        if all_user_inputs:
+            search_term = st.text_input("Search Notes")
+
+            filtered_notes = [
+                note
+                for note in all_user_inputs.keys()
+                if search_term.lower() in note.lower()
+            ]
+
+            selected_note = st.selectbox(
+                "Select a note to view details", filtered_notes
+            )
+            saved_inputs = all_user_inputs[selected_note]
+
     expander_option = st.selectbox(
-        "Select Expander", ["Single Analysis", "Summary"]
+        "Select Expander", ["Single Analysis", "Summary"], index=0
     )
     if expander_option == "Single Analysis":
         streamlit_inputs, saved_inputs = {}, {}
         st.header("PA Analysis")
-        update_volume_and_volatile_files(streamlit_inputs)
+        update_volume_and_volatile_files(streamlit_inputs, saved_inputs)
         portfolio_ids_input = set_portfolio_ids(streamlit_inputs, saved_inputs)
         set_allowed_direction(streamlit_inputs, saved_inputs)
         set_instrument(streamlit_inputs, saved_inputs)
@@ -174,10 +200,26 @@ def main_1():
             add_tp_fields(streamlit_inputs, required_fields)
             all_fields_filled = all(required_fields)
             if all_fields_filled:
+                notes = st.text_input(
+                    "Notes", value=saved_inputs.get("notes", "")
+                )
+                save = st.checkbox(
+                    "Save Inputs", value=saved_inputs.get("save", True)
+                )
                 if st.button("Submit"):
                     start = time.time()
                     try:
                         validated_data = validate(streamlit_inputs)
+                        if validated_data:
+                            if save:
+                                temp = {
+                                    "timestamp": datetime.now().strftime(
+                                        "%Y-%m-%d %H:%M:%S"
+                                    ),
+                                    "notes": notes,
+                                }
+                                temp.update(streamlit_inputs)
+                                write_user_inputs(temp, file_name)
                     except Exception as e:
                         st.write(f"Error: {e}")
                         return
@@ -408,10 +450,24 @@ def main():
         add_tp_fields(streamlit_inputs, required_fields)
         all_fields_filled = all(required_fields)
         if all_fields_filled:
+            notes = st.text_input("Notes", value=saved_inputs.get("notes", ""))
+            save = st.checkbox(
+                "Save Inputs", value=saved_inputs.get("save", True)
+            )
             if st.button("Submit"):
                 start = time.time()
                 try:
                     validated_data = validate(streamlit_inputs)
+                    if validated_data:
+                        if save:
+                            temp = {
+                                "timestamp": datetime.now().strftime(
+                                    "%Y-%m-%d %H:%M:%S"
+                                ),
+                                "notes": notes,
+                            }
+                            temp.update(streamlit_inputs)
+                            write_user_inputs(temp, file_name)
                 except Exception as e:
                     st.write(f"Error: {e}")
                     return
