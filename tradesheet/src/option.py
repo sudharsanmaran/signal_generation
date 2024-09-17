@@ -10,7 +10,7 @@ from tradesheet.src.mixin import OptionMixin
 
 class OptionSegment(OptionMixin, TradeSheetGenerator):
     dir_path = OPTION_FILE_PATH
-    db_date_format = OPTION_DATE_FORMAT
+    # db_date_format = OPTION_DATE_FORMAT
 
     output_file_name = f"{OUTPUT_PATH}option_output"
     STRIKE_POSTFIX = {
@@ -71,6 +71,7 @@ class OptionSegment(OptionMixin, TradeSheetGenerator):
                         # first we find time, and close price in cash db at ro_entry_dt
                         # for e.g. ro_entry_dt is 28/11/2022 9:15 then we find close of this date in Cash db
                         # which becomes cash_tracking_price.
+
                         cash_tracking_price, cash_tracking_time = self.get_tracking_price(self.cash_db_df, ro_entry_dt,
                                                                                           exit_dt)
 
@@ -161,8 +162,7 @@ class OptionSegment(OptionMixin, TradeSheetGenerator):
                 if os.path.exists(file_path):
                     # print("Fetched from Database", current_date)
                     new_df = pd.read_csv(file_path)
-                    new_df[DATE] = pd.to_datetime(new_df['Date'] + ' ' + new_df['Time'],
-                                                  format="%d/%m/%Y %H:%M:%S").dt.floor('min')
+                    new_df[DATE] = pd.to_datetime(new_df['Date'] + ' ' + new_df['Time'],).dt.floor('min')
                     self.date_expiry_tracker.setdefault(next_date, [])
                     self.date_expiry_tracker[next_date].append(expiry_date)
                     self.segment_df = pd.concat([self.segment_df, new_df], ignore_index=True)
