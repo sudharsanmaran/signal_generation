@@ -1099,6 +1099,7 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
         cycle_to_consider = st.multiselect(
             "Cycle to Consider",
             cycle_options,
+            default=saved_inputs.get("cycle_to_consider", cycle_options[0]),
         )
         streamlit_inputs["cycle_to_consider"] = cycle_to_consider
 
@@ -1123,11 +1124,12 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
         bb_time_frames_1 = st.multiselect(
             "BB Time Frame",
             bb_tf_options,
+            default=saved_inputs.get("bb_time_frames_1", bb_tf_options[0]),
         )
 
         include_higher_and_lower = st.checkbox(
             "Include Higher and Lower BB Bands",
-            value=saved_inputs.get("include_higer_and_lower", False),
+            value=saved_inputs.get("include_higher_and_lower", False),
         )
         # bb_band_column_1 = st.selectbox(
         #     "BB Band Column",
@@ -1138,18 +1140,19 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
             "Parameter ID",
             min_value=1,
             step=1,
+            value=saved_inputs.get("parameter_id_1", 1),
         )
 
         periods_1 = st.multiselect(
             "Periods",
             PERIOD_OPTIONS,
-            default=saved_inputs.get("period", [20]),
+            default=saved_inputs.get("period", PERIOD_OPTIONS[0]),
         )
 
         sds_1 = st.multiselect(
             "Standard Deviations",
             SD_OPTIONS,
-            default=saved_inputs.get("sd", [2]),
+            default=saved_inputs.get("sd", SD_OPTIONS[0]),
         )
 
         close_percent = st.number_input(
@@ -1182,7 +1185,7 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
         st.text("BB Band 2 inputs:")
         check_bb_2 = st.checkbox(
             "Check BB 2",
-            value=saved_inputs.get("calculate_cycles", False),
+            value=saved_inputs.get("check_bb_2", False),
         )
         streamlit_inputs["check_bb_2"] = check_bb_2
         if check_bb_2:
@@ -1196,6 +1199,9 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
             bb_time_frames_2 = st.multiselect(
                 "BB 2 Time Frame",
                 bb_2_tf_options,
+                default=saved_inputs.get(
+                    "bb_time_frames_2", bb_2_tf_options[0]
+                ),
             )
 
             if periods_1:
@@ -1216,16 +1222,18 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
                 "BB 2 Parameter ID 2",
                 min_value=1,
                 step=1,
+                value=saved_inputs.get("parameter_id_2", 1),
             )
 
             periods_2 = st.multiselect(
                 "BB 2 Periods",
                 bb_2_period_options,
+                default=saved_inputs.get("periods_2", bb_2_period_options[0]),
             )
             sds_2 = st.multiselect(
                 "BB 2 Standard Deviations",
                 SD_OPTIONS,
-                default=saved_inputs.get("sd", [2]),
+                default=saved_inputs.get("sd", SD_OPTIONS[0]),
             )
             streamlit_inputs.update(
                 {
@@ -1313,10 +1321,13 @@ def set_target_profit_inputs(streamlit_inputs, saved_inputs):
     )
     streamlit_inputs["calculate_tp"] = calculate_tp
     if calculate_tp:
+        tp_method_options = ["1", "2"]
         tp_method = st.selectbox(
             "TP Method",
-            ["1", "2"],
-            index=0,
+            tp_method_options,
+            index=tp_method_options.index(
+                saved_inputs.get("tp_method", tp_method_options[0])
+            ),
         )
         tp_percentage = st.number_input(
             "TP Percentage",

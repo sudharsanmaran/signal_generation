@@ -79,7 +79,11 @@ def main_1():
                 portfolio_ids, streamlit_inputs, saved_inputs
             )
 
-            combination_length = st.number_input("Combination Length", value=2)
+            combination_length = st.number_input(
+                "Combination Length",
+                value=saved_inputs.get("combination_length", 2),
+            )
+            streamlit_inputs["combination_length"] = combination_length
 
             options = [
                 (portfolio_id, strategy_id)
@@ -88,9 +92,19 @@ def main_1():
             ]
             all_combination = list(combinations(options, combination_length))
 
+            saved_strategy_pairs = saved_inputs.get("strategy_pairs", [])
+            saved_strategy_pairs = [
+                tuple(tuple(item) for item in pair)
+                for pair in saved_strategy_pairs
+            ]
             strategy_pairs = st.multiselect(
                 "Strategy Combination",
                 options=all_combination,
+                default=[
+                    item
+                    for item in saved_strategy_pairs
+                    if item in all_combination
+                ],
             )
             streamlit_inputs["strategy_pairs"] = strategy_pairs
 
@@ -99,9 +113,13 @@ def main_1():
             )
             categories = categorize_signal(filtered_flag_combinations)
 
+            categories_options = list(categories.keys())
             selected_category = st.selectbox(
                 "Select Category",
-                categories.keys(),
+                categories_options,
+                index=categories_options.index(
+                    saved_inputs.get("category", categories_options[0])
+                ),
             )
 
             streamlit_inputs["category"] = selected_category
@@ -115,7 +133,12 @@ def main_1():
                 long_entry_signals = st.multiselect(
                     "Long Entry Signals",
                     all_flag_combinations,
-                    default=saved_inputs.get("long_entry_signals", None),
+                    default=[
+                        tuple(signal)
+                        for signal in saved_inputs.get(
+                            "long_entry_signals", []
+                        )
+                    ],
                 )
             else:
                 long_entry_signals = []
@@ -131,7 +154,12 @@ def main_1():
                         for combination in all_flag_combinations
                         if combination not in long_entry_signals
                     ],
-                    default=saved_inputs.get("short_entry_signals", None),
+                    default=[
+                        tuple(signal)
+                        for signal in saved_inputs.get(
+                            "short_entry_signals", None
+                        )
+                    ],
                 )
             else:
                 short_entry_signals = []
@@ -145,7 +173,12 @@ def main_1():
                     set(filtered_flag_combinations) - set(long_entry_signals),
                     default=set(
                         [
-                            *saved_inputs.get("long_exit_signals", []),
+                            *[
+                                tuple(signal)
+                                for signal in saved_inputs.get(
+                                    "long_exit_signals", []
+                                )
+                            ],
                             *short_entry_signals,
                         ]
                     ),
@@ -164,7 +197,12 @@ def main_1():
                     - set(long_exit_signals),
                     default=set(
                         [
-                            *saved_inputs.get("short_exit_signals", []),
+                            *[
+                                tuple(signal)
+                                for signal in saved_inputs.get(
+                                    "short_exit_signals", []
+                                )
+                            ],
                             *long_entry_signals,
                         ]
                     ),
