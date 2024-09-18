@@ -48,6 +48,11 @@ class TradingConfiguration(BaseModel):
     risk: float = Field(..., gt=0, lt=1)
     leverage: int = 2
 
+    dte_based_exit: Optional[bool] = False
+    exit_date_number: Optional[int] = None
+    exit_date_time: Optional[str] = None
+    rollover_candle: Optional[int] = None
+
     @field_validator("opt_buying", "expiry", "strike")
     def validate_options(cls, v, values):
         if values.data.get("segment") == "OPTIONS":

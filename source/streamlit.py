@@ -613,6 +613,32 @@ def main():
             )
             streamlit_inputs["premium_feature"] = premium_feature
 
+            dte_based_exit = st.checkbox(
+                "date based exit",
+                value=saved_inputs.get("dte_based_exit", False),
+            )
+            streamlit_inputs["dte_based_exit"] = dte_based_exit
+
+            exit_date_number = st.number_input(
+                "exit date number",
+                min_value=1,
+                value=saved_inputs.get("exit_date_number", 1),
+            )
+            streamlit_inputs["exit_date_number"] = exit_date_number
+
+            exit_date_time = st.text_input(
+                "exit date time in HH:MM:SS",
+                value=saved_inputs.get("exit_date_time", "09:24:00"),
+            )
+            streamlit_inputs["exit_date_time"] = exit_date_time
+
+            rollover_candle = st.number_input(
+                "rollover candle",
+                min_value=1,
+                value=saved_inputs.get("rollover_candle", 1),
+            )
+            streamlit_inputs["rollover_candle"] = rollover_candle
+
         if segment == "FUTURE":
             # Hedge
             expiry = st.number_input(
