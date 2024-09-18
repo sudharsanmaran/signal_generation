@@ -141,7 +141,6 @@ def process_pa_output(validated_data, *args):
     merged_df = merge_all_df([merged_df, *dfs.values()])
 
     file_name = "_".join(validated_data["pa_file"].split("_")[:-2])
-    validated_data["file_name"] = file_name
 
     if (
         validated_data["calculate_fractal_analysis"]
@@ -258,8 +257,10 @@ def process_pa_output(validated_data, *args):
             entry_func=check_cycle_entry_condition,
             exit_func=check_cycle_exit_signals,
         )
+        file_name = f"{file_name}_{cycle.value}"
+        validated_data["file_name"] = file_name
         write_dataframe_to_csv(
-            output_df, SG_CYCLE_OUTPUT_FOLDER, f"{file_name}_{cycle.value}.csv"
+            output_df, SG_CYCLE_OUTPUT_FOLDER, file_name + ".csv"
         )
 
         if Trade.trigger_trade_management:

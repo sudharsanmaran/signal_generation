@@ -17,7 +17,7 @@ class TradeSheetGenerator:
     }
 
     def __init__(self, input_data, ee_df, strategy_pair="", instrument=""):
-        self.output_file_name = f"{self.output_file_name}_{instrument}_{strategy_pair}.csv"
+        self.output_file_name = f"{self.output_file_name}_{input_data['file_name']}.csv"
         self.start_date = input_data[InputFileCols.START_DATE].date()
         self.end_date = input_data.get(InputFileCols.END_DATE).date()
         self.symbol = instrument or input_data.get(InputFileCols.INSTRUMENT) 
