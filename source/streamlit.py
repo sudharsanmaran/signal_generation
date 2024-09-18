@@ -1146,13 +1146,13 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
         periods_1 = st.multiselect(
             "Periods",
             PERIOD_OPTIONS,
-            default=saved_inputs.get("period", PERIOD_OPTIONS[0]),
+            default=saved_inputs.get("periods_1", PERIOD_OPTIONS[0]),
         )
 
         sds_1 = st.multiselect(
             "Standard Deviations",
             SD_OPTIONS,
-            default=saved_inputs.get("sd", SD_OPTIONS[0]),
+            default=saved_inputs.get("sds_1", SD_OPTIONS[0]),
         )
 
         close_percent = st.number_input(
@@ -1233,7 +1233,7 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
             sds_2 = st.multiselect(
                 "BB 2 Standard Deviations",
                 SD_OPTIONS,
-                default=saved_inputs.get("sd", SD_OPTIONS[0]),
+                default=saved_inputs.get("sds_2", SD_OPTIONS[0]),
             )
             streamlit_inputs.update(
                 {
