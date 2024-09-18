@@ -80,6 +80,15 @@ def get_base_df(validated_data, strategy_df, strategy_pair_str, instrument):
 
         return market_direction_col
 
+    # Include the last row of strategy_df in filtered_df
+    def include_last_row(filtered_df):
+        # Check if the last row is already in filtered_df
+        last_row = strategy_df.tail(1)
+        if not filtered_df.index.isin(last_row.index).any():
+            # Append the last row to filtered_df
+            filtered_df = pd.concat([filtered_df, last_row])
+        return filtered_df
+
     # Initialize columns for results
     strategy_df["signal_change"] = False
     strategy_df["time"] = 0.0
@@ -123,6 +132,8 @@ def get_base_df(validated_data, strategy_df, strategy_pair_str, instrument):
     # Filter out rows where there was no signal change
     filtered_df = strategy_df[strategy_df["signal_change"]].copy()
 
+    filtered_df = include_last_row(filtered_df)
+
     filtered_df["time"] = make_round(
         filtered_df.index.to_series().diff().shift(-1).dt.total_seconds()
         / (3600 * 24)
@@ -150,7 +161,7 @@ def get_base_df(validated_data, strategy_df, strategy_pair_str, instrument):
 
     filtered_df["temp"] = filtered_df["points"] * filtered_df["time"]
 
-    filtered_df = filtered_df[:-1]
+    # filtered_df = filtered_df[:-1]
 
     write_dataframe_to_csv(
         filtered_df,
