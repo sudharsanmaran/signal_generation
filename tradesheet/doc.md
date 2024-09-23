@@ -100,3 +100,17 @@ so, for DTE less than equal to 5, we consider 2nd expiry else consider 1st expir
 - Once we find entry and exit time of trade for a signal in the future, we need to find hedge for that trade.
 - so based on given hedge strike and expiry, we follow steps of finding trackig price from 1 to 7. (premium is not considered in hedge)
 - once we filter db, we will find price at trade entry/exit time on that db.
+
+
+##### Issues Found in qc:
+1) Signal Exit time : 2/23/2023  1:15:00 PM  
+   expiry Date: 2/23/2023
+   Output Exit time is showing none. Issue was in delayed exit function. condition updated from  date_idx < len(date_ranges) to date_idx <= len(date_ranges)
+
+2) Signal Exit time: 2/3/2023  9:15:00 AM
+   expiry Date: 2/23/2023
+   Output Exit time: 2/3/2023  9:15:00 AM
+   Output Exit type: Delayed Exit.
+  Exit type should be Signal exit as we have candle at 9:15. Issue was filtere_df was not taking 2/3/2023 date. And that was due to pd.date range function. In pd.Daterange function when you pass date with time it excludes end date.
+
+3) 2nd issue same for options

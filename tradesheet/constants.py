@@ -1,3 +1,5 @@
+from datetime import time
+
 from source.constants import OutputColumn, MarketDirection
 
 INPUT_FILE = "input_file.csv"
@@ -157,9 +159,10 @@ class OutputCols:
     AD_PRICE_LEVEL = "A/D price Level"
     TARGET_PROFIT = "TARGET Profit %"
     SL_PERCENT = "SL %"
+    ENTRY_TIME = "Entry Time"
     EXIT_TIME = "Exit Time"
     EXIT_PRICE = "Exit Price"
-    ENTRY_TIME = "Entry Time"
+    NET_POINTS = "Net points"
     EXIT_TYPE = "Exit Type"
     RE_AD = "RE_Appreciation / Depreciation"
     RE_AD_PERCENT = "RE_Appreciation / Depreciation %"
@@ -208,3 +211,5 @@ RESULT_DICT = {value: None for name, value in vars(OutputCols).items(
 ) if not callable(value) and not name.startswith('_') and value not in exclude}
 EXPIRY_COL = OutputCols.EXPIRY_DATE
 EXPIRY_NUMBER_COL = "Expiry Number"
+
+EXPIRY_EXIT_TIME = time(14, 00)
