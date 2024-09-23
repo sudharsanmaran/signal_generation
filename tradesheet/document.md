@@ -82,12 +82,12 @@ Exit prices can be determined by several factors:
 ### **Comparision**:
 
 | **Feature**             | **Options**                                      | **Futures**                       | **Cash**                           |
-| ----------------------- | ------------------------------------------------ | --------------------------------- | ---------------------------------- |
+| ----------------------- |--------------------------------------------------| --------------------------------- | ---------------------------------- |
 | **Expiry Management**   | Yes (complex)                                    | Yes (simpler)                     | No                                 |
 | **Rollover Logic**      | Yes                                              | Yes                               | No                                 |
 | **Strike Price**        | Yes (adjusts based on premium and ITM/OTM logic) | No (strike prices don’t apply)    | No (not applicable)                |
 | **Premium Adjustment**  | Yes (adjusts based on cash price differences)    | No                                | No                                 |
-| **Hedging**             | Optional (strike-based adjustments)              | Optional (simpler hedge logic)    | No                                 |
+| **Hedging**             | No (not applicable)                              | Optional (simpler hedge logic)    | No                                 |
 | **Filtering Data**      | Based on expiry and missing dates                | Based on expiry and missing dates | Based on entry and exit dates only |
 | **Lot Size Management** | Yes (per expiry contract)                        | Yes (per expiry contract)         | No                                 |
 | **Complexity**          | High                                             | Medium                            | Low                                |
@@ -124,7 +124,8 @@ The `generate_trade_sheet` function you shared is responsible for generating a t
 
 6. **Cash Price Tracking**:
 
-   - Retrieves the cash price (`cash_tracking_price`) and the time from a separate cash database (`cash_db_df`), used to track the movement of the underlying asset during the trade.
+   - Retrieves the cash price (`cash_tracking_price`) and the time from a separate cash database (`cash_db_df`), used to calculate ATM based on cash price and 
+   track the movement of the underlying asset during the trade.
 
 7. **Strike Price Calculation**:
 
@@ -161,7 +162,7 @@ The `generate_trade_sheet` function you shared is responsible for generating a t
 - **Lot Size and Strike Price**: Dynamically calculates lot size and strike price based on expiry data and market signals.
 - **Cash Price and Premium Adjustment**: Tracks cash price movements and adjusts strike price based on premiums if applicable.
 - **Data Filtering**: Reads missing data for the relevant trading dates and applies it to the segment DataFrame.
-- **Hedging and Premium Logic**: Implements optional logic to handle hedging and strike-based premium adjustments.
+- **Premium Logic**: Implements optional logic to handle strike-based premium adjustments.
 - **Rollover Logic**: Supports rolling over positions to the next expiry, incrementing expiry numbers, and adjusting entry/exit points accordingly.
 
 ### FUTURE:
