@@ -12,8 +12,8 @@ from tradesheet.utils import percentage, clean_int
 class TradeSheetGenerator:
     db_date_format = "%Y-%m-%d %H:%M:%S"
     STRIKE_POSTFIX = {
-        "GREEN": "CE",
-        "RED": "PE",
+        InputCols.GREEN: "CE",
+        InputCols.RED: "PE",
     }
 
     def __init__(self, input_data, ee_df, strategy_pair="", instrument=""):
@@ -46,14 +46,6 @@ class TradeSheetGenerator:
         self.capital = clean_int(input_data.get(InputFileCols.CAPITAL))
         self.risk = input_data.get(InputFileCols.RISK)
         self.leverage = input_data.get(InputFileCols.LEVERAGE)
-
-        # Rollover settings, added temporarily. then it can be added in streamlit
-        input_data.update({
-            InputFileCols.DTE_BASED_EXIT: True,
-            InputFileCols.EXIT_DTE_NUMBER: 7,
-            InputFileCols.EXIT_DTE_TIME: "13:42:00",
-            InputFileCols.ROLLOVER_CANDLE: 1,
-        })
 
         self.dte_based_exit = input_data.get(InputFileCols.DTE_BASED_EXIT)
         self.exit_dte_no = clean_int(input_data.get(InputFileCols.EXIT_DTE_NUMBER))
@@ -228,8 +220,7 @@ class TradeSheetGenerator:
         # Concatenate all DataFrames in the list into a single DataFrame
         if df_list:
             df = pd.concat(df_list, ignore_index=True)
-            dformat = OPTION_DATE_FORMAT if kwargs.get("hedge") else self.db_date_format
-            df[DATE] = pd.to_datetime(df['Date'] + ' ' + df['Time'], format=dformat).dt.floor('min')
+            df[DATE] = pd.to_datetime(df['Date'] + ' ' + df['Time'], format=self.db_date_format).dt.floor('min')
             return df
         else:
             # print("Data not found")

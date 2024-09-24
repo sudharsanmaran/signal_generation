@@ -80,7 +80,7 @@ class FutureSegment(OptionMixin, TradeSheetGenerator):
         if self.hedge_strike:
             strike_price = self.get_itm_or_otm(self.hedge_strike, strike_diff, tag, atm)
         expiry_in_ticker = hedge_expiry.strftime("%d%b%y").upper()
-        find_str = f"{expiry_in_ticker}{int(strike_price)}{self.STRIKE_POSTFIX.get(tag, '')}.NFO"
+        find_str = f"{expiry_in_ticker}{strike_price}{self.STRIKE_POSTFIX.get(tag, '')}.NFO"
         # s_d = output.get(OutputCols.ENTRY_TIME)
         # e_d = output.get(OutputCols.RE_EXIT_TIME) or output.get(OutputCols.EXIT_TIME) or hedge_expiry
         date_range = {d.date() for col in HEDGE_DATE_COLUMNS if (d := output.get(col))}

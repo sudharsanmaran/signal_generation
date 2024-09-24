@@ -101,7 +101,6 @@ class StrategyInput(BaseInputs, FractalInput, BollingerBandInput):
 
 
 
-
 class StrategyInputAndTradingConfig(StrategyInput, TradingConfiguration):
     pass
 

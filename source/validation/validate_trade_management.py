@@ -49,8 +49,8 @@ class TradingConfiguration(BaseModel):
     leverage: int = 2
 
     dte_based_exit: Optional[bool] = False
-    exit_date_number: Optional[int] = None
-    exit_date_time: Optional[str] = None
+    exit_dte_number: Optional[int] = None
+    exit_dte_time: Optional[str] = None
     rollover_candle: Optional[int] = None
 
     @field_validator("opt_buying", "expiry", "strike")

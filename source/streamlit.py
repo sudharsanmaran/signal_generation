@@ -619,18 +619,18 @@ def main():
             )
             streamlit_inputs["dte_based_exit"] = dte_based_exit
 
-            exit_date_number = st.number_input(
+            exit_dte_number = st.number_input(
                 "exit date number",
-                min_value=1,
-                value=saved_inputs.get("exit_date_number", 1),
+                min_value=0,
+                value=saved_inputs.get("exit_dte_number", 1),
             )
-            streamlit_inputs["exit_date_number"] = exit_date_number
+            streamlit_inputs["exit_dte_number"] = exit_dte_number
 
-            exit_date_time = st.text_input(
+            exit_dte_time = st.text_input(
                 "exit date time in HH:MM:SS",
-                value=saved_inputs.get("exit_date_time", "09:24:00"),
+                value=saved_inputs.get("exit_dte_time", "09:24:00"),
             )
-            streamlit_inputs["exit_date_time"] = exit_date_time
+            streamlit_inputs["exit_dte_time"] = exit_dte_time
 
             rollover_candle = st.number_input(
                 "rollover candle",
@@ -660,7 +660,6 @@ def main():
                 )
                 hedge_strike = st.number_input(
                     "Hedge Strike",
-                    min_value=1,
                     value=saved_inputs.get("hedge_strike", 1),
                 )
                 hedge_delayed_exit = st.checkbox(
