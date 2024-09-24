@@ -674,6 +674,32 @@ def main():
                     }
                 )
 
+            dte_based_exit = st.checkbox(
+                "date based exit",
+                value=saved_inputs.get("dte_based_exit", False),
+            )
+            streamlit_inputs["dte_based_exit"] = dte_based_exit
+
+            exit_dte_number = st.number_input(
+                "exit date number",
+                min_value=0,
+                value=saved_inputs.get("exit_dte_number", 1),
+            )
+            streamlit_inputs["exit_dte_number"] = exit_dte_number
+
+            exit_dte_time = st.text_input(
+                "exit date time in HH:MM:SS",
+                value=saved_inputs.get("exit_dte_time", "09:24:00"),
+            )
+            streamlit_inputs["exit_dte_time"] = exit_dte_time
+
+            rollover_candle = st.number_input(
+                "rollover candle",
+                min_value=1,
+                value=saved_inputs.get("rollover_candle", 1),
+            )
+            streamlit_inputs["rollover_candle"] = rollover_candle
+
         # Appreciation/Depreciation based entry
         ade_based_entry = st.checkbox(
             "Appreciation/Depreciation based entry",
