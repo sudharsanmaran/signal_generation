@@ -204,7 +204,7 @@ class OptionMixin:
 
             if expiry_to_consider not in self.date_expiry_tracker.get(next_date, []):
                 dt_format = next_date.strftime('%d%m%Y')
-                file_path = self.get_file_path(next_date, expiry_date, expiry_str, dt_format)
+                file_path = self.get_file_path(next_date, expiry_str, dt_format)
                 if os.path.exists(file_path):
                     new_df = pd.read_csv(file_path)
                     new_df[DATE] = pd.to_datetime(new_df['Date'] + ' ' + new_df['Time'],

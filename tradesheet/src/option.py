@@ -13,10 +13,6 @@ class OptionSegment(OptionMixin, TradeSheetGenerator):
     # db_date_format = OPTION_DATE_FORMAT
 
     output_file_name = f"{OUTPUT_PATH}option_output"
-    STRIKE_POSTFIX = {
-        InputCols.GREEN: "CE",
-        InputCols.RED: "PE",
-    }
 
     def iterate_dir_month_wise(self, month_dir, start_date, end_date, **kwargs):
         return self.iterate_option_dir_month_wise(month_dir, start_date, end_date, **kwargs)
@@ -43,7 +39,6 @@ class OptionSegment(OptionMixin, TradeSheetGenerator):
                 signal_expiry_number = row[EXPIRY_NUMBER_COL] if self.is_next_expiry else self.expiry
                 ro_entry_dt = entry_dt  # Rollover entry date
                 current_date_expiry = self.expiry_data[current_date]
-
                 while True:
                     try:
                         col_name = self.get_expiry_column_name(signal_expiry_number)
@@ -85,7 +80,7 @@ class OptionSegment(OptionMixin, TradeSheetGenerator):
 
                         # Fetching strike based on Premium feature
                         while True:
-                            find_str = f"{expiry_in_ticker}{int(strike_price)}{self.STRIKE_POSTFIX.get(tag, '')}.NFO"
+                            find_str = f"{expiry_in_ticker}{strike_price}{self.STRIKE_POSTFIX.get(tag, '')}.NFO"
                             filtered_df = self.segment_df.loc[
                                 (self.segment_df[DATE] >= ro_entry_dt) & (self.segment_df[DATE] <= exit_dt) &
                                 (self.segment_df[CashCols.TICKER].str.contains(find_str))].reset_index(drop=True)
@@ -136,8 +131,9 @@ class OptionSegment(OptionMixin, TradeSheetGenerator):
             result_df.to_csv(self.output_file_name, index=False)
             os.chmod(self.output_file_name, 0o600)
 
-    def get_file_path(self, next_date, expiry_str):
+    def get_file_path(self, next_date, expiry_str, dt_format=None):
         file_path = f"{self.dir_path}\\{self.symbol.upper()}\\{next_date.year}\\{next_date.strftime('%b').upper()}\\{next_date.strftime('%d%m%Y')}\\{OPTION_FILE_NAME.format(self.symbol, expiry_str)}"
+        return file_path
 
     def get_delayed_price(self, current_date, expiry_date, find_str, expiry_str, **kwargs):
         """
