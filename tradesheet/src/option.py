@@ -80,7 +80,8 @@ class OptionSegment(OptionMixin, TradeSheetGenerator):
 
                         # Fetching strike based on Premium feature
                         while True:
-                            find_str = f"{expiry_in_ticker}{strike_price}{self.STRIKE_POSTFIX.get(tag, '')}.NFO"
+                            sp = int(strike_price) if strike_price.is_integer() else strike_price
+                            find_str = f"{expiry_in_ticker}{sp}{self.STRIKE_POSTFIX.get(tag, '')}.NFO"
                             filtered_df = self.segment_df.loc[
                                 (self.segment_df[DATE] >= ro_entry_dt) & (self.segment_df[DATE] <= exit_dt) &
                                 (self.segment_df[CashCols.TICKER].str.contains(find_str))].reset_index(drop=True)
@@ -112,7 +113,8 @@ class OptionSegment(OptionMixin, TradeSheetGenerator):
                             delayed_exit=True,
                             rid=rid,
                             find_str=find_str,
-                            expiry_str=expiry_in_ticker
+                            expiry_str=expiry_in_ticker,
+                            strike_price=strike_price
                         )
                         output[OutputCols.TRADE_ID] = index + 1
                         output[OutputCols.ROLLOVER_ID] = rid

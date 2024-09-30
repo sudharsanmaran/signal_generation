@@ -3,7 +3,7 @@ from datetime import datetime, time, timedelta
 import time as tm
 import pandas as pd
 from tradesheet.constants import DATE, InputCols, FUTURE_FILE_PREFIX, FUTURE_FILE_PATH, OutputCols, \
-    EXPIRY_NUMBER_COL, CashCols, ExitTypes, OPTION_FILE_PATH, OUTPUT_PATH, EXPIRY_EXIT_TIME
+    EXPIRY_NUMBER_COL, CashCols, OPTION_FILE_PATH, OUTPUT_PATH, HEDGE_EXPIRY_EXIT_TIME
 from tradesheet.src.base import TradeSheetGenerator
 from tradesheet.src.mixin import OptionMixin
 from tradesheet.utils import int_to_roman
@@ -80,7 +80,10 @@ class FutureSegment(OptionMixin, TradeSheetGenerator):
         if self.hedge_strike:
             strike_price = self.get_itm_or_otm(self.hedge_strike, strike_diff, tag, atm)
         expiry_in_ticker = hedge_expiry.strftime("%d%b%y").upper()
-        find_str = f"{expiry_in_ticker}{strike_price}{self.STRIKE_POSTFIX.get(tag, '')}.NFO"
+        sp = int(strike_price) if strike_price.is_integer() else strike_price
+        # In Hedge, if tage is green, we check for PE and for red, we check for CE.
+        tag = InputCols.GREEN if tag == InputCols.RED else InputCols.RED
+        find_str = f"{expiry_in_ticker}{sp}{self.STRIKE_POSTFIX.get(tag, '')}.NFO"
         # s_d = output.get(OutputCols.ENTRY_TIME)
         # e_d = output.get(OutputCols.RE_EXIT_TIME) or output.get(OutputCols.EXIT_TIME) or hedge_expiry
         date_range = {d.date() for col in HEDGE_DATE_COLUMNS if (d := output.get(col))}
@@ -102,8 +105,8 @@ class FutureSegment(OptionMixin, TradeSheetGenerator):
 
             # self.hedge_df = self.read_csv_files_in_date_range(s_d.date(), e_d.date(), dir_path=OPTION_FILE_PATH,
             #                                                   expiry_dt=hedge_expiry.date(), option=True)
-            filtered_hedge_df = self.hedge_df[self.hedge_df[CashCols.TICKER].str.contains(find_str)]
-            hedge_expiry = datetime.combine(hedge_expiry, EXPIRY_EXIT_TIME) if hedge_expiry else None
+            filtered_hedge_df = self.hedge_df[self.hedge_df[CashCols.TICKER].str.contains(find_str)].sort_values(by=DATE)
+            hedge_expiry = datetime.combine(hedge_expiry, HEDGE_EXPIRY_EXIT_TIME) if hedge_expiry else None
             output[OutputCols.H_TICKER] = filtered_hedge_df.iloc[0][
                 CashCols.TICKER] if not filtered_hedge_df.empty else None
             output[OutputCols.H_ENTRY_PRICE] = self.get_price(filtered_hedge_df, output.get(OutputCols.ENTRY_TIME),
