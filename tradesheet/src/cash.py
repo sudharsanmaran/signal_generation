@@ -42,7 +42,6 @@ class CashSegment(TradeSheetGenerator):
                 output, _, _ = self.iterate_signal(filtered_df, row, entry_dt, exit_dt)
                 results.append(output)
                 previous_date = entry_dt.date()
-                results.append({**row, **output})
             result_df = pd.DataFrame(results, columns=[*self.ee_df.columns.to_list(), *self.result.keys()])
             result_df.drop([OutputCols.TRADE_ID, OutputCols.ROLLOVER_ID], axis=1, inplace=True)
             result_df.to_csv(self.output_file_name, index=False)

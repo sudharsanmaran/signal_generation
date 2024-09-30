@@ -261,8 +261,7 @@ class TradeSheetGenerator:
         """
         # CHeck expiry exit after 3:20 at expiry date
         if expiry_date:
-            dte = (expiry_date - entry_dt.date()).days
-            expiry_date = datetime.combine(expiry_date, EXPIRY_EXIT_TIME)
+            dte = (expiry_date.date() - entry_dt.date()).days
         else:
             dte = None
         dte_exit_time = datetime.combine(entry_dt.date(), self.exit_dte_time) if self.exit_dte_time else None
@@ -382,10 +381,10 @@ class TradeSheetGenerator:
         for RED, we buy CALL.
         """
         move_range = abs(strike) * strike_diff
-        if (not self.is_hedge and tag == "GREEN") or (self.is_hedge and tag == "RED"):
+        if (not self.is_hedge and tag == InputCols.GREEN) or (self.is_hedge and tag == InputCols.RED):
             return atm - move_range if strike > 0 else atm + move_range
 
-        elif (not self.is_hedge and tag == "RED") or (self.is_hedge and tag == "GREEN"):
+        elif (not self.is_hedge and tag == InputCols.RED) or (self.is_hedge and tag == InputCols.GREEN):
             return atm + move_range if strike > 0 else atm - move_range
         return atm
 
@@ -399,10 +398,12 @@ class TradeSheetGenerator:
             return df['High'].max(), df['Low'].min()
 
     def iterate_signal(self, filtered_df, row, entry_dt, exit_dt, lot_size=None, delayed_exit=False, expiry_date=None,
-                       rid=0, **kwargs):
+                       rid=0, strike_price=None, **kwargs):
         s_time = time.time()
         output = {**row, **self.result}
         last_exit_type = last_exit_time = None
+        if expiry_date:
+            expiry_date = datetime.combine(expiry_date, EXPIRY_EXIT_TIME)
 
         if not filtered_df.empty:
             trade_type = TradeType.ROLLOVER if rid > 0 else None
@@ -443,8 +444,21 @@ class TradeSheetGenerator:
                     exit_time = exit_record[DATE]
                     exit_type = ExitTypes.DELAYED_EXIT
 
+            # check for "SPOT EXPIRY EXIT" in case of option & rollover.
+            # In case of red exit_price = spot - pe
+            # In case of Green exit_price = ce- spot
+            # when negative - show 0
+            tag = row[InputCols.TAG]
+            if self.__class__.__name__ == "OptionSegment" and not exit_price and trade_type == TradeType.ROLLOVER:
+                cash_price_at_expiry_time = self.get_ad_price_level(self.cash_db_df, expiry_date)
+                if cash_price_at_expiry_time:
+                    exit_price = strike_price - cash_price_at_expiry_time if tag == InputCols.GREEN else cash_price_at_expiry_time - strike_price
+                    exit_price = 0 if exit_price < 0 else exit_price
+                    exit_price = exit_price
+                    exit_time = expiry_date
+                    exit_type = ExitTypes.SPOT_EXPIRY_EXIT
+
             if entry_price and exit_price:
-                tag = row[InputCols.TAG]
                 output[OutputCols.EXIT_TIME] = exit_time
                 output[OutputCols.EXIT_PRICE] = exit_price
                 output[OutputCols.EXIT_TYPE] = exit_type
@@ -497,6 +511,7 @@ class TradeSheetGenerator:
                         last_exit_type = re_exit_type
                         last_exit_time = re_exit_time
                         output[OutputCols.RE_AD_ENTRY_TIME] = re_entry_time
+                        output[OutputCols.RE_AD_ENTRY_PRICE] = re_entry_price
                         output[OutputCols.RE_AD_PRICE] = re_ad_price
                         output[OutputCols.RE_AD_TIME] = re_ad_time
                         if self.__class__.__name__ != "CashSegment":
