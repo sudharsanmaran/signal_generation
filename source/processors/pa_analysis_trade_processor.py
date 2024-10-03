@@ -1,8 +1,10 @@
 from collections import defaultdict, deque
+import datetime
 import os
 import pandas as pd
 
 from source.constants import (
+    DB_FOLDER,
     PA_ANALYSIS_CYCLE_FOLDER,
     SG_CYCLE_OUTPUT_FOLDER,
     SG_FRACTAL_ANALYSIS_OUTPUT_FOLDER,
@@ -13,6 +15,7 @@ from source.constants import (
 )
 from source.data_reader import (
     merge_all_df,
+    read_csv_file,
     read_files,
     update_entry_fractal_file_with_period,
     update_exit_fractal_file_with_period,
@@ -129,7 +132,7 @@ def process_pa_output(validated_data, *args):
     merged_df = pa_df[cols]
 
     start_date, end_date = pa_df.index[0], pa_df.index[-1]
-    validated_data["start_date"] = start_date
+    validated_data["start_date"] = get_start_date(instrument)
     validated_data["end_date"] = end_date
 
     dfs = read_files(
@@ -288,3 +291,11 @@ def get_cycle_columns(merged_df):
     ][0]
 
     return cycle_cols
+
+
+def get_start_date(instrument: str) -> datetime.datetime:
+    """
+    Get the start date of the instrument based on first appearance in the database
+    """
+    first_appearance_df = read_csv_file(f"{DB_FOLDER}/first_appearance.csv")
+    ...

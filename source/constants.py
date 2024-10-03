@@ -113,6 +113,9 @@ confirm_fractal_column_dict = {
     },
 }
 
+BASE_SRC_FOLDER = Path("source")
+DB_FOLDER = str(BASE_SRC_FOLDER / "DB")
+
 BASE_OUTPUT_FOLDER = Path("outputs")
 SG = "sg"
 PA = "pa"
