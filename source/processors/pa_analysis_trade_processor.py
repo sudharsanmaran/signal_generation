@@ -141,7 +141,7 @@ def process_pa_output(validated_data, *args):
     first_appearance_date = get_start_date(
         instrument, validated_data["segment"]
     )
-    if not first_appearance_date:
+    if first_appearance_date and first_appearance_date > start_date:
         start_date = first_appearance_date
 
     validated_data["start_date"] = start_date
