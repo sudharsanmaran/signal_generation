@@ -142,6 +142,7 @@ def process_pa_output(validated_data, *args):
         instrument, validated_data["segment"]
     )
     if first_appearance_date and first_appearance_date > start_date:
+        logger.debug("first appearance date is greater than start date")
         start_date = first_appearance_date
 
     validated_data["start_date"] = start_date
