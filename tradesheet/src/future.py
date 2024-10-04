@@ -15,6 +15,7 @@ HEDGE_DATE_COLUMNS = [OutputCols.ENTRY_TIME, OutputCols.EXIT_TIME, OutputCols.RE
 class FutureSegment(OptionMixin, TradeSheetGenerator):
     dir_path = FUTURE_FILE_PATH
     output_file_name = f"{OUTPUT_PATH}future_output"
+    missing_file_path = "D:/future_ticker_missing_expiry.csv"
 
     def get_expiry_for_file(self, file_date):
         if self.next_expiry_column:
@@ -179,7 +180,6 @@ class FutureSegment(OptionMixin, TradeSheetGenerator):
                                                                                     end_date=max(missing_dates),
                                                                                     expiry_number=signal_expiry_number,
                                                                                     date_range=missing_dates)])
-
                         filtered_df = self.segment_df[
                             (self.segment_df[DATE] >= ro_entry_dt) & (self.segment_df[DATE] <= exit_dt)
                             & (self.segment_df[CashCols.TICKER] == expiry_in_ticker)].reset_index(drop=True)
