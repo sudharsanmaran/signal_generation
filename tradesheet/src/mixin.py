@@ -16,6 +16,10 @@ class OptionMixin:
 
     def __init__(self, input_data, ee_df, strategy_pair="", instrument=""):
         super().__init__(input_data, ee_df, strategy_pair, instrument)
+        missing_expiry_df = pd.read_csv(self.missing_file_path)
+        missing_expiry_df = missing_expiry_df[missing_expiry_df["Ticker"] == instrument]
+        missing_dates = pd.to_datetime(missing_expiry_df["Missing Date"]).dt.date
+        self.ee_df = self.ee_df[~(self.ee_df[InputCols.ENTRY_DT].dt.date.isin(missing_dates))]
         self.date_expiry_tracker = {}
         self.hedge_date_expiry_tracker = {}
         self.expiry_data = {}  # to store expiry, strike and lot size data
@@ -32,7 +36,7 @@ class OptionMixin:
             self.next_expiry_column = self.get_expiry_column_name(self.next_expiry)
 
         self.expiry_df = self.read_expiry_data(ExpiryCols, [EXPIRY_FILE, STOCKS_EXPIRY_FILE], parse_date=True)
-        self.lot_df = self.read_expiry_data(StrikeDiffCols, [LOT_FILE, STOCKS_LOT_FILE]) 
+        self.lot_df = self.read_expiry_data(StrikeDiffCols, [LOT_FILE, STOCKS_LOT_FILE])
         if self.is_hedge or self.is_option:
             self.strike_df = self.read_expiry_data(StrikeDiffCols, [STRIKE_FILE, STOCKS_STRIKE_FILE]) 
 

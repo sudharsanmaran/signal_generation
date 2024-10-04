@@ -13,6 +13,7 @@ class OptionSegment(OptionMixin, TradeSheetGenerator):
     # db_date_format = OPTION_DATE_FORMAT
 
     output_file_name = f"{OUTPUT_PATH}option_output"
+    missing_file_path = "D:/option_ticker_missing_expiry.csv"
 
     def iterate_dir_month_wise(self, month_dir, start_date, end_date, **kwargs):
         return self.iterate_option_dir_month_wise(month_dir, start_date, end_date, **kwargs)
