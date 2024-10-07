@@ -138,12 +138,12 @@ def process_pa_output(validated_data, *args):
     start_date, end_date = pa_df.index[0], pa_df.index[-1]
 
     # first appearance date
-    first_appearance_date = get_start_date(
-        instrument, validated_data["segment"]
-    )
-    if first_appearance_date and first_appearance_date > start_date:
-        logger.debug("first appearance date is greater than start date")
-        start_date = first_appearance_date
+    # first_appearance_date = get_start_date(
+    #     instrument, validated_data["segment"]
+    # )
+    # if first_appearance_date and first_appearance_date > start_date:
+    #     logger.debug("first appearance date is greater than start date")
+    #     start_date = first_appearance_date
 
     validated_data["start_date"] = start_date
     validated_data["end_date"] = end_date

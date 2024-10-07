@@ -177,10 +177,15 @@ class TradeSheetGenerator:
             roi = (diff * qty) / self.capital
             probability = 1 if roi > 0 else 0
 
-            revised_qty = (round(qty / lot_size) * lot_size) if lot_size else None
+            revised_qty = None
+            if not pd.isna(lot_size):
+                revised_qty = self.calculate_revised_qty(lot_size, qty)
             return qty, roi, probability, revised_qty
         except Exception as e:
             print(e)
+
+    def calculate_revised_qty(self, lot_size, qty):
+        return (round(qty / lot_size) * lot_size)
 
     def read_csv_files_in_date_range(self, start_date=None, end_date=None, **kwargs):
         """Function will read data from Database and create Dataframe.
