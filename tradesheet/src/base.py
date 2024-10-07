@@ -516,11 +516,13 @@ class TradeSheetGenerator:
                         output[OutputCols.RE_AD_TIME] = re_ad_time
                         if self.__class__.__name__ != "CashSegment":
                             output[OutputCols.RE_AD_PRICE_LEVEL] = self.get_ad_price_level(self.cash_db_df, re_ad_time)
-
-                        if self.__class__.__name__ == "FutureSegment" and tag == InputCols.RED:
-                            output[OutputCols.NET_POINTS] = re_entry_price - re_exit_price
-                        else:
-                            output[OutputCols.NET_POINTS] = re_exit_price - re_entry_price
+                        
+                        if re_entry_price and re_exit_price:
+                            if self.__class__.__name__ == "FutureSegment" and tag == InputCols.RED:
+                                output[OutputCols.NET_POINTS] = re_entry_price - re_exit_price
+                            else:
+                                output[OutputCols.NET_POINTS] = re_exit_price - re_entry_price
+                        
                         output[OutputCols.RE_AD_EXIT_PRICE] = re_exit_price
                         output[OutputCols.RE_EXIT_TYPE] = re_exit_type
                         output[OutputCols.RE_EXIT_TIME] = re_exit_time

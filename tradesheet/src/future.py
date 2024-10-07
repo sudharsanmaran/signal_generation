@@ -215,6 +215,7 @@ class FutureSegment(OptionMixin, TradeSheetGenerator):
                         ro_entry_dt = filtered_df.loc[filtered_df[DATE] >= last_exit_time].iloc[self.rollover_candle][
                             DATE]
                     except Exception as e:
+                        raise
                         print(f"Error: {e}")
                         break
                 previous_date = current_date

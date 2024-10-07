@@ -43,16 +43,16 @@ class OptionMixin:
         self.ee_df[ONLY_DATE] = pd.to_datetime(self.ee_df[InputCols.ENTRY_DT]).dt.date
         self.ee_df[EXIT_DATE] = pd.to_datetime(self.ee_df[InputCols.EXIT_DT]).dt.date
         df_merged = pd.merge(self.ee_df, self.expiry_df[[ExpiryCols.DATE, self.expiry_column]], left_on=EXIT_DATE,
-                             right_on=ExpiryCols.DATE, how="left")
+                             right_on=ExpiryCols.DATE, how="inner")
         df_merged.rename(columns={f'{self.expiry_column}': EXIT_EXPIRY}, inplace=True)
         df_merged = pd.merge(df_merged, self.expiry_df[self.use_cols(ExpiryCols)], left_on=ONLY_DATE,
-                             right_on=ExpiryCols.DATE, how="left")
+                             right_on=ExpiryCols.DATE, how="inner")
         df_merged = pd.merge(df_merged, self.lot_df[self.use_cols(StrikeDiffCols)], left_on=ONLY_DATE,
-                             right_on=StrikeDiffCols.DATE, how="left")
+                             right_on=StrikeDiffCols.DATE, how="inner")
 
         if self.is_option:
             df_merged = pd.merge(df_merged, self.strike_df[self.use_cols(StrikeDiffCols)], left_on=ONLY_DATE,
-                                 right_on=StrikeDiffCols.DATE, how="left")
+                                 right_on=StrikeDiffCols.DATE, how="inner")
 
         # Calculate DTE
         # column_x for expiry df and column_y for lot size df
