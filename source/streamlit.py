@@ -549,7 +549,11 @@ def main():
         folder = Path(PA_ANALYSIS_CYCLE_FOLDER)
         pa_files = [f.name for f in folder.iterdir() if f.is_file()]
 
-        pa_file = st.selectbox("Select PA File", pa_files, index=0)
+        pa_file = st.selectbox(
+            "Select PA File",
+            pa_files,
+            index=pa_files.index(saved_inputs.get("pa_file", pa_files[0])),
+        )
         streamlit_inputs["pa_file"] = pa_file
         cycle_options = [
             cycle.value
@@ -566,6 +570,9 @@ def main():
         cycle_to_consider = st.multiselect(
             "Cycle to Consider",
             cycle_options,
+            default=saved_inputs.get(
+                "cycle_to_consider", [CycleType.MTM_CYCLE.value]
+            ),
         )
         streamlit_inputs["cycle_to_consider"] = cycle_to_consider
         set_allowed_direction(streamlit_inputs, saved_inputs)
@@ -597,7 +604,10 @@ def main():
                 index=options.index(saved_inputs.get("opt_buying", "NO")),
             )
             expiry = st.number_input(
-                "Expiry", min_value=1, value=saved_inputs.get("expiry", 1)
+                "Expiry",
+                min_value=1,
+                max_value=3,
+                value=saved_inputs.get("expiry", 1),
             )
             strike = st.number_input(
                 "Strike", value=saved_inputs.get("strike", 1)
@@ -638,6 +648,9 @@ def main():
                 value=saved_inputs.get("rollover_candle", 1),
             )
             streamlit_inputs["rollover_candle"] = rollover_candle
+
+            # Next Expiry trading
+            set_next_expiry(streamlit_inputs, saved_inputs, expiry)
 
         if segment == "FUTURE":
             # Hedge
@@ -699,6 +712,9 @@ def main():
                 value=saved_inputs.get("rollover_candle", 1),
             )
             streamlit_inputs["rollover_candle"] = rollover_candle
+
+            # Next Expiry trading
+            set_next_expiry(streamlit_inputs, saved_inputs, expiry)
 
         # Appreciation/Depreciation based entry
         ade_based_entry = st.checkbox(
@@ -806,27 +822,6 @@ def main():
                 value=saved_inputs.get("dte_from", 1),
             )
             streamlit_inputs["dte_from"] = dte_from
-
-        # Next Expiry trading
-        next_expiry_trading = st.checkbox(
-            "Next Expiry trading",
-            value=saved_inputs.get("next_expiry_trading", False),
-        )
-        streamlit_inputs["next_expiry_trading"] = next_expiry_trading
-        if next_expiry_trading:
-            next_dte_from = st.number_input(
-                "From DTE",
-                min_value=1,
-                value=saved_inputs.get("next_dte_from", 1),
-            )
-            next_expiry = st.number_input(
-                "Expiry No",
-                min_value=1,
-                value=saved_inputs.get("next_expiry", 1),
-            )
-            streamlit_inputs.update(
-                {"next_dte_from": next_dte_from, "next_expiry": next_expiry}
-            )
 
         # Volume feature
         volume_feature = st.checkbox(
@@ -979,6 +974,34 @@ def main():
                 )
     else:
         st.error("Please fill in all the required fields.")
+
+
+def set_next_expiry(streamlit_inputs, saved_inputs, expiry):
+    next_expiry_trading = False
+    if expiry < 3:
+        next_expiry_trading = st.checkbox(
+            "Next Expiry trading",
+            value=saved_inputs.get("next_expiry_trading", False),
+        )
+        streamlit_inputs["next_expiry_trading"] = next_expiry_trading
+    if next_expiry_trading:
+        next_dte_from = st.number_input(
+            "From DTE",
+            min_value=1,
+            value=saved_inputs.get("next_dte_from", 1),
+        )
+        next_expiry = st.number_input(
+            "Expiry No",
+            min_value=expiry + 1,
+            max_value=3,
+            value=saved_inputs.get("next_expiry", expiry + 1),
+        )
+        streamlit_inputs.update(
+            {
+                "next_dte_from": next_dte_from,
+                "next_expiry": next_expiry,
+            }
+        )
 
 
 def update_bb_band_check(streamlit_inputs, saved_inputs):
