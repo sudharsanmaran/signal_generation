@@ -625,8 +625,6 @@ def process_trade(
 
     active_trades, completed_trades = [], []
     for index, row in merged_df.iterrows():
-        # todo
-        #  check for na but it depends on direction
         is_entry, direction, entry_type = entry_func(row, entry_state)
         is_exit, exit_type = exit_func(row, exit_state, entry_state)
         if is_exit:

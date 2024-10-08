@@ -9,6 +9,8 @@ from source.constants import (
     PA_ANALYSIS_CYCLE_FOLDER,
     SG_CYCLE_OUTPUT_FOLDER,
     SG_FRACTAL_ANALYSIS_OUTPUT_FOLDER,
+    entry_fractal_columns,
+    exit_fractal_columns,
     CycleType,
     MarketDirection,
     SecondCycleIDColumns,
