@@ -25,40 +25,44 @@ def main():
     global file_name
     st.title("Volatility Analysis")
     streamlit_inputs, saved_inputs = {}, {}
-    use_saved_input = st.checkbox("Use Saved Inputs", value=False)
-    if use_saved_input:
-        all_user_inputs = load_input_from_json(file_name)
-        if all_user_inputs:
-            search_term = st.text_input("Search Notes")
-
-            filtered_notes = [
-                note
-                for note in all_user_inputs.keys()
-                if search_term.lower() in note.lower()
-            ]
-
-            selected_note = st.selectbox(
-                "Select a note to view details", filtered_notes
-            )
-            saved_inputs = all_user_inputs[selected_note]
-            if saved_inputs:
-                parameter_id = saved_inputs.get("parameter_id")
-                converted_parameter_id = {}
-                for k, v in parameter_id.items():
-                    converted_parameter_id[ast.literal_eval(k)] = v
-                saved_inputs["parameter_id"] = converted_parameter_id
-
-                stdv_parameter_id = saved_inputs.get("stdv_parameter_id")
-                coverted_stdv_parameter_id = {}
-                for k, v in stdv_parameter_id.items():
-                    coverted_stdv_parameter_id[ast.literal_eval(k)] = v
-                saved_inputs["stdv_parameter_id"] = coverted_stdv_parameter_id
 
     expander_option = st.selectbox(
-        "Select Expander", ["Single Analysis", "Summary"]
+        "Select Expander", ["Single Analysis", "Summary", "Multiple Analysis"]
     )
     if expander_option == "Single Analysis":
         with st.expander("Single Analysis", expanded=True):
+            use_saved_input = st.checkbox("Use Saved Inputs", value=False)
+            if use_saved_input:
+                all_user_inputs = load_input_from_json(file_name)
+                if all_user_inputs:
+                    search_term = st.text_input("Search Notes")
+
+                    filtered_notes = [
+                        note
+                        for note in all_user_inputs.keys()
+                        if search_term.lower() in note.lower()
+                    ]
+
+                    selected_note = st.selectbox(
+                        "Select a note to view details", filtered_notes
+                    )
+                    saved_inputs = all_user_inputs[selected_note]
+                    if saved_inputs:
+                        parameter_id = saved_inputs.get("parameter_id")
+                        converted_parameter_id = {}
+                        for k, v in parameter_id.items():
+                            converted_parameter_id[ast.literal_eval(k)] = v
+                        saved_inputs["parameter_id"] = converted_parameter_id
+
+                        stdv_parameter_id = saved_inputs.get(
+                            "stdv_parameter_id"
+                        )
+                        coverted_stdv_parameter_id = {}
+                        for k, v in stdv_parameter_id.items():
+                            coverted_stdv_parameter_id[ast.literal_eval(k)] = v
+                        saved_inputs["stdv_parameter_id"] = (
+                            coverted_stdv_parameter_id
+                        )
             time_frames = st.multiselect(
                 "Time Frames",
                 options=[60, 120, 240, 375, 1125],
@@ -76,7 +80,7 @@ def main():
             for time_frame in time_frames:
                 selected_period = st.multiselect(
                     f"Period for tf:{time_frame}",
-                    options=[5, 10, 20, 40, 80],
+                    options=[5, 10, 20, 40, 80, 30, 15],
                     default=saved_inputs.get("periods_map", {}).get(
                         time_frame, [5]
                     ),
@@ -84,7 +88,20 @@ def main():
                 periods_map[time_frame] = selected_period
                 std_period = st.multiselect(
                     f"STDV Period for tf:{time_frame}",
-                    options=[1764, 1008, 504, 252, 126, 84],
+                    options=[
+                        1764,
+                        1008,
+                        504,
+                        252,
+                        126,
+                        84,
+                        5,
+                        35,
+                        462,
+                        20,
+                        88,
+                        528,
+                    ],
                     default=saved_inputs.get("std_periods_map", {}).get(
                         time_frame, [1764]
                     ),
@@ -234,7 +251,7 @@ def main():
             else:
                 st.warning("Please fill all the required fields")
 
-    else:
+    elif expander_option == "Summary":
         with st.expander("Summary", expanded=True):
 
             # multi select for all names of output of volatile outputs
@@ -244,6 +261,27 @@ def main():
 
             if selected_files and st.button("Submit"):
                 process_summaries(selected_files)
+    elif expander_option == "Multiple Analysis":
+        with st.expander("Multiple Analysis", expanded=True):
+            # get excel file
+            selected_files = st.file_uploader(
+                "Upload Excel File", type=["xlsx"]
+            )
+            st.write("Multiplier inputs")
+            instrument = st.text_input(
+                "Instrument(comma separated value)",
+                value=saved_inputs.get("instrument", "RELIANCE,ATUL"),
+            )
+            lv_hv_tag_combinations = st.text_input(
+                "LV and HV Tag Combinations",
+                value=saved_inputs.get(
+                    "lv_hv_tag_combinations", "(5,15), (10,20)"
+                ),
+            )
+
+            if selected_files and st.button("Submit"):
+                for file in selected_files:
+                    process_volatile(file)
 
 
 if __name__ == "__main__":

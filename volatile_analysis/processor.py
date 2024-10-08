@@ -217,7 +217,7 @@ def analyse_volatile(
     analyze=VolatileTag.ALL.value,
     prefix="",
 ):
-    def process_group(group_id, group_data):
+    def process_group(group_id, group_data, validate_data=validate_data):
         if group_id < 1:
             return
 
@@ -287,7 +287,7 @@ def analyse_volatile(
             )
         )
 
-        update_capital_and_capital_o_s(df, group_data, prefix)
+        update_capital_and_capital_o_s(df, group_data, prefix, validate_data)
 
         df.loc[last_index, prefix + AnalysisColumn.CYCLE_CAPITAL_MAX.value] = (
             df.loc[
@@ -340,7 +340,7 @@ def analyse_volatile(
             )
         )
 
-    def update_capital_and_capital_o_s(df, group_data, prefix):
+    def update_capital_and_capital_o_s(df, group_data, prefix, validate_data):
 
         df.loc[group_data.index[0], prefix + AnalysisColumn.CAPITAL.value] = (
             100
@@ -351,7 +351,14 @@ def analyse_volatile(
             group_data.index[0], prefix + AnalysisColumn.CAPITAL.value
         ] + (
             df.loc[group_data.index[0], prefix + AnalysisColumn.CAPITAL.value]
-            * group_data.loc[group_data.index[0], "calculate_change_1"]
+            * group_data.loc[
+                group_data.index[0],
+                get_calculate_change_cols(
+                    validate_data["parameter_id"],
+                    validate_data["periods"][validate_data["time_frames"][0]],
+                    validate_data["time_frames"][0],
+                )[0],
+            ]
         )
 
         for i in range(1, len(group_data)):
@@ -370,7 +377,16 @@ def analyse_volatile(
                 df.loc[
                     group_data.index[i], prefix + AnalysisColumn.CAPITAL.value
                 ]
-                * group_data.loc[group_data.index[i], "calculate_change_1"]
+                * group_data.loc[
+                    group_data.index[i],
+                    get_calculate_change_cols(
+                        validate_data["parameter_id"],
+                        validate_data["periods"][
+                            validate_data["time_frames"][0]
+                        ],
+                        validate_data["time_frames"][0],
+                    )[0],
+                ]
             )
 
         df[prefix + AnalysisColumn.CAPITAL.value] = make_round_series(
@@ -585,7 +601,7 @@ def analyse_volatile(
 
     groups = df.groupby(group_by_col)
     for group_id, group_data in groups:
-        process_group(group_id, group_data)
+        process_group(group_id, group_data, validate_data=validate_data)
 
     return df
 
