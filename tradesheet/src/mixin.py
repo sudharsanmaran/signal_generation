@@ -82,6 +82,8 @@ class OptionMixin:
         # Filter df by DTE
         if self.dte_based_trading and self.dte:
             df_merged = df_merged[df_merged[DTE_COL].isin(self.dte)]
+            if df_merged.empty:
+                print("DTE based trading, No data found for given DTE")
 
         # Drop extra columns
         drop_columns_list = [
