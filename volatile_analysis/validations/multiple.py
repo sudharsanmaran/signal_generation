@@ -23,6 +23,8 @@ class AnalysisInput(BaseModel):
     @field_validator("lv_hv_tag_combinations", mode="after")
     def validate_lv_hv_tag_combinations(cls, value):
         value = literal_eval(value)
+        if not isinstance(value[0], tuple):
+            value = (value,)
         for lv, hv in value:
             if lv >= hv:
                 raise ValueError(

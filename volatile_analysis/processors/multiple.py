@@ -1,3 +1,4 @@
+from collections import deque
 import logging
 import multiprocessing
 import pandas as pd
@@ -11,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 def process_multiple(validated_input, input_df: pd.DataFrame):
     # Process multiple files
-    # get np array string type of input_df size
     total_length = (
         len(input_df)
         * len(validated_input["instruments"])
@@ -22,7 +22,7 @@ def process_multiple(validated_input, input_df: pd.DataFrame):
     error_mssg = []
     datas = []
 
-    for index, row in input_df.iterrows():
+    for _, row in input_df.iterrows():
         validated_data = {}
         for instrument in validated_input["instruments"]:
             validated_data["instrument"] = instrument
@@ -77,19 +77,25 @@ def execute_data_processing(total_length, status, error_mssg, datas):
         int(multiprocessing.cpu_count() * cpu_percent_to_use),
         total_length,
     )
+    results = []
+    batch_size = 20
     with multiprocessing.Pool(num_workers) as pool:
-        results = []
-        for data in datas:
-            result = pool.apply_async(process_volatile, args=(data,))
-            results.append(result)
+        for i in range(0, total_length, batch_size):
+            batch = datas[i : i + batch_size]  # Create a batch of 10 items
+            results = []
 
-        # Collect results and update the status for each process
-        for result in results:
-            try:
-                result.get()  # This will raise an exception if the process failed
-                status.append("SUCCESS")
-                error_mssg.append("")
-            except Exception as e:
-                logger.error(f"Error processing volatile data for index {e}")
-                status.append("ERROR")
-                error_mssg.append(str(e))
+            # Submit tasks for the current batch
+            for data in batch:
+                result = pool.apply_async(process_volatile, args=(data,))
+                results.append(result)
+
+            # Wait for all tasks in the current batch to complete
+            for result in results:
+                try:
+                    result.get()  # This will raise an exception if the process failed
+                    status.append("SUCCESS")
+                    error_mssg.append("")
+                except Exception as e:
+                    logger.error(f"Error processing volatile data: {e}")
+                    status.append("ERROR")
+                    error_mssg.append(str(e))
