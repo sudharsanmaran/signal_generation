@@ -5,7 +5,7 @@ import pandas as pd
 from source.constants import VOLUME_OUTPUT_FOLDER, VOLUME_OUTPUT_SUMMARY_FOLDER
 from source.utils import make_round, write_dataframe_to_csv
 from volatile_analysis.constants import AnalysisColumn, PosNegConstant
-from volatile_analysis.summary import update_weighted_avg
+from volatile_analysis.processors.summary import update_weighted_avg
 from volume_analysis.constants import Operations, SummaryColumn
 from volume_analysis.processor import (
     AVG_ZSCORE,
