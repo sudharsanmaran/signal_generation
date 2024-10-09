@@ -1473,11 +1473,11 @@ def set_fractal_entry(streamlit_inputs, saved_inputs):
 def set_start_end_datetime(streamlit_inputs, saved_inputs):
     start_date = st.text_input(
         "Start Date (format: dd/mm/yyyy hh:mm:ss)",
-        value=saved_inputs.get("start_date", "3/01/2019 09:00:00"),
+        value=saved_inputs.get("start_date", "3/01/2012 09:00:00"),
     )
     end_date = st.text_input(
         "End Date (format: dd/mm/yyyy hh:mm:ss)",
-        value=saved_inputs.get("end_date", "3/04/2019 16:00:00"),
+        value=saved_inputs.get("end_date", "3/04/2025 16:00:00"),
     )
     streamlit_inputs.update({"start_date": start_date, "end_date": end_date})
 

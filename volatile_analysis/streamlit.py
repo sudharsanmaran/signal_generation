@@ -13,9 +13,14 @@ from source.streamlit import (
     write_user_inputs,
 )
 from volatile_analysis.constants import VolatileTag
-from volatile_analysis.processor import process_volatile
-from volatile_analysis.summary import process_summaries
-from volatile_analysis.validation import validate_inputs
+from volatile_analysis.processors.multiple import process_multiple
+from volatile_analysis.processors.single import process_volatile
+from volatile_analysis.processors.summary import process_summaries
+from volatile_analysis.validations.multiple import (
+    validate_file,
+    validate_multiple_inputs,
+)
+from volatile_analysis.validations.single import validate_inputs
 
 
 file_name = "volatile_user_inputs.json"
@@ -262,26 +267,64 @@ def main():
             if selected_files and st.button("Submit"):
                 process_summaries(selected_files)
     elif expander_option == "Multiple Analysis":
-        with st.expander("Multiple Analysis", expanded=True):
+        with st.expander("Multiple Analysis Config", expanded=True):
             # get excel file
-            selected_files = st.file_uploader(
+            selected_file = st.file_uploader(
                 "Upload Excel File", type=["xlsx"]
             )
-            st.write("Multiplier inputs")
-            instrument = st.text_input(
+
+            st.write("Common Inputs")
+            set_start_end_datetime(streamlit_inputs, saved_inputs)
+
+            instruments = st.text_input(
                 "Instrument(comma separated value)",
-                value=saved_inputs.get("instrument", "RELIANCE,ATUL"),
+                value=saved_inputs.get("instruments", "RELIANCE,ATUL"),
             )
+            streamlit_inputs["instruments"] = instruments
+
             lv_hv_tag_combinations = st.text_input(
                 "LV and HV Tag Combinations",
                 value=saved_inputs.get(
                     "lv_hv_tag_combinations", "(5,15), (10,20)"
                 ),
             )
+            streamlit_inputs["lv_hv_tag_combinations"] = lv_hv_tag_combinations
 
-            if selected_files and st.button("Submit"):
-                for file in selected_files:
-                    process_volatile(file)
+            option = [tag.value for tag in VolatileTag]
+            analyze = st.selectbox(
+                "Analyze",
+                option,
+                index=option.index(saved_inputs.get("analyze", option[0])),
+            )
+            streamlit_inputs["analyze"] = analyze
+
+            required_fileds = [
+                selected_file,
+                instruments,
+                lv_hv_tag_combinations,
+                streamlit_inputs.get("start_date", False),
+                streamlit_inputs.get("end_date", False),
+                analyze,
+            ]
+            if all(required_fileds):
+                if st.button("Submit"):
+                    try:
+                        validated_input = validate_multiple_inputs(
+                            streamlit_inputs
+                        )
+                        validated_file = validate_file(selected_file)
+                        start = time.time()
+                        process_multiple(
+                            validated_input=validated_input,
+                            input_df=validated_file,
+                        )
+                        st.success(
+                            f"Data processed successfully, time taken: {time.time()-start}"
+                        )
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
+            else:
+                st.warning("Please fill all the required fields")
 
 
 if __name__ == "__main__":
