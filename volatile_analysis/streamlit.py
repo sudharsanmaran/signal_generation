@@ -1,31 +1,83 @@
+import ast
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 import time
 import streamlit as st
 
 from source.constants import VOLATILE_OUTPUT_FOLDER
-from source.streamlit import set_start_end_datetime, validate
+from source.streamlit import (
+    load_input_from_json,
+    set_start_end_datetime,
+    validate,
+    write_user_inputs,
+)
 from volatile_analysis.constants import VolatileTag
-from volatile_analysis.processor import process_volatile
-from volatile_analysis.summary import process_summaries
-from volatile_analysis.validation import validate_inputs
+from volatile_analysis.processors.multiple import process_multiple
+from volatile_analysis.processors.single import process_volatile
+from volatile_analysis.processors.summary import process_summaries
+from volatile_analysis.validations.multiple import (
+    validate_file,
+    validate_multiple_inputs,
+)
+from volatile_analysis.validations.single import validate_inputs
+
+
+file_name = "volatile_user_inputs.json"
 
 
 def main():
+    global file_name
     st.title("Volatility Analysis")
-    streamlit_inputs = {}
+    streamlit_inputs, saved_inputs = {}, {}
 
     expander_option = st.selectbox(
-        "Select Expander", ["Single Analysis", "Summary"]
+        "Select Expander", ["Single Analysis", "Summary", "Multiple Analysis"]
     )
     if expander_option == "Single Analysis":
         with st.expander("Single Analysis", expanded=True):
+            use_saved_input = st.checkbox("Use Saved Inputs", value=False)
+            if use_saved_input:
+                all_user_inputs = load_input_from_json(file_name)
+                if all_user_inputs:
+                    search_term = st.text_input("Search Notes")
+
+                    filtered_notes = [
+                        note
+                        for note in all_user_inputs.keys()
+                        if search_term.lower() in note.lower()
+                    ]
+
+                    selected_note = st.selectbox(
+                        "Select a note to view details", filtered_notes
+                    )
+                    saved_inputs = all_user_inputs[selected_note]
+                    if saved_inputs:
+                        parameter_id = saved_inputs.get("parameter_id")
+                        converted_parameter_id = {}
+                        for k, v in parameter_id.items():
+                            converted_parameter_id[ast.literal_eval(k)] = v
+                        saved_inputs["parameter_id"] = converted_parameter_id
+
+                        stdv_parameter_id = saved_inputs.get(
+                            "stdv_parameter_id"
+                        )
+                        coverted_stdv_parameter_id = {}
+                        for k, v in stdv_parameter_id.items():
+                            coverted_stdv_parameter_id[ast.literal_eval(k)] = v
+                        saved_inputs["stdv_parameter_id"] = (
+                            coverted_stdv_parameter_id
+                        )
             time_frames = st.multiselect(
-                "Time Frames", options=[60, 120, 240, 375, 1125], default=[60]
+                "Time Frames",
+                options=[60, 120, 240, 375, 1125],
+                default=saved_inputs.get("time_frames", [60]),
             )
             streamlit_inputs["time_frames"] = time_frames
 
-            instrument = st.text_input("Instrument", value="ABBOTINDIA")
+            instrument = st.text_input(
+                "Instrument", value=saved_inputs.get("instrument", "ATUL")
+            )
             streamlit_inputs["instrument"] = instrument
 
             periods_map = defaultdict(list)
@@ -33,14 +85,31 @@ def main():
             for time_frame in time_frames:
                 selected_period = st.multiselect(
                     f"Period for tf:{time_frame}",
-                    options=[5, 10, 20, 40, 80],
-                    default=[5],
+                    options=[5, 10, 20, 40, 80, 30, 15],
+                    default=saved_inputs.get("periods_map", {}).get(
+                        time_frame, [5]
+                    ),
                 )
                 periods_map[time_frame] = selected_period
                 std_period = st.multiselect(
                     f"STDV Period for tf:{time_frame}",
-                    options=[1764, 1008, 504, 252, 126, 84],
-                    default=[1764],
+                    options=[
+                        1764,
+                        1008,
+                        504,
+                        252,
+                        126,
+                        84,
+                        5,
+                        35,
+                        462,
+                        20,
+                        88,
+                        528,
+                    ],
+                    default=saved_inputs.get("std_periods_map", {}).get(
+                        time_frame, [1764]
+                    ),
                 )
                 std_periods_map[time_frame] = std_period
             streamlit_inputs["periods"] = periods_map
@@ -52,7 +121,9 @@ def main():
 
                     parameter_id = st.number_input(
                         f"Parameter ID for tf:{tf}, period:{period}",
-                        value=1,
+                        value=saved_inputs.get("parameter_id", {}).get(
+                            (tf, period), 1
+                        ),
                         step=1,
                     )
                     streamlit_inputs["parameter_id"].update(
@@ -65,50 +136,72 @@ def main():
 
                     parameter_id = st.number_input(
                         f"stdv Parameter ID for tf:{tf}, period:{period}",
-                        value=1,
+                        value=saved_inputs.get("stdv_parameter_id", {}).get(
+                            (tf, period), 1
+                        ),
                         step=1,
                     )
                     streamlit_inputs["stdv_parameter_id"].update(
                         {(tf, period): parameter_id}
                     )
 
-            set_start_end_datetime(streamlit_inputs, {})
+            set_start_end_datetime(streamlit_inputs, saved_inputs)
 
             # float for z score input
             z_score_threshold = st.number_input(
-                "Z Score Threshold", value=0.0, step=0.1
+                "Z Score Threshold",
+                value=saved_inputs.get("z_score_threshold", 0.0),
+                step=0.1,
             )
             streamlit_inputs["z_score_threshold"] = z_score_threshold
 
             # integer for window size
             sum_window_size = st.number_input(
-                "Sum Window Size", value=20, step=1, min_value=1
+                "Sum Window Size",
+                value=saved_inputs.get("sum_window_size", 20),
+                step=1,
+                min_value=1,
             )
             streamlit_inputs["sum_window_size"] = sum_window_size
             avg_window_size = st.number_input(
-                "Average Window Size", value=20, step=1, min_value=1
+                "Average Window Size",
+                value=saved_inputs.get("avg_window_size", 20),
+                step=1,
+                min_value=1,
             )
             streamlit_inputs["avg_window_size"] = avg_window_size
 
             # integer for lv_tag and hv_tag
-            lv_tag = st.number_input("LV Tag", value=5, step=1)
+            lv_tag = st.number_input(
+                "LV Tag", value=saved_inputs.get("lv_tag", 5), step=1
+            )
             streamlit_inputs["lv_tag"] = lv_tag
-            hv_tag = st.number_input("HV Tag", step=1, value=15)
+            hv_tag = st.number_input(
+                "HV Tag", step=1, value=saved_inputs.get("hv_tag", 15)
+            )
             streamlit_inputs["hv_tag"] = hv_tag
 
             option = [tag.value for tag in VolatileTag]
-            analyze = st.selectbox("Analyze", option, index=0)
+            analyze = st.selectbox(
+                "Analyze",
+                option,
+                index=option.index(saved_inputs.get("analyze", option[0])),
+            )
             streamlit_inputs["analyze"] = analyze
 
             capital_lower_threshold = st.number_input(
-                "Capital Lower Threshold", value=-0.1, step=0.1
+                "Capital Lower Threshold",
+                value=saved_inputs.get("capital_lower_threshold", -0.1),
+                step=0.1,
             )
             streamlit_inputs["capital_lower_threshold"] = (
                 capital_lower_threshold
             )
 
             capital_upper_threshold = st.number_input(
-                "Capital Upper Threshold", value=0.2, step=0.1
+                "Capital Upper Threshold",
+                value=saved_inputs.get("capital_upper_threshold", 0.2),
+                step=0.1,
             )
             streamlit_inputs["capital_upper_threshold"] = (
                 capital_upper_threshold
@@ -121,24 +214,49 @@ def main():
                 hv_tag,
             ]
             if all(required_fileds):
-
+                notes = st.text_input(
+                    "Notes", value=saved_inputs.get("notes", "")
+                )
+                save = st.checkbox(
+                    "Save Inputs", value=saved_inputs.get("save", True)
+                )
                 if st.button("Submit"):
                     validated_input = validate(
                         streamlit_inputs, key=validate_inputs
                     )
                     if validated_input:
-                        # try:
+                        if save:
+                            temp = {
+                                "timestamp": datetime.now().strftime(
+                                    "%Y-%m-%d %H:%M:%S"
+                                ),
+                                "notes": notes,
+                            }
+                            temp.update(streamlit_inputs)
+                            # Convert tuple keys to strings
+                            temp["parameter_id"] = {
+                                str(k): v
+                                for k, v in temp["parameter_id"].items()
+                            }
+                            temp["stdv_parameter_id"] = {
+                                str(k): v
+                                for k, v in temp["stdv_parameter_id"].items()
+                            }
+
+                            # Convert defaultdict to dict
+                            temp["periods"] = dict(temp["periods"])
+                            temp["std_periods"] = dict(temp["std_periods"])
+                            write_user_inputs(temp, file_name)
                         start = time.time()
                         process_volatile(validated_data=validated_input)
                         st.success(
                             f"Data processed successfully, time taken: {time.time()-start}"
                         )
-                    # except Exception as e:
-                    #     st.write(f"Error: {e}")
+
             else:
                 st.warning("Please fill all the required fields")
 
-    else:
+    elif expander_option == "Summary":
         with st.expander("Summary", expanded=True):
 
             # multi select for all names of output of volatile outputs
@@ -148,6 +266,65 @@ def main():
 
             if selected_files and st.button("Submit"):
                 process_summaries(selected_files)
+    elif expander_option == "Multiple Analysis":
+        with st.expander("Multiple Analysis Config", expanded=True):
+            # get excel file
+            selected_file = st.file_uploader(
+                "Upload Excel File", type=["xlsx"]
+            )
+
+            st.write("Common Inputs")
+            set_start_end_datetime(streamlit_inputs, saved_inputs)
+
+            instruments = st.text_input(
+                "Instrument(comma separated value)",
+                value=saved_inputs.get("instruments", "RELIANCE,ATUL"),
+            )
+            streamlit_inputs["instruments"] = instruments
+
+            lv_hv_tag_combinations = st.text_input(
+                "LV and HV Tag Combinations",
+                value=saved_inputs.get(
+                    "lv_hv_tag_combinations", "(5,15), (10,20)"
+                ),
+            )
+            streamlit_inputs["lv_hv_tag_combinations"] = lv_hv_tag_combinations
+
+            option = [tag.value for tag in VolatileTag]
+            analyze = st.selectbox(
+                "Analyze",
+                option,
+                index=option.index(saved_inputs.get("analyze", option[0])),
+            )
+            streamlit_inputs["analyze"] = analyze
+
+            required_fileds = [
+                selected_file,
+                instruments,
+                lv_hv_tag_combinations,
+                streamlit_inputs.get("start_date", False),
+                streamlit_inputs.get("end_date", False),
+                analyze,
+            ]
+            if all(required_fileds):
+                if st.button("Submit"):
+                    try:
+                        validated_input = validate_multiple_inputs(
+                            streamlit_inputs
+                        )
+                        validated_file = validate_file(selected_file)
+                        start = time.time()
+                        process_multiple(
+                            validated_input=validated_input,
+                            input_df=validated_file,
+                        )
+                        st.success(
+                            f"Data processed successfully, time taken: {time.time()-start}"
+                        )
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
+            else:
+                st.warning("Please fill all the required fields")
 
 
 if __name__ == "__main__":

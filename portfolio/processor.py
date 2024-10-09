@@ -3,9 +3,10 @@ import logging
 from typing import Dict, List
 
 import pandas as pd
-from portfolio.constants import PNLSummaryCols
+from portfolio.constants import TRADING_SYMBOL, PNLSummaryCols
 from portfolio.data_reader import (
-    get_company_close_price_df, read_signal_gen_file
+    get_company_close_price_df,
+    read_signal_gen_file,
 )
 from portfolio.utils import fetch_ticker
 from portfolio.validation import Configs, InputData
@@ -130,8 +131,10 @@ def update_company_summary(
 def formulate_PNL_df(validated_data: InputData, company_sg_df_map):
     years_list = generate_years_list(validated_data)
     company_close_df_map = get_company_close_price_df(
-        validated_data.companies_data, years_list,
-        validated_data.company_lists, validated_data.company_tickers
+        validated_data.companies_data,
+        years_list,
+        validated_data.company_lists,
+        validated_data.company_tickers,
     )
     pnl_dict = defaultdict(list)
     out_of_list, prev_day_companies = set(), set()
@@ -149,7 +152,8 @@ def formulate_PNL_df(validated_data: InputData, company_sg_df_map):
 
         for company in out_of_list:
             company_close = get_company_close_price(
-                company_close_df_map, group_id, company)
+                company_close_df_map, group_id, company
+            )
             if company_close is None:
                 continue
             company_row = prev_group_df.loc[company]
@@ -161,6 +165,7 @@ def formulate_PNL_df(validated_data: InputData, company_sg_df_map):
                 company_row,
                 pd.Timestamp(f"{group_id} 09:15:00"),
                 ticker,
+                "",
             )
 
             process_out_of_list_exit(
@@ -197,6 +202,7 @@ def formulate_PNL_df(validated_data: InputData, company_sg_df_map):
                     company_row,
                     row["DATETIME"],
                     row[OutputColumn.INSTRUMENT.value],
+                    row[TRADING_SYMBOL],
                 )
 
                 if row["DATETIME_TYPE"] == OutputColumn.ENTRY_DATETIME.value:
@@ -221,8 +227,7 @@ def formulate_PNL_df(validated_data: InputData, company_sg_df_map):
 
 
 def get_company_close_price(company_close_df_map, group_id, company):
-    company_close_df = company_close_df_map.get(
-        (company, group_id.year))
+    company_close_df = company_close_df_map.get((company, group_id.year))
     if company_close_df is None:
         logger.error(
             f"{process_portfolio.__name__}: no closing price df found for {company} for {group_id.year}"
@@ -406,10 +411,13 @@ def formulate_daily_pnl_summary(
     return pd.DataFrame(summary_dict)
 
 
-def update_common_record(pnl_dict, company_row, date_time, instrument):
+def update_common_record(
+    pnl_dict, company_row, date_time, instrument, trading_symbol
+):
     pnl_dict["DATETIME"].append(date_time)
     pnl_dict["COMPANY"].append(instrument)
     pnl_dict["UNIQUE_ID"].append(company_row["Unique ID"])
+    pnl_dict[TRADING_SYMBOL].append(trading_symbol)
 
 
 def construct_company_signal_dictionary(validated_data: InputData) -> Dict:
@@ -436,6 +444,7 @@ def construct_company_signal_dictionary(validated_data: InputData) -> Dict:
                 OutputColumn.ENTRY_ID.value,
                 OutputColumn.EXIT_ID.value,
                 OutputColumn.INSTRUMENT.value,
+                TRADING_SYMBOL,
             ],
             value_vars=[
                 OutputColumn.ENTRY_DATETIME.value,

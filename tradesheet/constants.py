@@ -1,3 +1,5 @@
+from datetime import time
+
 from source.constants import OutputColumn, MarketDirection
 
 INPUT_FILE = "input_file.csv"
@@ -48,6 +50,7 @@ class ExitTypes:
     EXPIRY_EXIT = "Expiry Exit"
     DELAYED_EXIT = "Delayed Exit"
     DTE_BASED_EXIT = "DTE Based Exit"
+    SPOT_EXPIRY_EXIT = "SPOT EXPIRY EXIT"
 
 
 class InputValues:
@@ -157,9 +160,10 @@ class OutputCols:
     AD_PRICE_LEVEL = "A/D price Level"
     TARGET_PROFIT = "TARGET Profit %"
     SL_PERCENT = "SL %"
+    ENTRY_TIME = "Entry Time"
     EXIT_TIME = "Exit Time"
     EXIT_PRICE = "Exit Price"
-    ENTRY_TIME = "Entry Time"
+    NET_POINTS = "Net points"
     EXIT_TYPE = "Exit Type"
     RE_AD = "RE_Appreciation / Depreciation"
     RE_AD_PERCENT = "RE_Appreciation / Depreciation %"
@@ -167,6 +171,7 @@ class OutputCols:
     RE_AD_PRICE_LEVEL = "RE A/D price Level"
     RE_AD_TIME = "RE_Appreciation / Depreciation Time"
     RE_AD_ENTRY_TIME = "RE_Entry TIme"
+    RE_AD_ENTRY_PRICE = "RE_Appreciation / Depreciation Entry Price"
     RE_AD_EXIT_PRICE = "RE_Appreciation / Depreciation Exit Price"
     RE_EXIT_TYPE = "RE_Appreciation / Depreciation Exit Type"
     RE_EXIT_TIME = "RE_Appreciation / Depreciation Exit Time"
@@ -208,3 +213,6 @@ RESULT_DICT = {value: None for name, value in vars(OutputCols).items(
 ) if not callable(value) and not name.startswith('_') and value not in exclude}
 EXPIRY_COL = OutputCols.EXPIRY_DATE
 EXPIRY_NUMBER_COL = "Expiry Number"
+
+EXPIRY_EXIT_TIME = time(14, 00)
+HEDGE_EXPIRY_EXIT_TIME = time(15, 30)

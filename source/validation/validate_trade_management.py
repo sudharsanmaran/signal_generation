@@ -1,9 +1,16 @@
+from enum import Enum
 from pydantic import BaseModel, Field, field_validator, ValidationError
 from typing import Optional, Literal
 
 
+class Segment(Enum):
+    CASH = "CASH"
+    FUTURE = "FUTURE"
+    OPTIONS = "OPTIONS"
+
+
 class TradingConfiguration(BaseModel):
-    segment: Literal["CASH", "FUTURE", "OPTIONS"]
+    segment: Segment
 
     opt_buying: Optional[Literal["YES", "NO"]] = None
     expiry: Optional[int] = None
@@ -47,6 +54,15 @@ class TradingConfiguration(BaseModel):
     capital: float = 100000000
     risk: float = Field(..., gt=0, lt=1)
     leverage: int = 2
+
+    dte_based_exit: Optional[bool] = False
+    exit_dte_number: Optional[int] = None
+    exit_dte_time: Optional[str] = None
+    rollover_candle: Optional[int] = None
+
+    @field_validator("segment")
+    def validate_segment(cls, v):
+        return v.value
 
     @field_validator("opt_buying", "expiry", "strike")
     def validate_options(cls, v, values):

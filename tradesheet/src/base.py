@@ -3,21 +3,21 @@ import time
 from datetime import datetime, time as dtime, timedelta
 
 import pandas as pd
-from tradesheet.constants import ENTRY_EXIT_FILE, DATE, InputCols, InputValues,\
+from tradesheet.constants import DATE, InputCols, InputValues, \
     ENTRY, EXIT, CashCols, RESULT_DICT, OutputCols, ExitTypes, InputFileCols, ExpiryCols, TradeType, \
-    EXPIRY_COL, PRE_EXIT, OPTION_DATE_FORMAT
-from tradesheet.utils import percentage, clean_int, get_bool
+    PRE_EXIT, OPTION_DATE_FORMAT, EXPIRY_EXIT_TIME
+from tradesheet.utils import percentage, clean_int
 
 
 class TradeSheetGenerator:
     db_date_format = "%Y-%m-%d %H:%M:%S"
     STRIKE_POSTFIX = {
-        "GREEN": "CE",
-        "RED": "PE",
+        InputCols.GREEN: "CE",
+        InputCols.RED: "PE",
     }
 
     def __init__(self, input_data, ee_df, strategy_pair="", instrument=""):
-        self.output_file_name = f"{self.output_file_name}_{instrument}_{strategy_pair}.csv"
+        self.output_file_name = f"{self.output_file_name}_{input_data['file_name']}.csv"
         self.start_date = input_data[InputFileCols.START_DATE].date()
         self.end_date = input_data.get(InputFileCols.END_DATE).date()
         self.symbol = instrument or input_data.get(InputFileCols.INSTRUMENT) 
@@ -121,7 +121,7 @@ class TradeSheetGenerator:
         return [col_class.SYMBOL] + expiry_date_columns
 
     def read_expiry_data(self, col_class: object, file_path_lst: list, parse_date: bool = False) -> pd.DataFrame:
-        """Function will read file and convert date column to date and return df
+        """Function will read file and convert date column to date type and return df
             This function is used to read expiry, strike and lot size file.
         """
         final_df = pd.DataFrame()
@@ -177,10 +177,15 @@ class TradeSheetGenerator:
             roi = (diff * qty) / self.capital
             probability = 1 if roi > 0 else 0
 
-            revised_qty = (round(qty / lot_size) * lot_size) if lot_size else None
+            revised_qty = None
+            if not pd.isna(lot_size):
+                revised_qty = self.calculate_revised_qty(lot_size, qty)
             return qty, roi, probability, revised_qty
         except Exception as e:
             print(e)
+
+    def calculate_revised_qty(self, lot_size, qty):
+        return (round(qty / lot_size) * lot_size)
 
     def read_csv_files_in_date_range(self, start_date=None, end_date=None, **kwargs):
         """Function will read data from Database and create Dataframe.
@@ -220,8 +225,7 @@ class TradeSheetGenerator:
         # Concatenate all DataFrames in the list into a single DataFrame
         if df_list:
             df = pd.concat(df_list, ignore_index=True)
-            dformat = OPTION_DATE_FORMAT if kwargs.get("hedge") else self.db_date_format
-            df[DATE] = pd.to_datetime(df['Date'] + ' ' + df['Time'], format=dformat).dt.floor('min')
+            df[DATE] = pd.to_datetime(df['Date'] + ' ' + df['Time'], format=self.db_date_format).dt.floor('min')
             return df
         else:
             # print("Data not found")
@@ -262,8 +266,7 @@ class TradeSheetGenerator:
         """
         # CHeck expiry exit after 3:20 at expiry date
         if expiry_date:
-            dte = (expiry_date - entry_dt.date()).days
-            expiry_date = datetime.combine(expiry_date, dtime(15, 20))
+            dte = (expiry_date.date() - entry_dt.date()).days
         else:
             dte = None
         dte_exit_time = datetime.combine(entry_dt.date(), self.exit_dte_time) if self.exit_dte_time else None
@@ -281,8 +284,8 @@ class TradeSheetGenerator:
             entry_price = tracking_price
             entry_time = tracking_time
             step = PRE_EXIT
-
         for idx, cash_record in filtered_df[filtered_df[DATE] > tracking_time].iterrows():
+
             if step == PRE_EXIT and entry_price:
                 target_price = (entry_price + percentage(entry_price, self.tp_percent)) if self.target else None
                 sl_price = (entry_price - percentage(entry_price, self.sl_percent)) if self.sl_trading else None
@@ -299,7 +302,11 @@ class TradeSheetGenerator:
                     break
                 elif trade_type != TradeType.REDEPLOYMENT and self.target and target_price < cash_record[CashCols.HIGH]:
                     # No check for TP exit in case of redeployment.
-                    exit_price = target_price
+                    # In date is same as entry date
+                    if cash_record[DATE] == entry_time:
+                        exit_price = target_price
+                    else:
+                        exit_price = target_price if target_price > cash_record[CashCols.OPEN] else cash_record[CashCols.OPEN]
                     exit_type = ExitTypes.TARGET_EXIT
                 elif self.sl_trading and sl_price > cash_record[CashCols.LOW]:
                     exit_price = sl_price
@@ -379,27 +386,29 @@ class TradeSheetGenerator:
         for RED, we buy CALL.
         """
         move_range = abs(strike) * strike_diff
-        if (not self.is_hedge and tag == "GREEN") or (self.is_hedge and tag == "RED"):
+        if (not self.is_hedge and tag == InputCols.GREEN) or (self.is_hedge and tag == InputCols.RED):
             return atm - move_range if strike > 0 else atm + move_range
 
-        elif (not self.is_hedge and tag == "RED") or (self.is_hedge and tag == "GREEN"):
+        elif (not self.is_hedge and tag == InputCols.RED) or (self.is_hedge and tag == InputCols.GREEN):
             return atm + move_range if strike > 0 else atm - move_range
         return atm
 
     @staticmethod
     def get_max_min_high_low(df:pd.DataFrame, sd=None, ed=None, find=False) -> tuple:
         if find:
-            date_mask = (df[DATE] >= sd) & (df[DATE] <= ed)
+            date_mask = (df[DATE] > sd) & (df[DATE] < ed)
             aggregated_result = df.loc[date_mask].agg({'High': 'max', 'Low': 'min'})
             return aggregated_result['High'], aggregated_result["Low"]
         else:
             return df['High'].max(), df['Low'].min()
 
     def iterate_signal(self, filtered_df, row, entry_dt, exit_dt, lot_size=None, delayed_exit=False, expiry_date=None,
-                       rid=0, **kwargs):
+                       rid=0, strike_price=None, **kwargs):
         s_time = time.time()
         output = {**row, **self.result}
         last_exit_type = last_exit_time = None
+        if expiry_date:
+            expiry_date = datetime.combine(expiry_date, EXPIRY_EXIT_TIME)
 
         if not filtered_df.empty:
             trade_type = TradeType.ROLLOVER if rid > 0 else None
@@ -420,7 +429,6 @@ class TradeSheetGenerator:
                 exit_dt,
                 expiry_date,
                 trade_type=trade_type)
-
             last_exit_type = exit_type
             last_exit_time = exit_time
             output[OutputCols.TICKER] = filtered_df.iloc[-1][CashCols.TICKER]
@@ -429,7 +437,10 @@ class TradeSheetGenerator:
             if self.__class__.__name__ != "CashSegment":
                 # Ad level price is, price at ad_time in cash df.
                 output[OutputCols.AD_PRICE_LEVEL] = self.get_ad_price_level(self.cash_db_df, ad_time)
-            output[OutputCols.MAX_P], output[OutputCols.MIN_P] = self.get_max_min_high_low(filtered_df)
+            output[OutputCols.MAX_P], output[OutputCols.MIN_P] = self.get_max_min_high_low(filtered_df,
+                                                                                           entry_time or entry_dt ,
+                                                                                           exit_time or exit_dt,
+                                                                                           find=True)
             output[OutputCols.ENTRY_TIME] = entry_time
             if entry_price and not exit_price and delayed_exit:
                 exit_record = self.get_delayed_price(filtered_df.iloc[-1][DATE], expiry_date, **kwargs)
@@ -438,11 +449,28 @@ class TradeSheetGenerator:
                     exit_time = exit_record[DATE]
                     exit_type = ExitTypes.DELAYED_EXIT
 
+            # check for "SPOT EXPIRY EXIT" in case of option & rollover.
+            # In case of red exit_price = spot - pe
+            # In case of Green exit_price = ce- spot
+            # when negative - show 0
+            tag = row[InputCols.TAG]
+            if self.__class__.__name__ == "OptionSegment" and not exit_price and trade_type == TradeType.ROLLOVER:
+                cash_price_at_expiry_time = self.get_ad_price_level(self.cash_db_df, expiry_date)
+                if cash_price_at_expiry_time:
+                    exit_price = strike_price - cash_price_at_expiry_time if tag == InputCols.GREEN else cash_price_at_expiry_time - strike_price
+                    exit_price = 0 if exit_price < 0 else exit_price
+                    exit_price = exit_price
+                    exit_time = expiry_date
+                    exit_type = ExitTypes.SPOT_EXPIRY_EXIT
+
             if entry_price and exit_price:
-                tag = row[InputCols.TAG]
                 output[OutputCols.EXIT_TIME] = exit_time
                 output[OutputCols.EXIT_PRICE] = exit_price
                 output[OutputCols.EXIT_TYPE] = exit_type
+                if self.__class__.__name__ == "FutureSegment" and tag == InputCols.RED:
+                    output[OutputCols.NET_POINTS] = entry_price - exit_price
+                else:
+                    output[OutputCols.NET_POINTS] = exit_price - entry_price
 
                 # Find Min Max
                 if ad_time:
@@ -488,10 +516,18 @@ class TradeSheetGenerator:
                         last_exit_type = re_exit_type
                         last_exit_time = re_exit_time
                         output[OutputCols.RE_AD_ENTRY_TIME] = re_entry_time
+                        output[OutputCols.RE_AD_ENTRY_PRICE] = re_entry_price
                         output[OutputCols.RE_AD_PRICE] = re_ad_price
                         output[OutputCols.RE_AD_TIME] = re_ad_time
                         if self.__class__.__name__ != "CashSegment":
                             output[OutputCols.RE_AD_PRICE_LEVEL] = self.get_ad_price_level(self.cash_db_df, re_ad_time)
+                        
+                        if re_entry_price and re_exit_price:
+                            if self.__class__.__name__ == "FutureSegment" and tag == InputCols.RED:
+                                output[OutputCols.NET_POINTS] = re_entry_price - re_exit_price
+                            else:
+                                output[OutputCols.NET_POINTS] = re_exit_price - re_entry_price
+                        
                         output[OutputCols.RE_AD_EXIT_PRICE] = re_exit_price
                         output[OutputCols.RE_EXIT_TYPE] = re_exit_type
                         output[OutputCols.RE_EXIT_TIME] = re_exit_time

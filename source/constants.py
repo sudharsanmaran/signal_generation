@@ -28,9 +28,16 @@ These enumerations and constants are used throughout the trading system to ensur
 """
 
 from enum import Enum
+import logging
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 
 
 load_dotenv(override=True)
@@ -113,6 +120,9 @@ confirm_fractal_column_dict = {
     },
 }
 
+BASE_SRC_FOLDER = Path("source")
+DB_FOLDER = str(BASE_SRC_FOLDER / "DB")
+
 BASE_OUTPUT_FOLDER = Path("outputs")
 SG = "sg"
 PA = "pa"
@@ -133,6 +143,9 @@ PA_ANALYSIS_SUMMARY_FOLDER = str(
 )
 TARGET_PROFIT_FOLDER = str(BASE_OUTPUT_FOLDER / PA / "tp_outputs")
 VOLATILE_OUTPUT_FOLDER = str(BASE_OUTPUT_FOLDER / VA / "volatile_outputs")
+VOLATILE_OUTPUT_STATUS_FOLDER = str(
+    BASE_OUTPUT_FOLDER / VA / "volatile_status_outputs"
+)
 VOLATILE_OUTPUT_SUMMARY_FOLDER = str(
     BASE_OUTPUT_FOLDER / VA / "volatile_summary_outputs"
 )

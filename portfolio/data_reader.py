@@ -10,6 +10,7 @@ from portfolio.constants import (
 from portfolio.utils import fetch_ticker
 from portfolio.validation import CompaniesInput
 from source.constants import OutputColumn
+from tradesheet.constants import OUTPUT_PATH
 
 
 logger = logging.getLogger(__name__)
@@ -63,7 +64,7 @@ def read_company_tickers() -> pd.DataFrame:
 
 def get_signal_gen_files() -> list:
     try:
-        folder = Path(SIGNAL_GEN_FILES_PATH)
+        folder = Path(OUTPUT_PATH)
         sg_files = [f.name for f in folder.iterdir() if f.is_file()]
         logger.info("Successfully retrieved signal generation files")
         return sg_files
@@ -77,7 +78,7 @@ def get_signal_gen_files() -> list:
 
 
 def read_signal_gen_file(file_name: str) -> pd.DataFrame:
-    file_path = os.path.join(SIGNAL_GEN_FILES_PATH, file_name)
+    file_path = os.path.join(OUTPUT_PATH, file_name)
     df = read_csv_file(file_path)
     for col in [
         OutputColumn.ENTRY_DATETIME.value,

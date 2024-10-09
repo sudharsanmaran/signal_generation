@@ -21,12 +21,16 @@ The `data_reader.py` module provided is responsible for reading and merging vari
 """
 
 from functools import reduce
+import logging
 import os
 from typing import Tuple
 import pandas as pd
 
 # Import project-specific constants
 from source.constants import entry_fractal_columns, exit_fractal_columns
+
+
+logger = logging.getLogger(__name__)
 
 
 def merge_all_df(all_dfs):
@@ -366,3 +370,18 @@ def load_strategy_data(
     all_strategies_df = pd.concat(strategy_dfs, axis=1)
     all_dfs = [all_strategies_df]
     return all_dfs
+
+
+def read_csv_file(file_path: str, index_col: str = None) -> pd.DataFrame:
+    """Generic function to read a CSV file with error handling."""
+    try:
+        df = pd.read_csv(file_path, index_col=index_col)
+        logger.info(f"Successfully read file: {file_path}")
+        return df
+    except FileNotFoundError:
+        logger.error(f"File not found: {file_path}")
+    except pd.errors.EmptyDataError:
+        logger.error(f"File is empty: {file_path}")
+    except Exception as e:
+        logger.exception(f"An error occurred while reading {file_path}: {e}")
+    return pd.DataFrame()

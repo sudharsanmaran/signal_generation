@@ -38,6 +38,9 @@ def initialize_paths():
     TICKER_FILE_PATH = get_env_variable("TICKER_FILE_PATH")
 
 
+TRADING_SYMBOL = "tradingSymbol"
+
+
 class PNLSummaryCols(Enum):
     DATE = "Date"
     COMPANY = "Company"

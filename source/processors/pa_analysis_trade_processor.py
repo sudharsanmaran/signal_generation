@@ -1,11 +1,16 @@
 from collections import defaultdict, deque
+import logging
 import os
+from typing import Optional
 import pandas as pd
 
 from source.constants import (
+    DB_FOLDER,
     PA_ANALYSIS_CYCLE_FOLDER,
     SG_CYCLE_OUTPUT_FOLDER,
     SG_FRACTAL_ANALYSIS_OUTPUT_FOLDER,
+    entry_fractal_columns,
+    exit_fractal_columns,
     CycleType,
     MarketDirection,
     SecondCycleIDColumns,
@@ -13,6 +18,7 @@ from source.constants import (
 )
 from source.data_reader import (
     merge_all_df,
+    read_csv_file,
     read_files,
     update_entry_fractal_file_with_period,
     update_exit_fractal_file_with_period,
@@ -30,6 +36,9 @@ from source.processors.signal_trade_processor import (
 from source.trade import Trade, initialize
 from source.utils import write_dataframe_to_csv
 from tradesheet.index import generate_tradesheet
+
+
+logger = logging.getLogger(__name__)
 
 
 def process_pa_output(validated_data, *args):
@@ -129,6 +138,15 @@ def process_pa_output(validated_data, *args):
     merged_df = pa_df[cols]
 
     start_date, end_date = pa_df.index[0], pa_df.index[-1]
+
+    # first appearance date
+    # first_appearance_date = get_start_date(
+    #     instrument, validated_data["segment"]
+    # )
+    # if first_appearance_date and first_appearance_date > start_date:
+    #     logger.debug("first appearance date is greater than start date")
+    #     start_date = first_appearance_date
+
     validated_data["start_date"] = start_date
     validated_data["end_date"] = end_date
 
@@ -141,7 +159,6 @@ def process_pa_output(validated_data, *args):
     merged_df = merge_all_df([merged_df, *dfs.values()])
 
     file_name = "_".join(validated_data["pa_file"].split("_")[:-2])
-    validated_data["file_name"] = file_name
 
     if (
         validated_data["calculate_fractal_analysis"]
@@ -258,8 +275,10 @@ def process_pa_output(validated_data, *args):
             entry_func=check_cycle_entry_condition,
             exit_func=check_cycle_exit_signals,
         )
+        file_name = f"{file_name}_{cycle.value}"
+        validated_data["file_name"] = file_name
         write_dataframe_to_csv(
-            output_df, SG_CYCLE_OUTPUT_FOLDER, f"{file_name}_{cycle.value}.csv"
+            output_df, SG_CYCLE_OUTPUT_FOLDER, file_name + ".csv"
         )
 
         if Trade.trigger_trade_management:
@@ -287,3 +306,24 @@ def get_cycle_columns(merged_df):
     ][0]
 
     return cycle_cols
+
+
+def get_start_date(instrument: str, segment) -> Optional[pd.to_datetime]:
+    """
+    Get the start date of the instrument based on first appearance in the database
+    """
+    first_appearance_df = read_csv_file(
+        f"{DB_FOLDER}/first_appearance.csv", index_col="Ticker"
+    )
+    if first_appearance_df.empty:
+        logger.error("First appearance file is empty")
+        return None
+
+    try:
+        start_date = first_appearance_df.loc[instrument, segment]
+        return pd.to_datetime(start_date)
+    except KeyError:
+        logger.error(
+            f"Instrument: {instrument} with segment: {segment} not found in first appearance file"
+        )
+        return None

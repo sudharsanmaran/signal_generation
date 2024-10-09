@@ -5,8 +5,10 @@ import time
 import pandas as pd
 import numpy as np
 
-from tradesheet.constants import ExpiryCols, EXPIRY_FILE, STOCKS_EXPIRY_FILE, LOT_FILE, STOCKS_LOT_FILE, StrikeDiffCols, STRIKE_FILE, STOCKS_STRIKE_FILE, \
-    ONLY_DATE, EXIT_DATE, InputCols, EXIT_EXPIRY, DTE_COL, EXPIRY_COL, LOT_SIZE, STRIKE_DIFF, EXPIRY_NUMBER_COL, OPTION_FILE_NAME, DATE
+from tradesheet.constants import ExpiryCols, EXPIRY_FILE, STOCKS_EXPIRY_FILE, LOT_FILE, STOCKS_LOT_FILE, StrikeDiffCols, \
+    STRIKE_FILE, STOCKS_STRIKE_FILE, \
+    ONLY_DATE, EXIT_DATE, InputCols, EXIT_EXPIRY, DTE_COL, EXPIRY_COL, LOT_SIZE, STRIKE_DIFF, EXPIRY_NUMBER_COL, \
+    OPTION_FILE_NAME, DATE, CashCols
 from tradesheet.src.cash import CashSegment
 
 
@@ -14,6 +16,10 @@ class OptionMixin:
 
     def __init__(self, input_data, ee_df, strategy_pair="", instrument=""):
         super().__init__(input_data, ee_df, strategy_pair, instrument)
+        missing_expiry_df = pd.read_csv(self.missing_file_path)
+        missing_expiry_df = missing_expiry_df[missing_expiry_df["Ticker"] == instrument]
+        missing_dates = pd.to_datetime(missing_expiry_df["Missing Date"]).dt.date
+        self.ee_df = self.ee_df[~(self.ee_df[InputCols.ENTRY_DT].dt.date.isin(missing_dates))]
         self.date_expiry_tracker = {}
         self.hedge_date_expiry_tracker = {}
         self.expiry_data = {}  # to store expiry, strike and lot size data
@@ -30,23 +36,23 @@ class OptionMixin:
             self.next_expiry_column = self.get_expiry_column_name(self.next_expiry)
 
         self.expiry_df = self.read_expiry_data(ExpiryCols, [EXPIRY_FILE, STOCKS_EXPIRY_FILE], parse_date=True)
-        self.lot_df = self.read_expiry_data(StrikeDiffCols, [LOT_FILE, STOCKS_LOT_FILE]) 
+        self.lot_df = self.read_expiry_data(StrikeDiffCols, [LOT_FILE, STOCKS_LOT_FILE])
         if self.is_hedge or self.is_option:
             self.strike_df = self.read_expiry_data(StrikeDiffCols, [STRIKE_FILE, STOCKS_STRIKE_FILE]) 
 
         self.ee_df[ONLY_DATE] = pd.to_datetime(self.ee_df[InputCols.ENTRY_DT]).dt.date
         self.ee_df[EXIT_DATE] = pd.to_datetime(self.ee_df[InputCols.EXIT_DT]).dt.date
         df_merged = pd.merge(self.ee_df, self.expiry_df[[ExpiryCols.DATE, self.expiry_column]], left_on=EXIT_DATE,
-                             right_on=ExpiryCols.DATE, how="left")
+                             right_on=ExpiryCols.DATE, how="inner")
         df_merged.rename(columns={f'{self.expiry_column}': EXIT_EXPIRY}, inplace=True)
         df_merged = pd.merge(df_merged, self.expiry_df[self.use_cols(ExpiryCols)], left_on=ONLY_DATE,
-                             right_on=ExpiryCols.DATE, how="left")
+                             right_on=ExpiryCols.DATE, how="inner")
         df_merged = pd.merge(df_merged, self.lot_df[self.use_cols(StrikeDiffCols)], left_on=ONLY_DATE,
-                             right_on=StrikeDiffCols.DATE, how="left")
+                             right_on=StrikeDiffCols.DATE, how="inner")
 
         if self.is_option:
             df_merged = pd.merge(df_merged, self.strike_df[self.use_cols(StrikeDiffCols)], left_on=ONLY_DATE,
-                                 right_on=StrikeDiffCols.DATE, how="left")
+                                 right_on=StrikeDiffCols.DATE, how="inner")
 
         # Calculate DTE
         # column_x for expiry df and column_y for lot size df
@@ -76,6 +82,8 @@ class OptionMixin:
         # Filter df by DTE
         if self.dte_based_trading and self.dte:
             df_merged = df_merged[df_merged[DTE_COL].isin(self.dte)]
+            if df_merged.empty:
+                print("DTE based trading, No data found for given DTE")
 
         # Drop extra columns
         drop_columns_list = [
@@ -104,7 +112,7 @@ class OptionMixin:
             s_t = time.time()
             self.segment_df = self.segment_df[self.segment_df[DATE].dt.date > previous_date]
             self.cash_db_df = self.cash_db_df[self.cash_db_df[DATE].dt.date > previous_date]
-            if hasattr(self, "hedge_df"):
+            if hasattr(self, "hedge_df") and not self.hedge_df.empty:
                 self.hedge_df = self.hedge_df[self.hedge_df[DATE].dt.date > previous_date]
             self.date_expiry_tracker.pop(previous_date, None)
             self.expiry_data.pop(previous_date, None)
@@ -174,3 +182,47 @@ class OptionMixin:
             except:
                 continue
         return df_list
+
+    def get_delayed_price(self, current_date, expiry_date, find_str, expiry_str, expiry_to_consider):
+        """
+        Delayed Exit: To check for the first candle after signal end till expiry date.
+        SO if signal from 1/11/2024 9:15 to 1/11/2024 9:34 and expiry date is 3/11/2024, Then
+        if candle not found at signal exit i.e. at 1/11/2024 9:34 then we will check for delayed exit
+        on first record starting from 1/11/2024 9:35 to last timestamp of 3/11/2024.
+        """
+        # Filter df after last candle of signal for the same date.
+        new_df = self.segment_df[(self.segment_df[DATE] > current_date) & (
+                    self.segment_df[DATE].dt.date == current_date.date()) & (
+                                     self.segment_df[CashCols.TICKER].str.contains(find_str))]
+
+        date_idx = 1
+        date_ranges = pd.date_range(current_date.date(), expiry_date).date
+        exit_record = None
+        while date_idx <= len(date_ranges):
+            if not new_df.empty:
+                # else exit on first candle of filtered df.
+                exit_record = new_df.iloc[0]
+                break
+            try:
+                next_date = date_ranges[date_idx]
+            except:
+                break
+
+            if expiry_to_consider not in self.date_expiry_tracker.get(next_date, []):
+                dt_format = next_date.strftime('%d%m%Y')
+                file_path = self.get_file_path(next_date, expiry_str, dt_format)
+                if os.path.exists(file_path):
+                    new_df = pd.read_csv(file_path)
+                    new_df[DATE] = pd.to_datetime(new_df['Date'] + ' ' + new_df['Time'],
+                                                  format=self.db_date_format).dt.floor('min')
+                    self.date_expiry_tracker.setdefault(next_date, [])
+                    self.date_expiry_tracker[next_date].append(expiry_to_consider)
+                    self.segment_df = pd.concat([self.segment_df, new_df], ignore_index=True)
+                    new_df = new_df[(new_df[DATE].dt.date == next_date) &
+                                    (new_df[CashCols.TICKER].str.contains(find_str))]
+            else:
+                new_df = self.segment_df[(self.segment_df[DATE].dt.date == next_date) &
+                                         (self.segment_df[CashCols.TICKER].str.contains(find_str))]
+
+            date_idx += 1
+        return exit_record

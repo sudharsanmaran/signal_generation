@@ -1,3 +1,4 @@
+from datetime import datetime
 from itertools import combinations, product
 from pathlib import Path
 import time
@@ -26,18 +27,44 @@ from source.streamlit import (
     set_start_end_datetime,
     set_strategy_pair,
     update_volume_and_volatile_files,
+    write_user_inputs,
 )
 from pa_analysis.validation import validate
 
 
+file_name = "pa_analysis_user_inputs.json"
+
+
 def main_1():
+
+    global file_name
+
+    saved_inputs = {}
+    use_saved_input = st.checkbox("Use Saved Inputs", value=False)
+    if use_saved_input:
+
+        all_user_inputs = load_input_from_json(file_name)
+        if all_user_inputs:
+            search_term = st.text_input("Search Notes")
+
+            filtered_notes = [
+                note
+                for note in all_user_inputs.keys()
+                if search_term.lower() in note.lower()
+            ]
+
+            selected_note = st.selectbox(
+                "Select a note to view details", filtered_notes
+            )
+            saved_inputs = all_user_inputs[selected_note]
+
     expander_option = st.selectbox(
-        "Select Expander", ["Single Analysis", "Summary"]
+        "Select Expander", ["Single Analysis", "Summary"], index=0
     )
     if expander_option == "Single Analysis":
-        streamlit_inputs, saved_inputs = {}, {}
+        streamlit_inputs = {}
         st.header("PA Analysis")
-        update_volume_and_volatile_files(streamlit_inputs)
+        update_volume_and_volatile_files(streamlit_inputs, saved_inputs)
         portfolio_ids_input = set_portfolio_ids(streamlit_inputs, saved_inputs)
         set_allowed_direction(streamlit_inputs, saved_inputs)
         set_instrument(streamlit_inputs, saved_inputs)
@@ -52,7 +79,11 @@ def main_1():
                 portfolio_ids, streamlit_inputs, saved_inputs
             )
 
-            combination_length = st.number_input("Combination Length", value=2)
+            combination_length = st.number_input(
+                "Combination Length",
+                value=saved_inputs.get("combination_length", 2),
+            )
+            streamlit_inputs["combination_length"] = combination_length
 
             options = [
                 (portfolio_id, strategy_id)
@@ -61,9 +92,19 @@ def main_1():
             ]
             all_combination = list(combinations(options, combination_length))
 
+            saved_strategy_pairs = saved_inputs.get("strategy_pairs", [])
+            saved_strategy_pairs = [
+                tuple(tuple(item) for item in pair)
+                for pair in saved_strategy_pairs
+            ]
             strategy_pairs = st.multiselect(
                 "Strategy Combination",
                 options=all_combination,
+                default=[
+                    item
+                    for item in saved_strategy_pairs
+                    if item in all_combination
+                ],
             )
             streamlit_inputs["strategy_pairs"] = strategy_pairs
 
@@ -72,9 +113,13 @@ def main_1():
             )
             categories = categorize_signal(filtered_flag_combinations)
 
+            categories_options = list(categories.keys())
             selected_category = st.selectbox(
                 "Select Category",
-                categories.keys(),
+                categories_options,
+                index=categories_options.index(
+                    saved_inputs.get("category", categories_options[0])
+                ),
             )
 
             streamlit_inputs["category"] = selected_category
@@ -88,7 +133,12 @@ def main_1():
                 long_entry_signals = st.multiselect(
                     "Long Entry Signals",
                     all_flag_combinations,
-                    default=saved_inputs.get("long_entry_signals", None),
+                    default=[
+                        tuple(signal)
+                        for signal in saved_inputs.get(
+                            "long_entry_signals", []
+                        )
+                    ],
                 )
             else:
                 long_entry_signals = []
@@ -104,7 +154,12 @@ def main_1():
                         for combination in all_flag_combinations
                         if combination not in long_entry_signals
                     ],
-                    default=saved_inputs.get("short_entry_signals", None),
+                    default=[
+                        tuple(signal)
+                        for signal in saved_inputs.get(
+                            "short_entry_signals", None
+                        )
+                    ],
                 )
             else:
                 short_entry_signals = []
@@ -118,7 +173,12 @@ def main_1():
                     set(filtered_flag_combinations) - set(long_entry_signals),
                     default=set(
                         [
-                            *saved_inputs.get("long_exit_signals", []),
+                            *[
+                                tuple(signal)
+                                for signal in saved_inputs.get(
+                                    "long_exit_signals", []
+                                )
+                            ],
                             *short_entry_signals,
                         ]
                     ),
@@ -137,7 +197,12 @@ def main_1():
                     - set(long_exit_signals),
                     default=set(
                         [
-                            *saved_inputs.get("short_exit_signals", []),
+                            *[
+                                tuple(signal)
+                                for signal in saved_inputs.get(
+                                    "short_exit_signals", []
+                                )
+                            ],
                             *long_entry_signals,
                         ]
                     ),
@@ -174,10 +239,26 @@ def main_1():
             add_tp_fields(streamlit_inputs, required_fields)
             all_fields_filled = all(required_fields)
             if all_fields_filled:
+                notes = st.text_input(
+                    "Notes", value=saved_inputs.get("notes", "")
+                )
+                save = st.checkbox(
+                    "Save Inputs", value=saved_inputs.get("save", True)
+                )
                 if st.button("Submit"):
                     start = time.time()
                     try:
                         validated_data = validate(streamlit_inputs)
+                        if validated_data:
+                            if save:
+                                temp = {
+                                    "timestamp": datetime.now().strftime(
+                                        "%Y-%m-%d %H:%M:%S"
+                                    ),
+                                    "notes": notes,
+                                }
+                                temp.update(streamlit_inputs)
+                                write_user_inputs(temp, file_name)
                     except Exception as e:
                         st.write(f"Error: {e}")
                         return
@@ -408,10 +489,24 @@ def main():
         add_tp_fields(streamlit_inputs, required_fields)
         all_fields_filled = all(required_fields)
         if all_fields_filled:
+            notes = st.text_input("Notes", value=saved_inputs.get("notes", ""))
+            save = st.checkbox(
+                "Save Inputs", value=saved_inputs.get("save", True)
+            )
             if st.button("Submit"):
                 start = time.time()
                 try:
                     validated_data = validate(streamlit_inputs)
+                    if validated_data:
+                        if save:
+                            temp = {
+                                "timestamp": datetime.now().strftime(
+                                    "%Y-%m-%d %H:%M:%S"
+                                ),
+                                "notes": notes,
+                            }
+                            temp.update(streamlit_inputs)
+                            write_user_inputs(temp, file_name)
                 except Exception as e:
                     st.write(f"Error: {e}")
                     return

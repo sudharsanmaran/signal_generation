@@ -5,7 +5,7 @@ import pandas as pd
 from source.constants import VOLUME_OUTPUT_FOLDER
 from source.utils import make_round, write_dataframe_to_csv
 from volatile_analysis.analysis import updated_cycle_id_by_start_end
-from volatile_analysis.processor import analyse_volatile
+from volatile_analysis.processors.single import analyse_volatile
 
 
 AVG_ZSCORE_SUM_THRESHOLD = "avg_zscore_sum_threshold"

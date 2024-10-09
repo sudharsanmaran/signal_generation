@@ -67,3 +67,6 @@ pa_analysis_output/cycle_outpts/cycle_base_df.csv
 pa_analysis_output/cycle_outpts/base_df/.~lock.base_df_tf_2.csv#
 .env
 pa_db_user_inputs.json
+pa_analysis_user_inputs.json
+volatile_user_inputs.json
+volume_user_inputs.json

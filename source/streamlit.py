@@ -549,7 +549,11 @@ def main():
         folder = Path(PA_ANALYSIS_CYCLE_FOLDER)
         pa_files = [f.name for f in folder.iterdir() if f.is_file()]
 
-        pa_file = st.selectbox("Select PA File", pa_files, index=0)
+        pa_file = st.selectbox(
+            "Select PA File",
+            pa_files,
+            index=pa_files.index(saved_inputs.get("pa_file", pa_files[0])),
+        )
         streamlit_inputs["pa_file"] = pa_file
         cycle_options = [
             cycle.value
@@ -566,6 +570,9 @@ def main():
         cycle_to_consider = st.multiselect(
             "Cycle to Consider",
             cycle_options,
+            default=saved_inputs.get(
+                "cycle_to_consider", [CycleType.MTM_CYCLE.value]
+            ),
         )
         streamlit_inputs["cycle_to_consider"] = cycle_to_consider
         set_allowed_direction(streamlit_inputs, saved_inputs)
@@ -597,7 +604,10 @@ def main():
                 index=options.index(saved_inputs.get("opt_buying", "NO")),
             )
             expiry = st.number_input(
-                "Expiry", min_value=1, value=saved_inputs.get("expiry", 1)
+                "Expiry",
+                min_value=1,
+                max_value=3,
+                value=saved_inputs.get("expiry", 1),
             )
             strike = st.number_input(
                 "Strike", value=saved_inputs.get("strike", 1)
@@ -612,6 +622,35 @@ def main():
                 value=saved_inputs.get("premium_feature", False),
             )
             streamlit_inputs["premium_feature"] = premium_feature
+
+            dte_based_exit = st.checkbox(
+                "date based exit",
+                value=saved_inputs.get("dte_based_exit", False),
+            )
+            streamlit_inputs["dte_based_exit"] = dte_based_exit
+
+            exit_dte_number = st.number_input(
+                "exit date number",
+                min_value=0,
+                value=saved_inputs.get("exit_dte_number", 1),
+            )
+            streamlit_inputs["exit_dte_number"] = exit_dte_number
+
+            exit_dte_time = st.text_input(
+                "exit date time in HH:MM:SS",
+                value=saved_inputs.get("exit_dte_time", "09:24:00"),
+            )
+            streamlit_inputs["exit_dte_time"] = exit_dte_time
+
+            rollover_candle = st.number_input(
+                "rollover candle",
+                min_value=1,
+                value=saved_inputs.get("rollover_candle", 1),
+            )
+            streamlit_inputs["rollover_candle"] = rollover_candle
+
+            # Next Expiry trading
+            set_next_expiry(streamlit_inputs, saved_inputs, expiry)
 
         if segment == "FUTURE":
             # Hedge
@@ -634,7 +673,6 @@ def main():
                 )
                 hedge_strike = st.number_input(
                     "Hedge Strike",
-                    min_value=1,
                     value=saved_inputs.get("hedge_strike", 1),
                 )
                 hedge_delayed_exit = st.checkbox(
@@ -648,6 +686,35 @@ def main():
                         "hedge_delayed_exit": hedge_delayed_exit,
                     }
                 )
+
+            dte_based_exit = st.checkbox(
+                "date based exit",
+                value=saved_inputs.get("dte_based_exit", False),
+            )
+            streamlit_inputs["dte_based_exit"] = dte_based_exit
+
+            exit_dte_number = st.number_input(
+                "exit date number",
+                min_value=0,
+                value=saved_inputs.get("exit_dte_number", 1),
+            )
+            streamlit_inputs["exit_dte_number"] = exit_dte_number
+
+            exit_dte_time = st.text_input(
+                "exit date time in HH:MM:SS",
+                value=saved_inputs.get("exit_dte_time", "09:24:00"),
+            )
+            streamlit_inputs["exit_dte_time"] = exit_dte_time
+
+            rollover_candle = st.number_input(
+                "rollover candle",
+                min_value=1,
+                value=saved_inputs.get("rollover_candle", 1),
+            )
+            streamlit_inputs["rollover_candle"] = rollover_candle
+
+            # Next Expiry trading
+            set_next_expiry(streamlit_inputs, saved_inputs, expiry)
 
         # Appreciation/Depreciation based entry
         ade_based_entry = st.checkbox(
@@ -755,27 +822,6 @@ def main():
                 value=saved_inputs.get("dte_from", 1),
             )
             streamlit_inputs["dte_from"] = dte_from
-
-        # Next Expiry trading
-        next_expiry_trading = st.checkbox(
-            "Next Expiry trading",
-            value=saved_inputs.get("next_expiry_trading", False),
-        )
-        streamlit_inputs["next_expiry_trading"] = next_expiry_trading
-        if next_expiry_trading:
-            next_dte_from = st.number_input(
-                "From DTE",
-                min_value=1,
-                value=saved_inputs.get("next_dte_from", 1),
-            )
-            next_expiry = st.number_input(
-                "Expiry No",
-                min_value=1,
-                value=saved_inputs.get("next_expiry", 1),
-            )
-            streamlit_inputs.update(
-                {"next_dte_from": next_dte_from, "next_expiry": next_expiry}
-            )
 
         # Volume feature
         volume_feature = st.checkbox(
@@ -928,6 +974,34 @@ def main():
                 )
     else:
         st.error("Please fill in all the required fields.")
+
+
+def set_next_expiry(streamlit_inputs, saved_inputs, expiry):
+    next_expiry_trading = False
+    if expiry < 3:
+        next_expiry_trading = st.checkbox(
+            "Next Expiry trading",
+            value=saved_inputs.get("next_expiry_trading", False),
+        )
+        streamlit_inputs["next_expiry_trading"] = next_expiry_trading
+    if next_expiry_trading:
+        next_dte_from = st.number_input(
+            "From DTE",
+            min_value=1,
+            value=saved_inputs.get("next_dte_from", 1),
+        )
+        next_expiry = st.number_input(
+            "Expiry No",
+            min_value=expiry + 1,
+            max_value=3,
+            value=saved_inputs.get("next_expiry", expiry + 1),
+        )
+        streamlit_inputs.update(
+            {
+                "next_dte_from": next_dte_from,
+                "next_expiry": next_expiry,
+            }
+        )
 
 
 def update_bb_band_check(streamlit_inputs, saved_inputs):
@@ -1099,6 +1173,7 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
         cycle_to_consider = st.multiselect(
             "Cycle to Consider",
             cycle_options,
+            default=saved_inputs.get("cycle_to_consider", cycle_options[0]),
         )
         streamlit_inputs["cycle_to_consider"] = cycle_to_consider
 
@@ -1123,11 +1198,12 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
         bb_time_frames_1 = st.multiselect(
             "BB Time Frame",
             bb_tf_options,
+            default=saved_inputs.get("bb_time_frames_1", bb_tf_options[0]),
         )
 
         include_higher_and_lower = st.checkbox(
             "Include Higher and Lower BB Bands",
-            value=saved_inputs.get("include_higer_and_lower", False),
+            value=saved_inputs.get("include_higher_and_lower", False),
         )
         # bb_band_column_1 = st.selectbox(
         #     "BB Band Column",
@@ -1138,18 +1214,19 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
             "Parameter ID",
             min_value=1,
             step=1,
+            value=saved_inputs.get("parameter_id_1", 1),
         )
 
         periods_1 = st.multiselect(
             "Periods",
             PERIOD_OPTIONS,
-            default=saved_inputs.get("period", [20]),
+            default=saved_inputs.get("periods_1", PERIOD_OPTIONS[0]),
         )
 
         sds_1 = st.multiselect(
             "Standard Deviations",
             SD_OPTIONS,
-            default=saved_inputs.get("sd", [2]),
+            default=saved_inputs.get("sds_1", SD_OPTIONS[0]),
         )
 
         close_percent = st.number_input(
@@ -1182,7 +1259,7 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
         st.text("BB Band 2 inputs:")
         check_bb_2 = st.checkbox(
             "Check BB 2",
-            value=saved_inputs.get("calculate_cycles", False),
+            value=saved_inputs.get("check_bb_2", False),
         )
         streamlit_inputs["check_bb_2"] = check_bb_2
         if check_bb_2:
@@ -1196,6 +1273,9 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
             bb_time_frames_2 = st.multiselect(
                 "BB 2 Time Frame",
                 bb_2_tf_options,
+                default=saved_inputs.get(
+                    "bb_time_frames_2", bb_2_tf_options[0]
+                ),
             )
 
             if periods_1:
@@ -1216,16 +1296,18 @@ def set_cycle_configs(streamlit_inputs, saved_inputs):
                 "BB 2 Parameter ID 2",
                 min_value=1,
                 step=1,
+                value=saved_inputs.get("parameter_id_2", 1),
             )
 
             periods_2 = st.multiselect(
                 "BB 2 Periods",
                 bb_2_period_options,
+                default=saved_inputs.get("periods_2", bb_2_period_options[0]),
             )
             sds_2 = st.multiselect(
                 "BB 2 Standard Deviations",
                 SD_OPTIONS,
-                default=saved_inputs.get("sd", [2]),
+                default=saved_inputs.get("sds_2", SD_OPTIONS[0]),
             )
             streamlit_inputs.update(
                 {
@@ -1313,10 +1395,13 @@ def set_target_profit_inputs(streamlit_inputs, saved_inputs):
     )
     streamlit_inputs["calculate_tp"] = calculate_tp
     if calculate_tp:
+        tp_method_options = ["1", "2"]
         tp_method = st.selectbox(
             "TP Method",
-            ["1", "2"],
-            index=0,
+            tp_method_options,
+            index=tp_method_options.index(
+                saved_inputs.get("tp_method", tp_method_options[0])
+            ),
         )
         tp_percentage = st.number_input(
             "TP Percentage",
@@ -1388,11 +1473,11 @@ def set_fractal_entry(streamlit_inputs, saved_inputs):
 def set_start_end_datetime(streamlit_inputs, saved_inputs):
     start_date = st.text_input(
         "Start Date (format: dd/mm/yyyy hh:mm:ss)",
-        value=saved_inputs.get("start_date", "3/01/2019 09:00:00"),
+        value=saved_inputs.get("start_date", "3/01/2012 09:00:00"),
     )
     end_date = st.text_input(
         "End Date (format: dd/mm/yyyy hh:mm:ss)",
-        value=saved_inputs.get("end_date", "3/04/2019 16:00:00"),
+        value=saved_inputs.get("end_date", "3/04/2025 16:00:00"),
     )
     streamlit_inputs.update({"start_date": start_date, "end_date": end_date})
 
@@ -1532,41 +1617,65 @@ def set_trade_type(streamlit_inputs, saved_inputs):
     return trade_type, trade_start_time, trade_end_time
 
 
-def update_volume_and_volatile_files(streamlit_inputs):
-    include_volatile = st.checkbox("Include Volatile", value=False)
+def update_volume_and_volatile_files(streamlit_inputs, saved_inputs):
+    include_volatile = st.checkbox(
+        "Include Volatile", value=saved_inputs.get("include_volatile", False)
+    )
     streamlit_inputs["include_volatile"] = include_volatile
     if include_volatile:
         folder = Path(VOLATILE_OUTPUT_FOLDER)
         volatile_files = [f.name for f in folder.iterdir() if f.is_file()]
+        volatile_index = 0
+        if volatile_files:
+            volatile_index = volatile_files.index(
+                saved_inputs.get("volatile_file", volatile_files[0])
+            )
 
         selected_volatile_file = st.selectbox(
             "Select the volatile file",
             volatile_files,
-            index=0,
+            index=volatile_index,
         )
+        all_volatile_tags = ["HV", "LV"]
         volatile_tag_to_process = st.selectbox(
             "Volatile Tag to Process",
-            ["HV", "LV"],
-            index=0,
+            all_volatile_tags,
+            index=all_volatile_tags.index(
+                saved_inputs.get(
+                    "volatile_tag_to_process", all_volatile_tags[0]
+                )
+            ),
         )
         streamlit_inputs["volatile_file"] = selected_volatile_file
         streamlit_inputs["volatile_tag_to_process"] = volatile_tag_to_process
 
-    include_volume = st.checkbox("Include Volume", value=False)
+    include_volume = st.checkbox(
+        "Include Volume", value=saved_inputs.get("include_volume", False)
+    )
     streamlit_inputs["include_volume"] = include_volume
     if include_volume:
         folder = Path(VOLUME_OUTPUT_FOLDER)
-        volatile_files = [f.name for f in folder.iterdir() if f.is_file()]
+        volume_files = [f.name for f in folder.iterdir() if f.is_file()]
+        volume_index = 0
+        if volume_files:
+            volume_index = volume_files.index(
+                saved_inputs.get("volume_file", volume_files[0])
+            )
 
         selected_volume_file = st.selectbox(
             "Select the volume file",
-            volatile_files,
-            index=0,
+            volume_files,
+            index=volume_index,
         )
         streamlit_inputs["volume_file"] = selected_volume_file
 
+        all_volume_tags = ["CV", "NCV"]
         volume_tag_to_process = st.selectbox(
-            "Volume Tag to Process", ["CV", "NCV"], index=0
+            "Volume Tag to Process",
+            all_volume_tags,
+            index=all_volume_tags.index(
+                saved_inputs.get("volume_tag_to_process", all_volume_tags[0])
+            ),
         )
         streamlit_inputs["volume_tag_to_process"] = volume_tag_to_process
 
