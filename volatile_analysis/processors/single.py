@@ -130,7 +130,7 @@ def process_volatile(validated_data):
     df = updated_inputs(df, validated_data)
     prefix = get_prefix(validated_data, df)
     write_dataframe_to_csv(
-        df, VOLATILE_OUTPUT_FOLDER, f"{prefix}.csv".replace(":", "-")
+        df, VOLATILE_OUTPUT_FOLDER, f"{prefix}-lv-{validated_data["lv_tag"]}-hv-{validated_data['hv_tag']}.csv".replace(":", "-")
     )
     return
 
