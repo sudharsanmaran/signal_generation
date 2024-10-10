@@ -294,3 +294,7 @@ def determine_quarter(row, instrument_quatre):
         return instrument_quatre[f"JUN-{year}"]
     elif month in [10, 11, 12]:
         return instrument_quatre[f"SEP-{year}"]
+
+
+def process_multiple(validated_input, input_df):
+    a = 1
