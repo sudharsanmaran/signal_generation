@@ -9,9 +9,14 @@ from source.streamlit import (
     set_start_end_datetime,
     write_user_inputs,
 )
-from volume_analysis.processor import process
+
+from volume_analysis.processor import process, process_multiple
 from volume_analysis.summary import process_summaries
-from volume_analysis.validation import validate
+from volume_analysis.validation import (
+    validate,
+    validate_multiple_inputs,
+    validate_file,
+)
 
 file_name = "volume_user_inputs.json"
 
@@ -39,7 +44,7 @@ def main():
             saved_inputs = all_user_inputs[selected_note]
 
     expander_option = st.selectbox(
-        "Select Expander", ["Single Analysis", "Summary"]
+        "Select Expander", ["Single Analysis", "Summary", "Multiple Analysis"]
     )
     if expander_option == "Single Analysis":
         instrument = st.text_input(
@@ -140,7 +145,7 @@ def main():
                     f"Data processed successfully, time taken: {time.time()-start}"
                 )
 
-    else:
+    elif expander_option == "Summary":
         with st.expander("Summary", expanded=True):
 
             # multi select for all names of output of volatile outputs
@@ -150,6 +155,58 @@ def main():
 
             if selected_files and st.button("Submit"):
                 process_summaries(selected_files)
+
+    elif expander_option == "Multiple Analysis":
+        with st.expander("Multiple Analysis Config", expanded=True):
+            # get excel file
+            selected_file = st.file_uploader(
+                "Upload Excel File", type=["xlsx"]
+            )
+
+            st.write("Common Inputs")
+
+            set_start_end_datetime(streamlit_inputs, saved_inputs)
+
+            instruments = st.text_input(
+                "Instruments",
+                value=saved_inputs.get("instrument", "RELIANCE, ABBOTINDIA"),
+            )
+            streamlit_inputs["instruments"] = instruments
+
+            avg_zscore_sum_thresholds = st.text_input(
+                "Avg Zscore Sums Threshold",
+                value=saved_inputs.get("avg_zscore_sum_thresholds", "1,2,3"),
+            )
+            streamlit_inputs["avg_zscore_sum_thresholds"] = (
+                avg_zscore_sum_thresholds
+            )
+
+            required_fileds = [
+                selected_file,
+                instruments,
+                avg_zscore_sum_thresholds,
+                streamlit_inputs.get("start_date", False),
+                streamlit_inputs.get("end_date", False),
+            ]
+            if all(required_fileds):
+                if st.button("Submit"):
+                    try:
+                        validated_input = validate_multiple_inputs(
+                            streamlit_inputs
+                        )
+                        validated_file = validate_file(selected_file)
+                        start = time.time()
+                        process_multiple(
+                            validated_input=validated_input,
+                            input_df=validated_file,
+                        )
+                        st.success(
+                            f"Data processed successfully, time taken: {time.time()-start}"
+                        )
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
+            else:
+                st.warning("Please fill all the required fields")
 
 
 if __name__ == "__main__":

@@ -150,6 +150,9 @@ VOLATILE_OUTPUT_SUMMARY_FOLDER = str(
     BASE_OUTPUT_FOLDER / VA / "volatile_summary_outputs"
 )
 VOLUME_OUTPUT_FOLDER = str(BASE_OUTPUT_FOLDER / VOLUME / "volume_outputs")
+VOLUME_OUTPUT_STATUS_FOLDER = str(
+    BASE_OUTPUT_FOLDER / VOLUME / "volume_status"
+)
 VOLUME_OUTPUT_SUMMARY_FOLDER = str(
     BASE_OUTPUT_FOLDER / VOLUME / "volume_summary_outputs"
 )
