@@ -490,7 +490,7 @@ class TradeSheetGenerator:
                         OutputCols.REVISED_QTY] = self.cal_capital_management(entry_price, exit_price, tag, lot_size)
 
                 # Calculate Volume
-                if self.volume and self.no_of_mins and self.__class__.__name__ != "CashSegment":
+                if self.volume and self.no_of_mins:
                     output[OutputCols.ENTRY_VOLUME] = self.sum_of_volume(entry_time, kwargs.get("find_str"))
                     output[OutputCols.EXIT_VOLUME] = self.sum_of_volume(exit_time, kwargs.get("find_str"))
 
