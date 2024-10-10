@@ -217,6 +217,7 @@ def analyse_volatile(
     include_next_first_row=False,
     analyze=VolatileTag.ALL.value,
     prefix="",
+    calculate_change_col=None,
 ):
     def process_group(group_id, group_data, validate_data=validate_data):
         if group_id < 1:
@@ -354,11 +355,17 @@ def analyse_volatile(
             df.loc[group_data.index[0], prefix + AnalysisColumn.CAPITAL.value]
             * group_data.loc[
                 group_data.index[0],
-                get_calculate_change_cols(
-                    validate_data["parameter_id"],
-                    validate_data["periods"][validate_data["time_frames"][0]],
-                    validate_data["time_frames"][0],
-                )[0],
+                (
+                    calculate_change_col
+                    if calculate_change_col
+                    else get_calculate_change_cols(
+                        validate_data["parameter_id"],
+                        validate_data["periods"][
+                            validate_data["time_frames"][0]
+                        ],
+                        validate_data["time_frames"][0],
+                    )[0]
+                ),
             ]
         )
 
@@ -380,13 +387,17 @@ def analyse_volatile(
                 ]
                 * group_data.loc[
                     group_data.index[i],
-                    get_calculate_change_cols(
-                        validate_data["parameter_id"],
-                        validate_data["periods"][
-                            validate_data["time_frames"][0]
-                        ],
-                        validate_data["time_frames"][0],
-                    )[0],
+                    (
+                        calculate_change_col
+                        if calculate_change_col
+                        else get_calculate_change_cols(
+                            validate_data["parameter_id"],
+                            validate_data["periods"][
+                                validate_data["time_frames"][0]
+                            ],
+                            validate_data["time_frames"][0],
+                        )[0]
+                    ),
                 ]
             )
 

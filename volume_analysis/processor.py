@@ -180,6 +180,7 @@ def process(validated_data: dict):
         group_by_col=CYCLE_ID,
         include_next_first_row=True,
         prefix="1",
+        calculate_change_col="calculate_change_1",
     )
 
     analyse_volatile(
@@ -188,6 +189,7 @@ def process(validated_data: dict):
         group_by_col="sub_cycle_id",
         include_next_first_row=True,
         prefix="2",
+        calculate_change_col="calculate_change_1",
     )
 
     write_dataframe_to_csv(
@@ -310,7 +312,7 @@ def process_multiple(validated_input, input_df: pd.DataFrame):
     total_length = (
         len(input_df)
         * len(validated_input["instruments"])
-        * len(validated_input["zscore_sum_thresholds"])
+        * len(validated_input["avg_zscore_sum_thresholds"])
     )
     data_to_process, status, error_message = [], [], []
     for _, row in input_df.iterrows():
@@ -321,6 +323,7 @@ def process_multiple(validated_input, input_df: pd.DataFrame):
         validated_data["period"] = row["period"]
         validated_data["parameter_id"] = row["parameter_id"]
         validated_data["cycle_duration"] = row["cycle_duration"]
+        validated_data["cycle_skip_count"] = row["cycle_skip_count"]
         validated_data["capital_lower_threshold"] = row[
             "capital_lower_threshold"
         ]
@@ -337,7 +340,7 @@ def process_multiple(validated_input, input_df: pd.DataFrame):
         for instrument in validated_input["instruments"]:
             validated_data["instrument"] = instrument
             for zscore_sum_threshold in validated_input[
-                "zscore_sum_thresholds"
+                "avg_zscore_sum_thresholds"
             ]:
                 validated_data["avg_zscore_sum_threshold"] = (
                     zscore_sum_threshold
@@ -388,6 +391,6 @@ def execute_data_processing(total_length, status, error_message, data_list):
                     status.append("SUCCESS")
                     error_message.append("")
                 except Exception as e:
-                    logger.error(f"Error processing volatile data: {e}")
+                    logger.error(f"Error processing volatile data: {str(e)}")
                     status.append("ERROR")
                     error_message.append(str(e))

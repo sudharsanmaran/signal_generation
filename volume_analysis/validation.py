@@ -39,23 +39,10 @@ class Inputs(BaseModel):
 
 
 class MultiInputs(BaseModel):
-    start_date: Union[str, datetime]
-    end_date: Union[str, datetime]
+    start_date: str
+    end_date: str
     instruments: List[str]
     avg_zscore_sum_thresholds: List[int]
-
-    @field_validator("start_date", "end_date", mode="before")
-    def convert_to_datetime(cls, v):
-        """
-        Convert string dates to datetime objects.
-        """
-        if isinstance(v, str):
-            return datetime.strptime(v, "%d/%m/%Y %H:%M:%S")
-        elif isinstance(v, datetime):
-            return v
-        raise ValueError(
-            'Invalid datetime format, should be "dd/mm/yyyy hh:mm:ss"'
-        )
 
     @field_validator("instruments", "avg_zscore_sum_thresholds", mode="before")
     def convert_to_list(cls, v):
@@ -108,9 +95,9 @@ def validate_file(file):
 
 
 def type_cast_df(df: pd.DataFrame) -> None:
-    df["time_frame"] = df["time_frame"].astype(int)
-    df["period"] = df["period"].astype(int)
-    df["parameter_id"] = df["parameter_id"].astype(int)
+    df["time_frame"] = df["time_frame"].astype(str)
+    df["period"] = df["period"].astype(str)
+    df["parameter_id"] = df["parameter_id"].astype(str)
     df["cycle_duration"] = df["cycle_duration"].astype(int)
     df["cycle_skip_count"] = df["cycle_skip_count"].astype(int)
     df["capital_upper_threshold"] = df["capital_upper_threshold"].astype(float)
