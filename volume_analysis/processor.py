@@ -1,11 +1,21 @@
+import logging
+import multiprocessing
 import os
 
 import pandas as pd
 
-from source.constants import VOLUME_OUTPUT_FOLDER
+from source.constants import (
+    VOLUME_OUTPUT_FOLDER,
+    VOLUME_OUTPUT_STATUS_FOLDER,
+    cpu_percent_to_use,
+)
 from source.utils import make_round, write_dataframe_to_csv
 from volatile_analysis.analysis import updated_cycle_id_by_start_end
 from volatile_analysis.processors.single import analyse_volatile
+from volume_analysis.validation import validate
+
+
+logger = logging.getLogger(__name__)
 
 
 AVG_ZSCORE_SUM_THRESHOLD = "avg_zscore_sum_threshold"
@@ -296,5 +306,88 @@ def determine_quarter(row, instrument_quatre):
         return instrument_quatre[f"SEP-{year}"]
 
 
-def process_multiple(validated_input, input_df):
-    a = 1
+def process_multiple(validated_input, input_df: pd.DataFrame):
+    total_length = (
+        len(input_df)
+        * len(validated_input["instruments"])
+        * len(validated_input["zscore_sum_thresholds"])
+    )
+    data_to_process, status, error_message = [], [], []
+    for _, row in input_df.iterrows():
+        validated_data = {}
+        validated_data["start_date"] = validated_input["start_date"]
+        validated_data["end_date"] = validated_input["end_date"]
+        validated_data["time_frame"] = row["time_frame"]
+        validated_data["period"] = row["period"]
+        validated_data["parameter_id"] = row["parameter_id"]
+        validated_data["cycle_duration"] = row["cycle_duration"]
+        validated_data["capital_lower_threshold"] = row[
+            "capital_lower_threshold"
+        ]
+        validated_data["capital_upper_threshold"] = row[
+            "capital_upper_threshold"
+        ]
+        validated_data["sub_cycle_lower_threshold"] = row[
+            "sub_cycle_lower_threshold"
+        ]
+        validated_data["sub_cycle_upper_threshold"] = row[
+            "sub_cycle_upper_threshold"
+        ]
+        validated_data["sub_cycle_interval"] = row["sub_cycle_interval"]
+        for instrument in validated_input["instruments"]:
+            validated_data["instrument"] = instrument
+            for zscore_sum_threshold in validated_input[
+                "zscore_sum_thresholds"
+            ]:
+                validated_data["avg_zscore_sum_threshold"] = (
+                    zscore_sum_threshold
+                )
+                validated_data = validate(validated_data)
+                data_to_process.append(validated_data.copy())
+
+    execute_data_processing(
+        total_length,
+        status,
+        error_message,
+        data_to_process,
+    )
+
+    status_df = pd.DataFrame(data_to_process)
+    status_df["status"] = status
+    status_df["error_message"] = error_message
+
+    now_str = pd.Timestamp.now().strftime("%Y-%m-%d %H-%M-%S")
+    write_dataframe_to_csv(
+        status_df,
+        VOLUME_OUTPUT_STATUS_FOLDER,
+        f"{now_str}_volatile_output.csv",
+    )
+
+
+def execute_data_processing(total_length, status, error_message, data_list):
+    num_workers = min(
+        int(multiprocessing.cpu_count() * cpu_percent_to_use),
+        total_length,
+    )
+    results = []
+    batch_size = 20
+    with multiprocessing.Pool(num_workers) as pool:
+        for i in range(0, total_length, batch_size):
+            batch = data_list[i : i + batch_size]  # Create a batch of 10 items
+            results = []
+
+            # Submit tasks for the current batch
+            for data in batch:
+                result = pool.apply_async(process, args=(data,))
+                results.append(result)
+
+            # Wait for all tasks in the current batch to complete
+            for result in results:
+                try:
+                    result.get()  # This will raise an exception if the process failed
+                    status.append("SUCCESS")
+                    error_message.append("")
+                except Exception as e:
+                    logger.error(f"Error processing volatile data: {e}")
+                    status.append("ERROR")
+                    error_message.append(str(e))
